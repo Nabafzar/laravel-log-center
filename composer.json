@@ -1,0 +1,49 @@
+{
+  "name": "nabafzar/laravel-log-center",
+  "description": "Unified logging, multi-channel notifications, and built-in log viewer for Laravel.",
+  "keywords": [
+    "laravel",
+    "log",
+    "logger",
+    "log viewer",
+    "monolog",
+    "telegram",
+    "bale",
+    "slack",
+    "mattermost",
+    "webhook",
+    "observability",
+    "notification"
+  ],
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Sayyed Abdollah Mahmoudzadeh",
+      "email": "s.a.mahmoudzadeh@gmail.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Nabafzar\\LogCenter\\": "src/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Nabafzar\\LogCenter\\LogCenterServiceProvider"
+      ]
+    }
+  },
+  "require": {
+    "php": "^8.2",
+    "illuminate/support": "^10.0|^11.0|^12.0",
+    "illuminate/log": "^10.0|^11.0|^12.0",
+    "monolog/monolog": "^3.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^11.0"
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}
