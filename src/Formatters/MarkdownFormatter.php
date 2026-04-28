@@ -5,67 +5,129 @@ namespace Nabafzar\LogCenter\Formatters;
 use Nabafzar\LogCenter\Contracts\LogFormatterInterface;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\DTO\LogPayload;
+use Nabafzar\LogCenter\Enums\LogLevel;
+use Nabafzar\LogCenter\Enums\MessageFormatEnum;
+use Nabafzar\LogCenter\Enums\ParseModeEnum;
 use Throwable;
 
-final class MarkdownFormatter implements LogFormatterInterface
+class MarkdownFormatter implements LogFormatterInterface
 {
     public function format(LogPayload $payload): FormattedMessage
     {
-        $lines = [];
-
-        $lines[] = sprintf(
-            '%s *[%s] %s.%s*',
-            $this->levelIcon($payload->level),
-            $payload->datetime?->format('Y-m-d H:i:s') ?? now()->format('Y-m-d H:i:s'),
-            $payload->environment ?? 'app',
-            strtoupper($payload->level)
-        );
-
-        $lines[] = '';
-        $lines[] = '*Message:*';
-        $lines[] = $this->escape($payload->message);
-
-        if (! empty($payload->channel)) {
-            $lines[] = '';
-            $lines[] = '*Channel:* `' . $this->escapeInline($payload->channel) . '`';
-        }
-
-        if (! empty($payload->tags)) {
-            $lines[] = '';
-            $lines[] = '*Tags:* `' . $this->escapeInline(implode(', ', $payload->tags)) . '`';
-        }
-
-        if (! empty($payload->context)) {
-            $lines[] = '';
-            $lines[] = '*Context:*';
-            $lines[] = '```json';
-            $lines[] = $this->encodeJson($this->maskSensitiveData($payload->context));
-            $lines[] = '```';
-        }
-
-        if (! empty($payload->exception)) {
-            $lines[] = '';
-            $lines[] = '*Exception:*';
-            $lines[] = '```';
-            $lines[] = $this->formatException($this->maskSensitiveData($payload->exception));
-            $lines[] = '```';
-        }
-
-        if (! empty($payload->trace)) {
-            $lines[] = '';
-            $lines[] = '*Trace:*';
-            $lines[] = '```';
-            $lines[] = $this->truncate($this->maskText($payload->trace), 2000);
-            $lines[] = '```';
-        }
+        $sections = array_filter([
+            $this->header($payload),
+            $this->message($payload),
+            $this->channel($payload),
+            $this->tags($payload),
+            $this->context($payload),
+            $this->extra($payload),
+            $this->exception($payload),
+            $this->trace($payload),
+        ]);
 
         return new FormattedMessage(
-            content: $this->truncate(implode(PHP_EOL, $lines), $this->maxLength()),
+            content: $this->truncate(
+                implode(PHP_EOL . PHP_EOL, $sections),
+                $this->maxLength()
+            ),
             meta: [
-                'format' => 'markdown',
-                'parse_mode' => 'Markdown',
+                'format' => MessageFormatEnum::MARKDOWN,
+                'parse_mode' => ParseModeEnum::MARKDOWN,
             ],
         );
+    }
+
+    private function header(LogPayload $payload): string
+    {
+        $level = LogLevel::fromString($payload->level);
+
+        return sprintf(
+            '%s *[%s] %s.%s*',
+            $level->icon(),
+            $payload->datetime?->format('Y-m-d H:i:s') ?? now()->format('Y-m-d H:i:s'),
+            $this->escapeInline($payload->environment ?? 'app'),
+            $level->label()
+        );
+    }
+
+    private function message(LogPayload $payload): string
+    {
+        return '*Message:*' . PHP_EOL . $this->escape($payload->message);
+    }
+
+    private function channel(LogPayload $payload): ?string
+    {
+        if (empty($payload->channel)) {
+            return null;
+        }
+
+        return '*Channel:* `' . $this->escapeInline($payload->channel) . '`';
+    }
+
+    private function tags(LogPayload $payload): ?string
+    {
+        if (empty($payload->tags)) {
+            return null;
+        }
+
+        return '*Tags:* `' . $this->escapeInline(implode(', ', $payload->tags)) . '`';
+    }
+
+    private function context(LogPayload $payload): ?string
+    {
+        if (empty($payload->context)) {
+            return null;
+        }
+
+        return '*Context:*' . PHP_EOL . $this->codeBlock(
+                $this->encodeJson($payload->context),
+                'json'
+            );
+    }
+
+    private function extra(LogPayload $payload): ?string
+    {
+        if (empty($payload->extra)) {
+            return null;
+        }
+
+        return '*Extra:*' . PHP_EOL . $this->codeBlock(
+                $this->encodeJson($payload->extra),
+                'json'
+            );
+    }
+
+    private function exception(LogPayload $payload): ?string
+    {
+        if (empty($payload->exception)) {
+            return null;
+        }
+
+        return '*Exception:*' . PHP_EOL . $this->codeBlock(
+                is_array($payload->exception)
+                    ? $this->encodeJson($payload->exception)
+                    : (string) $payload->exception
+            );
+    }
+
+    private function trace(LogPayload $payload): ?string
+    {
+        if (empty($payload->trace)) {
+            return null;
+        }
+
+        return '*Trace:*' . PHP_EOL . $this->codeBlock(
+                $this->truncate($payload->trace, $this->traceMaxLength())
+            );
+    }
+
+    private function codeBlock(string $content, ?string $language = null): string
+    {
+        $language = $language ?: '';
+
+        return '```' . $language . PHP_EOL
+            . $content . PHP_EOL
+            . '```';
     }
 
     private function encodeJson(array $data): string
@@ -76,36 +138,35 @@ final class MarkdownFormatter implements LogFormatterInterface
                 JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR
             );
         } catch (Throwable) {
-            return '[unserializable context]';
+            return '[unserializable data]';
         }
     }
 
-    private function formatException(array $exception): string
+    private function escape(string $text): string
     {
-        return sprintf(
-            '%s: %s',
-            $exception['class'] ?? 'Exception',
-            $exception['message'] ?? ''
+        return str_replace(
+            ['\\', '*', '_', '`'],
+            ['\\\\', '\*', '\_', '\`'],
+            $text
+        );
+    }
+
+    private function escapeInline(string $text): string
+    {
+        return str_replace(
+            ['\\', '`'],
+            ['\\\\', '\`'],
+            $text
         );
     }
 
     private function truncate(string $text, int $limit): string
     {
-        return mb_strlen($text) > $limit
-            ? mb_substr($text, 0, $limit) . PHP_EOL . '... [truncated]'
-            : $text;
-    }
+        if (mb_strlen($text) <= $limit) {
+            return $text;
+        }
 
-    private function levelIcon(string $level): string
-    {
-        return match (strtoupper($level)) {
-            'EMERGENCY', 'ALERT', 'CRITICAL' => '🚨',
-            'ERROR' => '🔴',
-            'WARNING' => '🟡',
-            'NOTICE', 'INFO' => '🔵',
-            'DEBUG' => '⚪',
-            default => 'ℹ️',
-        };
+        return mb_substr($text, 0, $limit) . PHP_EOL . '... [truncated]';
     }
 
     private function maxLength(): int
@@ -113,53 +174,8 @@ final class MarkdownFormatter implements LogFormatterInterface
         return (int) config('logcenter.formatters.markdown.max_length', 3500);
     }
 
-    private function maskSensitiveData(array $data): array
+    private function traceMaxLength(): int
     {
-        $sensitiveKeys = config('logcenter.formatters.markdown.mask_keys', [
-            'password',
-            'password_confirmation',
-            'token',
-            'access_token',
-            'refresh_token',
-            'authorization',
-            'api_key',
-            'secret',
-        ]);
-
-        foreach ($data as $key => $value) {
-            if (is_array($value)) {
-                $data[$key] = $this->maskSensitiveData($value);
-                continue;
-            }
-
-            if (in_array(strtolower((string) $key), $sensitiveKeys, true)) {
-                $data[$key] = '******';
-            }
-        }
-
-        return $data;
-    }
-
-    private function maskText(string $text): string
-    {
-        return preg_replace(
-            '/(token|access_token|refresh_token|authorization|api_key|secret|password)=([^&\s]+)/i',
-            '$1=******',
-            $text
-        ) ?? $text;
-    }
-
-    private function escape(string $text): string
-    {
-        return str_replace(
-            ['*', '_', '`'],
-            ['\*', '\_', '\`'],
-            $text
-        );
-    }
-
-    private function escapeInline(string $text): string
-    {
-        return str_replace('`', '\`', $text);
+        return (int) config('logcenter.formatters.markdown.trace_max_length', 1200);
     }
 }

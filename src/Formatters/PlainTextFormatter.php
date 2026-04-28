@@ -5,79 +5,118 @@ namespace Nabafzar\LogCenter\Formatters;
 use Nabafzar\LogCenter\Contracts\LogFormatterInterface;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\DTO\LogPayload;
+use Nabafzar\LogCenter\Enums\LogLevelEnum;
+use Nabafzar\LogCenter\Enums\MessageFormatEnum;
+use Throwable;
 
-final class PlainTextFormatter implements LogFormatterInterface
+class PlainTextFormatter implements LogFormatterInterface
 {
     public function format(LogPayload $payload): FormattedMessage
     {
-        $lines = [];
-
-        $lines[] = sprintf(
-            '%s [%s] %s.%s',
-            $this->levelIcon($payload->level),
-            $payload->datetime?->format('Y-m-d H:i:s') ?? now()->format('Y-m-d H:i:s'),
-            $payload->environment ?? 'app',
-            strtoupper($payload->level)
-        );
-
-        $lines[] = $payload->message;
-
-        if ($payload->channel) {
-            $lines[] = "Channel: {$payload->channel}";
-        }
-
-        if (! empty($payload->tags)) {
-            $lines[] = 'Tags: ' . implode(', ', $payload->tags);
-        }
-
-        if (! empty($payload->context)) {
-            $lines[] = '';
-            $lines[] = 'Context:';
-            $lines[] = $this->encodeJson($this->maskSensitiveData($payload->context));
-        }
-
-        if (! empty($payload->exception)) {
-            $lines[] = '';
-            $lines[] = 'Exception:';
-            $lines[] = $this->formatException($payload->exception);
-        }
-
-        if (! empty($payload->trace)) {
-            $lines[] = '';
-            $lines[] = 'Trace:';
-            $lines[] = $this->truncate($payload->trace, 2000);
-        }
+        $sections = array_filter([
+            $this->header($payload),
+            $this->message($payload),
+            $this->context($payload),
+            $this->extra($payload),
+            $this->exception($payload),
+            $this->trace($payload),
+        ]);
 
         return new FormattedMessage(
-            content: $this->truncate(implode(PHP_EOL, $lines), $this->maxLength()),
+            content: $this->truncate(
+                implode(PHP_EOL . PHP_EOL, $sections),
+                $this->maxLength()
+            ),
             meta: [
-                'format' => 'plain',
+                'format' => MessageFormatEnum::PLAIN,
             ],
         );
     }
 
-    private function encodeJson(array $data): string
+    private function header(LogPayload $payload): string
     {
-        return json_encode(
-            $data,
-            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT
-        ) ?: '{}';
+        $level = LogLevelEnum::fromString($payload->level);
+
+        return sprintf(
+            '%s [%s] %s.%s',
+            $this->levelIcon($payload->level),
+            $payload->datetime?->format('Y-m-d H:i:s') ?? now()->format('Y-m-d H:i:s'),
+            $payload->environment ?? 'app',
+            $level->label()
+        );
     }
 
-    private function formatException(array $exception): string
+    private function message(LogPayload $payload): string
     {
-        return sprintf(
-            '%s: %s',
-            $exception['class'] ?? 'Exception',
-            $exception['message'] ?? ''
-        );
+        return implode(PHP_EOL, array_filter([
+            'Message:',
+            $payload->message,
+            $payload->channel ? 'Channel: ' . $payload->channel : null,
+        ]));
+    }
+
+    private function context(LogPayload $payload): ?string
+    {
+        return empty($payload->context)
+            ? null
+            : 'Context:' . PHP_EOL . $this->encodeJson($payload->context);
+    }
+
+    private function extra(LogPayload $payload): ?string
+    {
+        return empty($payload->extra)
+            ? null
+            : 'Extra:' . PHP_EOL . $this->encodeJson($payload->extra);
+    }
+
+    private function exception(LogPayload $payload): ?string
+    {
+        return empty($payload->exception)
+            ? null
+            : 'Exception:' . PHP_EOL . $this->encodeJson($payload->exception);
+    }
+
+    private function trace(LogPayload $payload): ?string
+    {
+        if (empty($payload->trace)) {
+            return null;
+        }
+
+        return 'Trace:' . PHP_EOL . $this->truncate(
+                $payload->trace,
+                $this->traceMaxLength()
+            );
+    }
+
+    private function encodeJson(array $data): string
+    {
+        try {
+            return json_encode(
+                $data,
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR
+            );
+        } catch (Throwable) {
+            return '[unserializable data]';
+        }
     }
 
     private function truncate(string $text, int $limit): string
     {
-        return mb_strlen($text) > $limit
-            ? mb_substr($text, 0, $limit) . PHP_EOL . '... [truncated]'
-            : $text;
+        if (mb_strlen($text) <= $limit) {
+            return $text;
+        }
+
+        return mb_substr($text, 0, $limit) . PHP_EOL . '... [truncated]';
+    }
+
+    private function maxLength(): int
+    {
+        return (int) config('logcenter.formatters.plain.max_length', 3500);
+    }
+
+    private function traceMaxLength(): int
+    {
+        return (int) config('logcenter.formatters.plain.trace_max_length', 1200);
     }
 
     private function levelIcon(string $level): string
@@ -90,37 +129,5 @@ final class PlainTextFormatter implements LogFormatterInterface
             'DEBUG' => '⚪',
             default => 'ℹ️',
         };
-    }
-
-    private function maxLength(): int
-    {
-        return (int) config('logcenter.formatters.plain.max_length', 3500);
-    }
-
-    private function maskSensitiveData(array $data): array
-    {
-        $sensitiveKeys = config('logcenter.formatters.plain.mask_keys', [
-            'password',
-            'password_confirmation',
-            'token',
-            'access_token',
-            'refresh_token',
-            'authorization',
-            'api_key',
-            'secret',
-        ]);
-
-        foreach ($data as $key => $value) {
-            if (is_array($value)) {
-                $data[$key] = $this->maskSensitiveData($value);
-                continue;
-            }
-
-            if (in_array(strtolower((string) $key), $sensitiveKeys, true)) {
-                $data[$key] = '******';
-            }
-        }
-
-        return $data;
     }
 }

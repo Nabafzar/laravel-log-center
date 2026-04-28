@@ -18,6 +18,7 @@ final class FormatterFactory
         return match ($name) {
             'plain' => new PlainTextFormatter(),
             'json' => new JsonFormatter(),
+            'telegram_html' => new TelegramHtmlFormatter(),
             /*'compact' => new CompactFormatter(),
             'exception' => new ExceptionFormatter(),
             'telegram_html' => new TelegramHtmlFormatter(),

@@ -5,33 +5,40 @@ namespace Nabafzar\LogCenter\Formatters;
 use Nabafzar\LogCenter\Contracts\LogFormatterInterface;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\DTO\LogPayload;
+use Nabafzar\LogCenter\Enums\LogLevelEnum;
+use Nabafzar\LogCenter\Enums\MessageFormatEnum;
 use Throwable;
 
-final class JsonFormatter implements LogFormatterInterface
+class JsonFormatter implements LogFormatterInterface
 {
     public function format(LogPayload $payload): FormattedMessage
     {
         $data = [
             'timestamp' => $payload->datetime?->format(DATE_ATOM) ?? now()->toAtomString(),
-            'level' => strtoupper($payload->level),
+            'level' => LogLevelEnum::fromString($payload->level)->label(),
             'message' => $payload->message,
+
             'channel' => $payload->channel,
             'environment' => $payload->environment ?? 'app',
             'application' => $payload->application ?? config('app.name'),
+
             'tags' => $payload->tags ?? [],
+            'context' => $payload->context ?? [],
+            'extra' => $payload->extra ?? [],
 
-            'context' => $this->sanitize($payload->context ?? []),
-            'extra' => $this->sanitize($payload->extra ?? []),
-
-            'exception' => ! empty($payload->exception)
-                ? $this->sanitize($payload->exception)
-                : null,
+            'exception' => $payload->exception ?: null,
 
             'trace' => ! empty($payload->trace)
-                ? $this->truncate($this->maskText($payload->trace), $this->traceMaxLength())
+                ? $this->truncate($payload->trace, $this->traceMaxLength())
                 : null,
 
-            'meta' => $this->sanitize($payload->meta ?? []),
+            'meta' => array_merge(
+                [
+                    'format' => MessageFormatEnum::JSON,
+                    'schema_version' => 1,
+                ],
+                $payload->meta ?? []
+            ),
         ];
 
         return new FormattedMessage(
@@ -66,60 +73,21 @@ final class JsonFormatter implements LogFormatterInterface
         return $flags;
     }
 
-    private function sanitize(array $data): array
-    {
-        return $this->maskSensitiveData($data);
-    }
-
-    private function maskSensitiveData(array $data): array
-    {
-        $sensitiveKeys = config('logcenter.formatters.json.mask_keys', [
-            'password',
-            'password_confirmation',
-            'token',
-            'access_token',
-            'refresh_token',
-            'authorization',
-            'api_key',
-            'secret',
-        ]);
-
-        foreach ($data as $key => $value) {
-            if (is_array($value)) {
-                $data[$key] = $this->maskSensitiveData($value);
-                continue;
-            }
-
-            if (in_array(strtolower((string) $key), $sensitiveKeys, true)) {
-                $data[$key] = '******';
-            }
-        }
-
-        return $data;
-    }
-
-    private function maskText(string $text): string
-    {
-        return preg_replace(
-            '/(token|access_token|refresh_token|authorization|api_key|secret|password)=([^&\s]+)/i',
-            '$1=******',
-            $text
-        ) ?? $text;
-    }
-
-    private function traceMaxLength(): int
-    {
-        return (int) config('logcenter.formatters.json.trace_max_length', 5000);
-    }
-
     private function truncate(?string $text, int $limit): ?string
     {
         if ($text === null || $text === '') {
             return null;
         }
 
-        return mb_strlen($text) > $limit
-            ? mb_substr($text, 0, $limit) . '... [truncated]'
-            : $text;
+        if (mb_strlen($text) <= $limit) {
+            return $text;
+        }
+
+        return mb_substr($text, 0, $limit) . '... [truncated]';
+    }
+
+    private function traceMaxLength(): int
+    {
+        return (int) config('logcenter.formatters.json.trace_max_length', 5000);
     }
 }
