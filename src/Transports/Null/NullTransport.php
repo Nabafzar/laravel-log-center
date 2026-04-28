@@ -4,10 +4,31 @@ declare(strict_types=1);
 
 namespace Nabafzar\LogCenter\Transports\Null;
 
+use LogTransportInterface;
+use Nabafzar\LogCenter\DTO\FormattedMessage;
+use Nabafzar\LogCenter\DTO\LogPayload;
+use Nabafzar\LogCenter\DTO\TransportResult;
+use Nabafzar\LogCenter\Enums\MessageFormatEnum;
+
 final class NullTransport implements LogTransportInterface
 {
-    public function send(LogPayload $payload, FormattedMessage $message): void
+    public function send(LogPayload $payload, FormattedMessage $message): TransportResult
     {
-        // intentionally empty
+        return new TransportResult(
+            success: true,
+            driver: 'null',
+            meta: [
+                'discarded' => true,
+            ],
+        );
+    }
+
+    public function supportedFormats(): array
+    {
+        return [
+            MessageFormatEnum::PLAIN,
+            MessageFormatEnum::MARKDOWN,
+            MessageFormatEnum::TELEGRAM_HTML,
+        ];
     }
 }
