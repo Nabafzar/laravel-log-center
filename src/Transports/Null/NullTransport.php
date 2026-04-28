@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Nabafzar\LogCenter\Transports\Null;
 
-use LogTransportInterface;
+use Nabafzar\LogCenter\Contracts\LogTransportInterface;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\DTO\LogPayload;
 use Nabafzar\LogCenter\DTO\TransportResult;

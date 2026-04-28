@@ -2,7 +2,7 @@
 
 namespace Nabafzar\LogCenter\DTO;
 
-use PHPUnit\Event\Code\Throwable;
+use Throwable;
 
 final readonly class TransportResult
 {

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Nabafzar\LogCenter\Transports\Telegram;
 
 use Illuminate\Support\Facades\Http;
-use LogTransportInterface;
+use Nabafzar\LogCenter\Contracts\LogTransportInterface;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\DTO\LogPayload;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
