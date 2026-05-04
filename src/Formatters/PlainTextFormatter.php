@@ -28,7 +28,7 @@ class PlainTextFormatter implements LogFormatterInterface
                 $this->maxLength()
             ),
             meta: [
-                'format' => MessageFormatEnum::PLAIN,
+                'format' => MessageFormatEnum::PLAIN->value,
             ],
         );
     }

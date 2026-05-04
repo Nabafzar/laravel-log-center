@@ -2,27 +2,33 @@
 
 namespace Nabafzar\LogCenter\Services;
 
+use Nabafzar\LogCenter\Contracts\LogDispatcherInterface;
 use Nabafzar\LogCenter\DTO\LogPayload;
+use Nabafzar\LogCenter\DTO\TransportResult;
 use Nabafzar\LogCenter\Managers\TransportManager;
+use Nabafzar\LogCenter\Processors\PayloadProcessor;
 
-final class LogDispatcher
+final class LogDispatcher implements LogDispatcherInterface
 {
     public function __construct(
         private readonly TransportManager $transportManager,
+        private readonly PayloadProcessor $payloadProcessor,
     ) {}
 
-    public function dispatch(LogPayload $payload): void
+    public function dispatch(LogPayload $payload): TransportResult
     {
-        // در آینده اینجا میتونه queue / retry / failover اضافه بشه
-        $this->sendNow($payload);
+        return $this->sendNow($payload);
     }
 
-    public function sendNow(LogPayload $payload): void
+    public function sendNow(LogPayload $payload): TransportResult
     {
-        $formatter = $this->transportManager->formatter();
+        $driverName = $this->transportManager->defaultDriverName();
+        $payload = $this->payloadProcessor->process($payload);
 
-        $transport = $this->transportManager->driver();
+        $formatter = $this->transportManager->formatter(driver: $driverName);
 
-        $transport->send($payload, $formatter->format($payload));
+        return $this->transportManager
+            ->driver($driverName)
+            ->send($payload, $formatter->format($payload));
     }
 }

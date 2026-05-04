@@ -14,7 +14,7 @@ final class TelegramHtmlFormatter implements LogFormatterInterface
 {
     public function format(LogPayload $payload): FormattedMessage
     {
-        $sections = array_filter([
+        $sections = array_values(array_filter([
             $this->header($payload),
             $this->message($payload),
             $this->channel($payload),
@@ -23,13 +23,13 @@ final class TelegramHtmlFormatter implements LogFormatterInterface
             $this->extra($payload),
             $this->exception($payload),
             $this->trace($payload),
-        ]);
+        ]));
 
         return new FormattedMessage(
-            content: implode("\n\n", $sections),
+            content: $this->fitSections($sections),
             meta: [
-                'format' => MessageFormatEnum::TELEGRAM_HTML,
-                'parse_mode' => ParseModeEnum::HTML,
+                'format' => MessageFormatEnum::TELEGRAM_HTML->value,
+                'parse_mode' => ParseModeEnum::HTML->value,
             ],
         );
     }
@@ -49,7 +49,9 @@ final class TelegramHtmlFormatter implements LogFormatterInterface
 
     private function message(LogPayload $payload): string
     {
-        return '<b>Message:</b>' . PHP_EOL . $this->escape($payload->message);
+        return '<b>Message:</b>' . PHP_EOL . $this->escape(
+            $this->truncatePlain($payload->message, $this->sectionMaxLength())
+        );
     }
 
     private function channel(LogPayload $payload): ?string
@@ -95,7 +97,9 @@ final class TelegramHtmlFormatter implements LogFormatterInterface
     {
         return empty($payload->trace)
             ? null
-            : '<b>Trace:</b>' . PHP_EOL . $this->pre($this->escape($payload->trace));
+            : '<b>Trace:</b>' . PHP_EOL . $this->pre(
+                $this->escape($this->truncatePlain($payload->trace, $this->traceMaxLength()))
+            );
     }
 
     private function pre(string $text): string
@@ -106,10 +110,12 @@ final class TelegramHtmlFormatter implements LogFormatterInterface
     private function json(array $data): string
     {
         try {
-            return $this->escape(json_encode(
+            $json = json_encode(
                 $data,
                 JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR
-            ));
+            );
+
+            return $this->escape($this->truncatePlain($json, $this->sectionMaxLength()));
         } catch (Throwable) {
             return '[invalid json]';
         }
@@ -118,5 +124,57 @@ final class TelegramHtmlFormatter implements LogFormatterInterface
     private function escape(string $text): string
     {
         return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+
+    /**
+     * @param list<string> $sections
+     */
+    private function fitSections(array $sections): string
+    {
+        $content = '';
+        $notice = '<i>... [truncated]</i>';
+
+        foreach ($sections as $section) {
+            $candidate = $content === ''
+                ? $section
+                : $content . "\n\n" . $section;
+
+            if (mb_strlen($candidate) <= $this->maxLength()) {
+                $content = $candidate;
+                continue;
+            }
+
+            $candidateWithNotice = $content . "\n\n" . $notice;
+
+            return $content !== '' && mb_strlen($candidateWithNotice) <= $this->maxLength()
+                ? $candidateWithNotice
+                : $content;
+        }
+
+        return $content;
+    }
+
+    private function truncatePlain(string $text, int $limit): string
+    {
+        if (mb_strlen($text) <= $limit) {
+            return $text;
+        }
+
+        return mb_substr($text, 0, max(0, $limit - 16)) . PHP_EOL . '... [truncated]';
+    }
+
+    private function sectionMaxLength(): int
+    {
+        return max(500, (int) floor($this->maxLength() / 2));
+    }
+
+    private function maxLength(): int
+    {
+        return (int) config('logcenter.formatters.telegram_html.max_length', 3500);
+    }
+
+    private function traceMaxLength(): int
+    {
+        return (int) config('logcenter.formatters.telegram_html.trace_max_length', 1200);
     }
 }

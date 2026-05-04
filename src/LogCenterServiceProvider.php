@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nabafzar\LogCenter;
 
 use Illuminate\Support\ServiceProvider;
+use Nabafzar\LogCenter\Contracts\LogDispatcherInterface;
 use Nabafzar\LogCenter\Factories\FormatterFactory;
 use Nabafzar\LogCenter\Factories\TransportFactory;
 use Nabafzar\LogCenter\Managers\TransportManager;
@@ -42,6 +43,8 @@ final class LogCenterServiceProvider extends ServiceProvider
         $this->app->singleton(TransportManager::class);
 
         $this->app->singleton(LogDispatcher::class);
+
+        $this->app->alias(LogDispatcher::class, LogDispatcherInterface::class);
 
         $this->app->alias(LogDispatcher::class, 'logcenter');
     }

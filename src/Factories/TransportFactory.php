@@ -18,6 +18,8 @@ use Nabafzar\LogCenter\Transports\Telegram\TelegramTransport;
 
 final class TransportFactory
 {
+    private array $customDrivers = [];
+
     public function __construct(
         private readonly Container $app,
     )

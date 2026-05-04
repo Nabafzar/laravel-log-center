@@ -5,7 +5,7 @@ namespace Nabafzar\LogCenter\Formatters;
 use Nabafzar\LogCenter\Contracts\LogFormatterInterface;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\DTO\LogPayload;
-use Nabafzar\LogCenter\Enums\LogLevel;
+use Nabafzar\LogCenter\Enums\LogLevelEnum;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
 use Nabafzar\LogCenter\Enums\ParseModeEnum;
 use Throwable;
@@ -31,15 +31,15 @@ class MarkdownFormatter implements LogFormatterInterface
                 $this->maxLength()
             ),
             meta: [
-                'format' => MessageFormatEnum::MARKDOWN,
-                'parse_mode' => ParseModeEnum::MARKDOWN,
+                'format' => MessageFormatEnum::MARKDOWN->value,
+                'parse_mode' => ParseModeEnum::MARKDOWN->value,
             ],
         );
     }
 
     private function header(LogPayload $payload): string
     {
-        $level = LogLevel::fromString($payload->level);
+        $level = LogLevelEnum::fromString($payload->level);
 
         return sprintf(
             '%s *[%s] %s.%s*',

@@ -135,6 +135,12 @@ return [
             'token' => env('LOGCENTER_TELEGRAM_TOKEN'),
             'chat_id' => env('LOGCENTER_TELEGRAM_CHAT_ID'),
             'topic_id' => env('LOGCENTER_TELEGRAM_TOPIC_ID'),
+            'parse_mode' => env('LOGCENTER_TELEGRAM_PARSE_MODE'),
+            'disable_web_page_preview' => env('LOGCENTER_TELEGRAM_DISABLE_WEB_PAGE_PREVIEW'),
+            'disable_notification' => env('LOGCENTER_TELEGRAM_DISABLE_NOTIFICATION'),
+            'split_long_messages' => env('LOGCENTER_TELEGRAM_SPLIT_LONG_MESSAGES', false),
+            'delay_between_messages' => env('LOGCENTER_TELEGRAM_DELAY_BETWEEN_MESSAGES', false),
+            'delay_milliseconds' => env('LOGCENTER_TELEGRAM_DELAY_MILLISECONDS', 250),
             'timeout' => env('LOGCENTER_TELEGRAM_TIMEOUT', 5),
 
             'limits' => [
@@ -144,6 +150,9 @@ return [
             'topics_level' => [
                 'emergency' => env('LOGCENTER_TELEGRAM_EMERGENCY_TOPIC_ID'),
                 'critical' => env('LOGCENTER_TELEGRAM_CRITICAL_TOPIC_ID'),
+                'error' => env('LOGCENTER_TELEGRAM_ERROR_TOPIC_ID'),
+                'warning' => env('LOGCENTER_TELEGRAM_WARNING_TOPIC_ID'),
+                'notice' => env('LOGCENTER_TELEGRAM_NOTICE_TOPIC_ID'),
                 'important' => env('LOGCENTER_TELEGRAM_IMPORTANT_TOPIC_ID'),
                 'debug' => env('LOGCENTER_TELEGRAM_DEBUG_TOPIC_ID'),
                 'info' => env('LOGCENTER_TELEGRAM_INFORMATION_TOPIC_ID'),

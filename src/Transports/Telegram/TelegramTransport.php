@@ -4,91 +4,197 @@ declare(strict_types=1);
 
 namespace Nabafzar\LogCenter\Transports\Telegram;
 
+use BackedEnum;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Nabafzar\LogCenter\Contracts\LogTransportInterface;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\DTO\LogPayload;
+use Nabafzar\LogCenter\DTO\TransportResult;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
+use Throwable;
 
 class TelegramTransport implements LogTransportInterface
 {
     private const BASE_URL = 'https://api.telegram.org/bot';
     private const MAX_MESSAGE_LENGTH = 4096;
-
     private const TRUNCATED_MARKER = PHP_EOL . '... [truncated]';
 
-    public function send(LogPayload $payload, FormattedMessage $message): void
+    public function send(LogPayload $payload, FormattedMessage $message): TransportResult
     {
         $token = $this->token();
         $chatId = $this->chatId();
 
-        if (! $token || ! $chatId || trim($message->content) === '') {
-            return;
+        if (! $token || ! $chatId) {
+            return TransportResult::failed(
+                driver: 'telegram',
+                errorMessage: 'Telegram token or chat ID is not configured.',
+            );
         }
 
-        Http::timeout(config('logcenter.drivers.telegram.timeout', 5))
-            ->post(self::BASE_URL . $token . "/sendMessage", [
-                'chat_id' => $chatId,
-                'text' => $message->content,
-                'parse_mode' => $message->meta['parse_mode'] ?? null,
-            ])
-            ->throw();
+        $messages = $this->enforceMessageLimit($message->content);
+
+        if ($messages === []) {
+            return TransportResult::success(
+                driver: 'telegram',
+                meta: ['skipped' => true, 'reason' => 'empty_message'],
+            );
+        }
+
+        try {
+            $lastStatusCode = null;
+            $lastMessageId = null;
+
+            foreach ($messages as $index => $content) {
+                $response = $this->http()
+                    ->post($this->endpoint($token), $this->telegramPayload($payload, $message, $content))
+                    ->throw();
+
+                $lastStatusCode = $response->status();
+                $lastMessageId = $this->messageId($response->json());
+
+                if ($index < count($messages) - 1 && $this->shouldDelayBetweenMessages()) {
+                    usleep($this->delayMilliseconds() * 1000);
+                }
+            }
+
+            return TransportResult::success(
+                driver: 'telegram',
+                statusCode: $lastStatusCode,
+                messageId: $lastMessageId,
+                meta: ['sent_messages' => count($messages)],
+            );
+        } catch (Throwable $e) {
+            $statusCode = $this->statusCodeFromException($e);
+
+            return TransportResult::failed(
+                driver: 'telegram',
+                errorMessage: $e->getMessage(),
+                exception: $e,
+                statusCode: $statusCode,
+                retryable: $this->isRetryable($statusCode),
+            );
+        }
     }
 
+    /**
+     * @return list<string>
+     */
     private function enforceMessageLimit(string $content): array
     {
-        if (mb_strlen($content) <= self::MAX_MESSAGE_LENGTH) {
+        $content = trim($content);
+
+        if ($content === '') {
+            return [];
+        }
+
+        $limit = min($this->messageLimit(), self::MAX_MESSAGE_LENGTH);
+
+        if (mb_strlen($content) <= $limit) {
             return [$content];
         }
 
         if ($this->shouldSplitLongMessages()) {
-            return mb_str_split($content, self::MAX_MESSAGE_LENGTH);
+            return array_values(array_filter(
+                mb_str_split($content, $limit),
+                static fn (string $chunk) => trim($chunk) !== ''
+            ));
         }
 
+        $messageLimit = max(1, $limit - mb_strlen(self::TRUNCATED_MARKER));
+
         return [
-            mb_substr($content, 0, self::MAX_MESSAGE_LENGTH - 20)
-            . PHP_EOL
-            . '... [truncated]',
+            mb_substr($content, 0, $messageLimit) . self::TRUNCATED_MARKER,
         ];
     }
 
-    private function endpoint(): string
+    private function http()
     {
-        return self::BASE_URL . $this->token() . '/sendMessage';
+        $request = Http::timeout($this->timeout());
+
+        if ($this->proxy()) {
+            $request = $request->withOptions(['proxy' => $this->proxy()]);
+        }
+
+        return $request;
+    }
+
+    private function telegramPayload(
+        LogPayload $payload,
+        FormattedMessage $message,
+        string $content,
+    ): array {
+        return array_filter([
+            'chat_id' => $this->chatId(),
+            'message_thread_id' => $this->topicIdForPayload($payload),
+            'text' => $content,
+            'parse_mode' => $this->parseModeFromMessage($message) ?? $this->parseMode(),
+            'disable_web_page_preview' => $this->disableWebPagePreview(),
+            'disable_notification' => $this->disableNotification(),
+        ], static fn (mixed $value) => $value !== null);
+    }
+
+    private function endpoint(string $token): string
+    {
+        return self::BASE_URL . $token . '/sendMessage';
     }
 
     private function token(): ?string
     {
-        return config('logcenter.drivers.telegram.token');
+        return $this->configuredString(config('logcenter.drivers.telegram.token'));
     }
 
     private function chatId(): ?string
     {
-        return config('logcenter.drivers.telegram.chat_id');
+        return $this->configuredString(config('logcenter.drivers.telegram.chat_id'));
     }
 
-    private function topicId(): ?int
+    private function defaultTopicId(): ?int
     {
-        $topicId = config('logcenter.drivers.telegram.topic_id');
+        return $this->configuredInt(config('logcenter.drivers.telegram.topic_id'));
+    }
 
-        return $topicId !== null && $topicId !== ''
-            ? (int) $topicId
-            : null;
+    private function topicIdForPayload(LogPayload $payload): ?int
+    {
+        $topics = config('logcenter.drivers.telegram.topics_level', []);
+
+        if (! is_array($topics)) {
+            return $this->defaultTopicId();
+        }
+
+        $level = strtolower($payload->level);
+        $topicId = $topics[$level] ?? match ($level) {
+            'emergency', 'alert' => $topics['emergency'] ?? null,
+            'critical' => $topics['critical'] ?? null,
+            'error' => $topics['error'] ?? $topics['important'] ?? null,
+            'warning' => $topics['warning'] ?? $topics['low_priority'] ?? null,
+            'notice' => $topics['notice'] ?? $topics['low_priority'] ?? null,
+            'info' => $topics['info'] ?? null,
+            'debug' => $topics['debug'] ?? null,
+            default => null,
+        };
+
+        return $this->configuredInt($topicId) ?? $this->defaultTopicId();
     }
 
     private function timeout(): int
     {
-        return (int) config('logcenter.drivers.telegram.timeout', 5);
+        return max(1, (int) config('logcenter.drivers.telegram.timeout', 5));
     }
 
     private function proxy(): ?string
     {
-        return config('logcenter.drivers.telegram.proxy');
+        return $this->configuredString(config('logcenter.drivers.telegram.proxy'));
     }
 
     private function parseMode(): ?string
     {
-        return config('logcenter.drivers.telegram.parse_mode');
+        return $this->configuredString(config('logcenter.drivers.telegram.parse_mode'));
+    }
+
+    private function parseModeFromMessage(FormattedMessage $message): ?string
+    {
+        return $this->configuredString($this->backedValue($message->meta['parse_mode'] ?? null));
     }
 
     private function disableWebPagePreview(): ?bool
@@ -115,9 +221,70 @@ class TelegramTransport implements LogTransportInterface
         return (bool) config('logcenter.drivers.telegram.delay_between_messages', false);
     }
 
-    private function messageLength(string $content): int
+    private function delayMilliseconds(): int
     {
-        return mb_strlen($content);
+        return max(0, (int) config('logcenter.drivers.telegram.delay_milliseconds', 250));
+    }
+
+    private function messageLimit(): int
+    {
+        return max(1, (int) config('logcenter.drivers.telegram.limits.message', self::MAX_MESSAGE_LENGTH));
+    }
+
+    private function messageId(mixed $response): ?string
+    {
+        if (! is_array($response)) {
+            return null;
+        }
+
+        $messageId = $response['result']['message_id'] ?? null;
+
+        return $messageId === null ? null : (string) $messageId;
+    }
+
+    private function statusCodeFromException(Throwable $exception): ?int
+    {
+        if ($exception instanceof RequestException) {
+            return $exception->response->status();
+        }
+
+        return null;
+    }
+
+    private function isRetryable(?int $statusCode): bool
+    {
+        return $statusCode === null || $statusCode === 429 || $statusCode >= 500;
+    }
+
+    private function configuredString(mixed $value): ?string
+    {
+        if ($value instanceof BackedEnum) {
+            $value = $value->value;
+        }
+
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        return $value !== '' ? $value : null;
+    }
+
+    private function configuredInt(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $value = (int) $value;
+
+        return $value > 0 ? $value : null;
+    }
+
+    private function backedValue(mixed $value): mixed
+    {
+        return $value instanceof BackedEnum ? $value->value : $value;
     }
 
     public function supportedFormats(): array

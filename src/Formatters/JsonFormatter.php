@@ -34,7 +34,7 @@ class JsonFormatter implements LogFormatterInterface
 
             'meta' => array_merge(
                 [
-                    'format' => MessageFormatEnum::JSON,
+                    'format' => MessageFormatEnum::JSON->value,
                     'schema_version' => 1,
                 ],
                 $payload->meta ?? []
