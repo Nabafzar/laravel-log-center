@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Nabafzar\LogCenter\Formatters;
 
 use Nabafzar\LogCenter\Contracts\LogFormatterInterface;
@@ -21,6 +23,7 @@ final class TelegramHtmlFormatter implements LogFormatterInterface
             $this->tags($payload),
             $this->context($payload),
             $this->extra($payload),
+            $this->request($payload),
             $this->exception($payload),
             $this->trace($payload),
         ]));
@@ -82,14 +85,19 @@ final class TelegramHtmlFormatter implements LogFormatterInterface
             : '<b>Extra:</b>' . PHP_EOL . $this->pre($this->json($payload->extra));
     }
 
+    private function request(LogPayload $payload): ?string
+    {
+        return empty($payload->request)
+            ? null
+            : '<b>Request:</b>' . PHP_EOL . $this->pre($this->json($payload->request));
+    }
+
     private function exception(LogPayload $payload): ?string
     {
         return empty($payload->exception)
             ? null
             : '<b>Exception:</b>' . PHP_EOL . $this->pre(
-                is_array($payload->exception)
-                    ? $this->json($payload->exception)
-                    : $this->escape((string)$payload->exception)
+                $this->json($payload->exception)
             );
     }
 

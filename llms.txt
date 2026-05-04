@@ -1,0 +1,36 @@
+# nabafzar/laravel-log-center
+
+Laravel package for centralized log dispatch, driver switching, message
+formatting, masking, and planned multi-channel log notifications.
+
+Canonical AI manifest:
+
+- `AI_MANIFEST.md`
+
+Key package files:
+
+- `composer.json`
+- `config/logcenter.php`
+- `src/LogCenterServiceProvider.php`
+- `src/Logging/LogCenterHandler.php`
+- `src/Services/LogDispatcher.php`
+- `src/Managers/TransportManager.php`
+- `src/Factories/TransportFactory.php`
+- `src/Factories/FormatterFactory.php`
+- `src/Transports/Null/NullTransport.php`
+- `src/Transports/Telegram/TelegramTransport.php`
+- `src/Formatters/PlainTextFormatter.php`
+- `src/Formatters/JsonFormatter.php`
+- `src/Formatters/MarkdownFormatter.php`
+- `src/Formatters/TelegramHtmlFormatter.php`
+
+Current status summary:
+
+- Transport classes present: `null`, `telegram`
+- Planned transports: `bale`, `slack`, `mattermost`, `webhook`
+- Factory-exposed formatters: `plain`, `json`, `markdown`, `telegram_html`
+- Known gaps and roadmap are documented in `AI_MANIFEST.md`.
+
+AI assistants should treat `AI_MANIFEST.md` as the project handoff and avoid
+claiming planned drivers are production-ready until implementation and tests
+exist.

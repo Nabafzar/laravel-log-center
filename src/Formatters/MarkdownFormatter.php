@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Nabafzar\LogCenter\Formatters;
 
 use Nabafzar\LogCenter\Contracts\LogFormatterInterface;
@@ -21,6 +23,7 @@ class MarkdownFormatter implements LogFormatterInterface
             $this->tags($payload),
             $this->context($payload),
             $this->extra($payload),
+            $this->request($payload),
             $this->exception($payload),
             $this->trace($payload),
         ]);
@@ -80,9 +83,9 @@ class MarkdownFormatter implements LogFormatterInterface
         }
 
         return '*Context:*' . PHP_EOL . $this->codeBlock(
-                $this->encodeJson($payload->context),
-                'json'
-            );
+            $this->encodeJson($payload->context),
+            'json'
+        );
     }
 
     private function extra(LogPayload $payload): ?string
@@ -92,9 +95,21 @@ class MarkdownFormatter implements LogFormatterInterface
         }
 
         return '*Extra:*' . PHP_EOL . $this->codeBlock(
-                $this->encodeJson($payload->extra),
-                'json'
-            );
+            $this->encodeJson($payload->extra),
+            'json'
+        );
+    }
+
+    private function request(LogPayload $payload): ?string
+    {
+        if (empty($payload->request)) {
+            return null;
+        }
+
+        return '*Request:*' . PHP_EOL . $this->codeBlock(
+            $this->encodeJson($payload->request),
+            'json'
+        );
     }
 
     private function exception(LogPayload $payload): ?string
@@ -104,10 +119,8 @@ class MarkdownFormatter implements LogFormatterInterface
         }
 
         return '*Exception:*' . PHP_EOL . $this->codeBlock(
-                is_array($payload->exception)
-                    ? $this->encodeJson($payload->exception)
-                    : (string) $payload->exception
-            );
+            $this->encodeJson($payload->exception)
+        );
     }
 
     private function trace(LogPayload $payload): ?string
@@ -117,8 +130,8 @@ class MarkdownFormatter implements LogFormatterInterface
         }
 
         return '*Trace:*' . PHP_EOL . $this->codeBlock(
-                $this->truncate($payload->trace, $this->traceMaxLength())
-            );
+            $this->truncate($payload->trace, $this->traceMaxLength())
+        );
     }
 
     private function codeBlock(string $content, ?string $language = null): string

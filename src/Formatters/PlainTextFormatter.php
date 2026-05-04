@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Nabafzar\LogCenter\Formatters;
 
 use Nabafzar\LogCenter\Contracts\LogFormatterInterface;
@@ -18,6 +20,7 @@ class PlainTextFormatter implements LogFormatterInterface
             $this->message($payload),
             $this->context($payload),
             $this->extra($payload),
+            $this->request($payload),
             $this->exception($payload),
             $this->trace($payload),
         ]);
@@ -69,6 +72,13 @@ class PlainTextFormatter implements LogFormatterInterface
             : 'Extra:' . PHP_EOL . $this->encodeJson($payload->extra);
     }
 
+    private function request(LogPayload $payload): ?string
+    {
+        return empty($payload->request)
+            ? null
+            : 'Request:' . PHP_EOL . $this->encodeJson($payload->request);
+    }
+
     private function exception(LogPayload $payload): ?string
     {
         return empty($payload->exception)
@@ -83,9 +93,9 @@ class PlainTextFormatter implements LogFormatterInterface
         }
 
         return 'Trace:' . PHP_EOL . $this->truncate(
-                $payload->trace,
-                $this->traceMaxLength()
-            );
+            $payload->trace,
+            $this->traceMaxLength()
+        );
     }
 
     private function encodeJson(array $data): string

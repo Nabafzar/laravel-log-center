@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Nabafzar\LogCenter\Formatters;
 
 use Nabafzar\LogCenter\Contracts\LogFormatterInterface;
@@ -25,8 +27,9 @@ class JsonFormatter implements LogFormatterInterface
             'tags' => $payload->tags ?? [],
             'context' => $payload->context ?? [],
             'extra' => $payload->extra ?? [],
+            'request' => $payload->request,
 
-            'exception' => $payload->exception ?: null,
+            'exception' => $payload->exception,
 
             'trace' => ! empty($payload->trace)
                 ? $this->truncate($payload->trace, $this->traceMaxLength())
