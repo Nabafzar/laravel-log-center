@@ -20,6 +20,7 @@ class MarkdownFormatter implements LogFormatterInterface
             $this->header($payload),
             $this->message($payload),
             $this->tags($payload),
+            $this->user($payload),
             $this->context($payload),
             $this->extra($payload),
             $this->request($payload),
@@ -29,7 +30,7 @@ class MarkdownFormatter implements LogFormatterInterface
 
         return new FormattedMessage(
             content: $this->truncate(
-                implode(PHP_EOL . PHP_EOL, $sections),
+                implode(PHP_EOL, $sections),
                 $this->maxLength()
             ),
             meta: [
@@ -96,7 +97,19 @@ class MarkdownFormatter implements LogFormatterInterface
         return '*Extra:*' . PHP_EOL . $this->codeBlock(
             $this->encodeJson($payload->extra),
             'json'
-        );
+            );
+    }
+
+    private function user(LogPayload $payload): ?string
+    {
+        if (empty($payload->user)) {
+            return null;
+        }
+
+        return implode(' / ', array_filter([
+            $this->userValue('User', $payload->user['id'] ?? null),
+            $this->userValue('Name', $payload->user['name'] ?? null),
+        ]));
     }
 
     private function request(LogPayload $payload): ?string
@@ -121,7 +134,11 @@ class MarkdownFormatter implements LogFormatterInterface
             return null;
         }
 
-        return '*Exception:* `' . $this->escapeInline($this->exceptionInline($payload->exception)) . '`';
+        return implode(PHP_EOL, array_filter([
+            '*Exception:* `' . $this->escapeInline($this->exceptionClass($payload->exception)) . '`',
+            $this->exceptionFile($payload),
+            $this->exceptionLine($payload),
+        ]));
     }
 
     private function trace(LogPayload $payload): ?string
@@ -226,30 +243,40 @@ class MarkdownFormatter implements LogFormatterInterface
         );
     }
 
-    private function exceptionInline(array $exception): string
+    private function exceptionClass(array $exception): string
     {
-        $class = (string) ($exception['class'] ?? $exception['type'] ?? 'Exception');
-        $message = (string) ($exception['message'] ?? 'Unknown exception');
-        $file = $exception['file'] ?? null;
-        $line = $exception['line'] ?? null;
+        return (string) ($exception['class'] ?? $exception['type'] ?? 'Exception');
+    }
 
-        $location = '';
-
-        if (is_string($file) && $file !== '') {
-            $location = $file;
-
-            if (is_scalar($line) && (int) $line > 0) {
-                $location .= ':' . (int) $line;
-            }
+    private function userValue(string $label, mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
         }
 
-        $summary = $class . ': ' . $message;
+        return '*'.$this->escapeInline($label).':* `' . $this->escapeInline($this->truncate((string) $value, 200)) . '`';
+    }
 
-        if ($location !== '') {
-            $summary .= ' at ' . $location;
+    private function exceptionFile(LogPayload $payload): ?string
+    {
+        $file = $payload->exception['file'] ?? null;
+
+        if (! is_string($file) || $file === '') {
+            return null;
         }
 
-        return $this->truncate($summary, $this->sectionMaxLength());
+        return '*File:* `' . $this->escapeInline($this->truncate($file, 250)) . '`';
+    }
+
+    private function exceptionLine(LogPayload $payload): ?string
+    {
+        $line = $payload->exception['line'] ?? null;
+
+        if (! is_scalar($line) || (int) $line <= 0) {
+            return null;
+        }
+
+        return '*Line:* `' . (int) $line . '`';
     }
 
     private function escape(string $text): string
