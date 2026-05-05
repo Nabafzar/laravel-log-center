@@ -19,17 +19,18 @@ class BaleMarkdownFormatter implements LogFormatterInterface
         $sections = array_filter([
             $this->header($payload),
             $this->message($payload),
-            $this->tags($payload),
-            $this->context($payload),
-            $this->extra($payload),
             $this->request($payload),
+            $this->user($payload),
             $this->exception($payload),
+            $this->context($payload),
             $this->trace($payload),
+            $this->extra($payload),
+            $this->tags($payload),
         ]);
 
         return new FormattedMessage(
             content: $this->truncate(
-                implode(PHP_EOL . PHP_EOL, $sections),
+                implode(PHP_EOL, $sections),
                 $this->maxLength()
             ),
             meta: [
@@ -54,7 +55,7 @@ class BaleMarkdownFormatter implements LogFormatterInterface
 
     private function message(LogPayload $payload): string
     {
-        return '*Message:* ' . $this->escape($payload->message);
+        return PHP_EOL . '*Message:* ' . $this->escape($payload->message);
     }
 
     private function tags(LogPayload $payload): ?string
@@ -90,6 +91,18 @@ class BaleMarkdownFormatter implements LogFormatterInterface
             );
     }
 
+    private function user(LogPayload $payload): ?string
+    {
+        if (empty($payload->user)) {
+            return null;
+        }
+
+        return implode(PHP_EOL, array_filter([
+            $this->userValue('User', $payload->user['id'] ?? null),
+            $this->userValue('Name', $payload->user['name'] ?? null),
+        ]));
+    }
+
     private function request(LogPayload $payload): ?string
     {
         $request = $this->sanitizeRequest($payload->request);
@@ -102,9 +115,10 @@ class BaleMarkdownFormatter implements LogFormatterInterface
             $this->requestLine('Method', $request['method'] ?? null),
             $this->requestLink('URL', $request['url'] ?? null),
             $this->requestLine('IP', $request['ip'] ?? null),
+            $this->requestLine('Referer', $request['referer'] ?? null),
         ]);
 
-        return implode(PHP_EOL, $sections);
+        return PHP_EOL . implode(PHP_EOL, $sections);
     }
 
     private function exception(LogPayload $payload): ?string
@@ -113,7 +127,11 @@ class BaleMarkdownFormatter implements LogFormatterInterface
             return null;
         }
 
-        return '*Exception:* ' . PHP_EOL . $this->escapeInline($this->exceptionInline($payload->exception));
+        return PHP_EOL . implode(PHP_EOL, array_filter([
+                '*Exception:* ' . $this->escapeInline($this->exceptionClass($payload->exception)),
+                $this->exceptionFile($payload),
+                $this->exceptionLine($payload),
+            ]));
     }
 
     private function trace(LogPayload $payload): ?string
@@ -122,7 +140,7 @@ class BaleMarkdownFormatter implements LogFormatterInterface
             return null;
         }
 
-        return '*Trace:* ' . PHP_EOL . $this->codeBlock(
+        return PHP_EOL . '*Trace:* ' . $this->codeBlock(
                 $this->truncate($payload->trace, $this->traceMaxLength())
             );
     }
@@ -137,7 +155,11 @@ class BaleMarkdownFormatter implements LogFormatterInterface
             $request['referer'] = $this->extractHeaderValue($request['headers'], ['referer', 'referrer']);
         }
 
-        unset($request['headers'], $request['cookies'], $request['body'], $request['referer']);
+        if (isset($request['referer']) && is_string($request['referer']) && $request['referer'] !== '') {
+            $request['referer'] = rawurldecode($request['referer']);
+        }
+
+        unset($request['headers'], $request['cookies'], $request['body']);
 
         return $request === [] ? null : $request;
     }
@@ -211,24 +233,40 @@ class BaleMarkdownFormatter implements LogFormatterInterface
         );
     }
 
-    private function exceptionInline(array $exception): string
+    private function exceptionClass(array $exception): string
     {
-        $class = (string)($exception['class'] ?? $exception['type'] ?? 'Exception');
-        $message = (string)($exception['message'] ?? 'Unknown exception');
-        $file = $exception['file'] ?? null;
-        $line = $exception['line'] ?? null;
+        return (string)($exception['class'] ?? $exception['type'] ?? 'Exception');
+    }
 
-        $summary = $class . ': ' . $message;
-
-        if (is_string($file) && $file !== '') {
-            $summary .= ' at ' . $file;
-
-            if (is_scalar($line) && (int)$line > 0) {
-                $summary .= ': ' . (int)$line;
-            }
+    private function userValue(string $label, mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
         }
 
-        return $this->truncate($summary, $this->sectionMaxLength());
+        return '*'.$this->escapeInline($label).':* ' . $this->escapeInline($this->truncate((string)$value, 200));
+    }
+
+    private function exceptionFile(LogPayload $payload): ?string
+    {
+        $file = $payload->exception['file'] ?? null;
+
+        if (!is_string($file) || $file === '') {
+            return null;
+        }
+
+        return '*File:* ' . $this->escapeInline($this->truncate($file, 250));
+    }
+
+    private function exceptionLine(LogPayload $payload): ?string
+    {
+        $line = $payload->exception['line'] ?? null;
+
+        if (!is_scalar($line) || (int)$line <= 0) {
+            return null;
+        }
+
+        return '*Line:* ' . (int)$line;
     }
 
     private function codeBlock(string $content, ?string $language = null): string
@@ -265,7 +303,7 @@ class BaleMarkdownFormatter implements LogFormatterInterface
     {
         return str_replace(
             ['\\', '`', '[', ']'],
-            ['\\\\', '\`', '\[', '\]'],
+            ['\\\\', "\\`", "\\[", "\\]"],
             $text
         );
     }

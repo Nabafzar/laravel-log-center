@@ -114,11 +114,17 @@ Primary dispatch flow:
 
 1. Monolog emits a `Monolog\LogRecord`.
 2. `LogCenterHandler::write()` converts the record with `LogPayloadFactory`,
-   which lifts `exception` and request data out of context before building the DTO.
+   which lifts `exception`, request data, and the authenticated user id out of
+   context before building the DTO.
 3. `LogDispatcher::dispatch()` calls `sendNow()`.
 4. `TransportManager` resolves the active formatter and transport.
 5. The formatter converts `LogPayload` to `FormattedMessage`.
 6. The transport sends or discards the formatted message.
+
+Formatter sections are assembled with `implode(PHP_EOL, $sections)`.
+Exception output is rendered from one formatter method as class, file, and
+line lines when available.
+User output is rendered as `User: ... / Name: ...` when both values are present.
 
 Main extension points:
 
