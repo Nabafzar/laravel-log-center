@@ -22,7 +22,7 @@ The package should let a Laravel app route log events to configurable transports
 
 - `null`: discard messages safely.
 - `telegram`: send logs to Telegram Bot API.
-- `bale`: planned Bale messenger transport.
+- `bale`: send logs to Bale messenger.
 - `mattermost`: planned Mattermost incoming webhook transport.
 - `slack`: planned Slack webhook transport.
 - `webhook`: planned generic webhook transport.
@@ -61,6 +61,7 @@ Implemented code:
 - Transports:
   - `src/Transports/Null/NullTransport.php`
   - `src/Transports/Telegram/TelegramTransport.php`
+  - `src/Transports/Bale/BaleTransport.php`
 - Formatters:
   - `src/Formatters/PlainTextFormatter.php`
   - `src/Formatters/JsonFormatter.php`
@@ -75,7 +76,6 @@ Implemented code:
 
 Advertised or partially planned, but not implemented yet:
 
-- Bale transport
 - Slack transport
 - Mattermost transport
 - Generic webhook transport
@@ -90,8 +90,8 @@ Advertised or partially planned, but not implemented yet:
 Do not assume config entries are implemented. Current gaps to resolve before a
 stable release:
 
-- Config references Slack, Mattermost, Bale, and webhook drivers, but factory
-  creation is commented out and classes are missing.
+- Config references Slack, Mattermost, and webhook drivers, but factory
+  creation is still missing and classes are missing.
 - Config references a viewer through `logcenter.viewer.enabled`, but no viewer
   config key exists in `config/logcenter.php`.
 - `LogViewerController` references `Nabafzar\LogCenter\Viewer\LogFileRepository`,
@@ -157,6 +157,8 @@ Formatter names currently intended:
 - `json`
 - `markdown`
 - `telegram_html`
+- `bale_markdown`
+- `bale_text`
 
 Driver names currently intended:
 
@@ -188,6 +190,10 @@ Formatter:
 - `LOGCENTER_MARKDOWN_FORMATTER_MAX_LENGTH`
 - `LOGCENTER_TELEGRAM_HTML_FORMATTER_MAX_LENGTH`
 - `LOGCENTER_TELEGRAM_HTML_FORMATTER_TRACE_MAX_LENGTH`
+- `LOGCENTER_BALE_MARKDOWN_FORMATTER_MAX_LENGTH`
+- `LOGCENTER_BALE_MARKDOWN_FORMATTER_TRACE_MAX_LENGTH`
+- `LOGCENTER_BALE_TEXT_FORMATTER_MAX_LENGTH`
+- `LOGCENTER_BALE_TEXT_FORMATTER_TRACE_MAX_LENGTH`
 
 Telegram:
 
@@ -215,6 +221,14 @@ Telegram:
 - `LOGCENTER_TELEGRAM_INFORMATION_TOPIC_ID`
 - `LOGCENTER_TELEGRAM_LOW_PRIORITY_TOPIC_ID`
 
+Bale:
+
+- `LOGCENTER_BALE_BASE_URL`
+- `LOGCENTER_BALE_FORMATTER`
+- `LOGCENTER_BALE_TOKEN`
+- `LOGCENTER_BALE_CHAT_ID`
+- `LOGCENTER_BALE_TIMEOUT`
+
 Slack:
 
 - `LOGCENTER_SLACK_WEBHOOK`
@@ -228,13 +242,6 @@ Mattermost:
 - `LOGCENTER_MATTERMOST_CHANNEL`
 - `LOGCENTER_MATTERMOST_USERNAME`
 - `LOGCENTER_MATTERMOST_TIMEOUT`
-
-Bale:
-
-- `LOGCENTER_BALE_FORMATTER`
-- `LOGCENTER_BALE_TOKEN`
-- `LOGCENTER_BALE_CHAT_ID`
-- `LOGCENTER_BALE_TIMEOUT`
 
 Webhook:
 
@@ -289,10 +296,9 @@ Prefer this order for future work:
    and driver-specific formatter selection.
 2. Implement generic webhook transport.
 3. Implement Slack and Mattermost webhook transports.
-4. Implement Bale transport.
-5. Add queue job, retry strategy, and failure handling.
-6. Add the log viewer only after repository/routes/views/config are complete.
-7. Add README usage docs and broaden test coverage.
+4. Add queue job, retry strategy, and failure handling.
+5. Add the log viewer only after repository/routes/views/config are complete.
+6. Add README usage docs and broaden test coverage.
 
 ## Testing Expectations
 

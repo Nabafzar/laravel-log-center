@@ -19,7 +19,6 @@ class MarkdownFormatter implements LogFormatterInterface
         $sections = array_filter([
             $this->header($payload),
             $this->message($payload),
-            $this->channel($payload),
             $this->tags($payload),
             $this->context($payload),
             $this->extra($payload),
@@ -55,7 +54,7 @@ class MarkdownFormatter implements LogFormatterInterface
 
     private function message(LogPayload $payload): string
     {
-        return '*Message:*' . PHP_EOL . $this->escape($payload->message);
+        return '*Message:*' . $this->escape($payload->message);
     }
 
     private function channel(LogPayload $payload): ?string
@@ -102,14 +101,18 @@ class MarkdownFormatter implements LogFormatterInterface
 
     private function request(LogPayload $payload): ?string
     {
-        if (empty($payload->request)) {
+        $request = $this->sanitizeRequest($payload->request);
+
+        if (empty($request)) {
             return null;
         }
 
-        return '*Request:*' . PHP_EOL . $this->codeBlock(
-            $this->encodeJson($payload->request),
-            'json'
-        );
+        return '*Request:*' . PHP_EOL . implode(PHP_EOL, array_values(array_filter([
+            $this->requestLine('Method', $request['method'] ?? null),
+            $this->requestLine('URL', $request['url'] ?? null),
+            $this->requestLine('IP', $request['ip'] ?? null),
+            $this->requestData('Query Params', $request['query'] ?? null),
+        ])));
     }
 
     private function exception(LogPayload $payload): ?string
@@ -118,9 +121,7 @@ class MarkdownFormatter implements LogFormatterInterface
             return null;
         }
 
-        return '*Exception:*' . PHP_EOL . $this->codeBlock(
-            $this->encodeJson($payload->exception)
-        );
+        return '*Exception:* `' . $this->escapeInline($this->exceptionInline($payload->exception)) . '`';
     }
 
     private function trace(LogPayload $payload): ?string
@@ -153,6 +154,102 @@ class MarkdownFormatter implements LogFormatterInterface
         } catch (Throwable) {
             return '[unserializable data]';
         }
+    }
+
+    private function sanitizeRequest(?array $request): ?array
+    {
+        if (empty($request)) {
+            return null;
+        }
+
+        if (! isset($request['referer']) && isset($request['headers'])) {
+            $request['referer'] = $this->extractHeaderValue($request['headers'], ['referer', 'referrer']);
+        }
+
+        unset($request['headers'], $request['cookies'], $request['body'], $request['referer']);
+
+        return $request === [] ? null : $request;
+    }
+
+    private function extractHeaderValue(mixed $headers, array $candidates): ?string
+    {
+        if (! is_array($headers)) {
+            return null;
+        }
+
+        foreach ($candidates as $candidate) {
+            foreach ([$candidate, ucfirst($candidate), strtoupper($candidate)] as $key) {
+                if (! isset($headers[$key])) {
+                    continue;
+                }
+
+                $value = $headers[$key];
+
+                if (is_array($value)) {
+                    $value = $value[0] ?? null;
+                }
+
+                if (is_string($value) && $value !== '') {
+                    return $value;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function requestLine(string $label, mixed $value): ?string
+    {
+        if ($value === null || $value === '' || $value === []) {
+            return null;
+        }
+
+        return sprintf(
+            '*%s:* `%s`',
+            $this->escapeInline($label),
+            $this->escapeInline($this->truncate((string) $value, 200))
+        );
+    }
+
+    private function requestData(string $label, mixed $value): ?string
+    {
+        if (! is_array($value) || $value === []) {
+            return null;
+        }
+
+        return sprintf(
+            '*%s:*' . PHP_EOL . $this->codeBlock(
+                $this->encodeJson($value),
+                'json'
+            ),
+            $this->escapeInline($label)
+        );
+    }
+
+    private function exceptionInline(array $exception): string
+    {
+        $class = (string) ($exception['class'] ?? $exception['type'] ?? 'Exception');
+        $message = (string) ($exception['message'] ?? 'Unknown exception');
+        $file = $exception['file'] ?? null;
+        $line = $exception['line'] ?? null;
+
+        $location = '';
+
+        if (is_string($file) && $file !== '') {
+            $location = $file;
+
+            if (is_scalar($line) && (int) $line > 0) {
+                $location .= ':' . (int) $line;
+            }
+        }
+
+        $summary = $class . ': ' . $message;
+
+        if ($location !== '') {
+            $summary .= ' at ' . $location;
+        }
+
+        return $this->truncate($summary, $this->sectionMaxLength());
     }
 
     private function escape(string $text): string
@@ -190,5 +287,10 @@ class MarkdownFormatter implements LogFormatterInterface
     private function traceMaxLength(): int
     {
         return (int) config('logcenter.formatters.markdown.trace_max_length', 1200);
+    }
+
+    private function sectionMaxLength(): int
+    {
+        return max(500, (int) floor($this->maxLength() / 2));
     }
 }

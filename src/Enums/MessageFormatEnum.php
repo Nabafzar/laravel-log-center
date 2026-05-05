@@ -8,5 +8,6 @@ enum MessageFormatEnum: string
     case JSON = 'json';
     case MARKDOWN = 'markdown';
     case TELEGRAM_HTML = 'telegram_html';
+    case BALE_MARKDOWN = 'bale_markdown';
     case SLACK_BLOCK = 'slack_block';
 }

@@ -7,12 +7,8 @@ namespace Nabafzar\LogCenter\Factories;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Container\Container;
 use InvalidArgumentException;
-/*use Nabafzar\LogCenter\Transports\BaleTransport;
-use Nabafzar\LogCenter\Transports\GenericWebhookTransport;
-use Nabafzar\LogCenter\Transports\MattermostWebhookTransport;
-use Nabafzar\LogCenter\Transports\SlackWebhookTransport;*/
-
 use Nabafzar\LogCenter\Contracts\LogTransportInterface;
+use Nabafzar\LogCenter\Transports\Bale\BaleTransport;
 use Nabafzar\LogCenter\Transports\Null\NullTransport;
 use Nabafzar\LogCenter\Transports\Telegram\TelegramTransport;
 
@@ -45,10 +41,7 @@ final class TransportFactory
 
         return match ($name) {
             'telegram' => $this->app->make(TelegramTransport::class),
-           /* 'bale' => $this->app->make(BaleTransport::class),
-            'slack' => $this->app->make(SlackWebhookTransport::class),
-            'mattermost' => $this->app->make(MattermostWebhookTransport::class),
-            'webhook' => $this->app->make(GenericWebhookTransport::class),*/
+            'bale' => $this->app->make(BaleTransport::class),
             'null' => $this->app->make(NullTransport::class),
 
             default => throw new InvalidArgumentException(

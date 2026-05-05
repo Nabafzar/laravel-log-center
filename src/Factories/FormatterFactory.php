@@ -4,6 +4,7 @@ namespace Nabafzar\LogCenter\Factories;
 
 use InvalidArgumentException;
 use Nabafzar\LogCenter\Contracts\LogFormatterInterface;
+use Nabafzar\LogCenter\Formatters\BaleMarkdownFormatter;
 use Nabafzar\LogCenter\Formatters\JsonFormatter;
 use Nabafzar\LogCenter\Formatters\MarkdownFormatter;
 use Nabafzar\LogCenter\Formatters\PlainTextFormatter;
@@ -18,6 +19,7 @@ final class FormatterFactory
             'json' => new JsonFormatter(),
             'markdown' => new MarkdownFormatter(),
             'telegram_html' => new TelegramHtmlFormatter(),
+            'bale_markdown' => new BaleMarkdownFormatter(),
 
             default => throw new InvalidArgumentException(
                 "Unsupported log formatter [{$name}]."

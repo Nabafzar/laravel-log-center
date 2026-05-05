@@ -51,7 +51,7 @@ class TelegramHtmlFormatter implements LogFormatterInterface
 
     private function message(LogPayload $payload): string
     {
-        return '<b>Message:</b> ' . PHP_EOL . $this->escape(
+        return PHP_EOL . '<b>Message: </b> ' . $this->escape(
                 $this->truncatePlain($payload->message, $this->sectionMaxLength())
             );
     }
@@ -59,7 +59,7 @@ class TelegramHtmlFormatter implements LogFormatterInterface
     private function tags(LogPayload $payload): ?string
     {
         return !empty($payload->tags)
-            ? '<b>Tags:</b> <code>' . $this->escape(implode(', ', $payload->tags)) . '</code>'
+            ? '<b>Tags: </b> <code>' . $this->escape(implode(', ', $payload->tags)) . '</code>'
             : null;
     }
 
@@ -67,14 +67,14 @@ class TelegramHtmlFormatter implements LogFormatterInterface
     {
         return empty($payload->context)
             ? null
-            : '<b>Context:</b>' . PHP_EOL . $this->pre($this->json($payload->context));
+            : '<b>Context: </b>' . PHP_EOL . $this->pre($this->json($payload->context));
     }
 
     private function extra(LogPayload $payload): ?string
     {
         return empty($payload->extra)
             ? null
-            : '<b>Extra:</b>' . PHP_EOL . $this->pre($this->json($payload->extra));
+            : '<b>Extra: </b>' . PHP_EOL . $this->pre($this->json($payload->extra));
     }
 
     private function request(LogPayload $payload): ?string
@@ -88,7 +88,6 @@ class TelegramHtmlFormatter implements LogFormatterInterface
                 $this->requestLine('URL', $request['url'] ?? null),
                 $this->requestLine('IP', $request['ip'] ?? null),
                 $this->requestLine('Referer', $request['referer'] ?? null),
-                $this->requestData('Query Params', $request['query'] ?? null),
                 $this->requestData('Body', $request['body'] ?? null),
             ])));
     }
@@ -97,7 +96,7 @@ class TelegramHtmlFormatter implements LogFormatterInterface
     {
         return empty($payload->exception)
             ? null
-            : '<b>Exception:</b>' . PHP_EOL . $this->pre(
+            : PHP_EOL . '<b>Exception: </b>' . PHP_EOL . $this->pre(
                 $this->json($payload->exception)
             );
     }
@@ -106,7 +105,7 @@ class TelegramHtmlFormatter implements LogFormatterInterface
     {
         return empty($payload->trace)
             ? null
-            : '<b>Trace:</b>' . PHP_EOL . $this->pre(
+            : PHP_EOL . '<b>Trace: </b>' . PHP_EOL . $this->pre(
                 $this->escape($this->truncatePlain($payload->trace, $this->traceMaxLength()))
             );
     }
@@ -183,7 +182,7 @@ class TelegramHtmlFormatter implements LogFormatterInterface
         }
 
         return sprintf(
-            '<b>%s:</b> <code>%s</code>',
+            '<b>%s: </b> <code>%s</code>',
             $this->escape($label),
             $this->escape($this->truncatePlain((string)$value, 200))
         );
@@ -196,7 +195,7 @@ class TelegramHtmlFormatter implements LogFormatterInterface
         }
 
         return sprintf(
-            '<b>%s:</b>' . PHP_EOL . '%s',
+            '<b>%s: </b>' . PHP_EOL . '%s',
             $this->escape($label),
             $this->pre($this->json($value))
         );

@@ -3,12 +3,12 @@
 return [
 
     /*
-    |--------------------------------------------------------------------------
+    |-------------------------------------------------------------------------- 
     | Default Driver
     |--------------------------------------------------------------------------
     |
     | The default transport driver used to send logs.
-    | Supported: telegram, slack, mattermost, bale, webhook, null
+    | Supported: telegram, bale, null
     |
     */
     'default' => env('LOGCENTER_DRIVER', 'null'),
@@ -116,6 +116,11 @@ return [
             'max_length' => env('LOGCENTER_TELEGRAM_HTML_FORMATTER_MAX_LENGTH', 3500),
             'trace_max_length' => env('LOGCENTER_TELEGRAM_HTML_FORMATTER_TRACE_MAX_LENGTH', 1200),
         ],
+
+        'bale_markdown' => [
+            'max_length' => env('LOGCENTER_BALE_MARKDOWN_FORMATTER_MAX_LENGTH', 3500),
+            'trace_max_length' => env('LOGCENTER_BALE_MARKDOWN_FORMATTER_TRACE_MAX_LENGTH', 1200),
+        ],
     ],
 
 
@@ -149,6 +154,7 @@ return [
 
             'topics_level' => [
                 'emergency' => env('LOGCENTER_TELEGRAM_EMERGENCY_TOPIC_ID'),
+                'alert' => env('LOGCENTER_TELEGRAM_ALERT_TOPIC_ID'),
                 'critical' => env('LOGCENTER_TELEGRAM_CRITICAL_TOPIC_ID'),
                 'error' => env('LOGCENTER_TELEGRAM_ERROR_TOPIC_ID'),
                 'warning' => env('LOGCENTER_TELEGRAM_WARNING_TOPIC_ID'),
@@ -175,7 +181,8 @@ return [
         ],
 
         'bale' => [
-            'formatter' => env('LOGCENTER_BALE_FORMATTER', 'telegram_html'),
+            'base_url' => env('LOGCENTER_BALE_BASE_URL', 'https://tapi.bale.ai/bot'),
+            'formatter' => env('LOGCENTER_BALE_FORMATTER', 'bale_markdown'),
             'token' => env('LOGCENTER_BALE_TOKEN'),
             'chat_id' => env('LOGCENTER_BALE_CHAT_ID'),
             'timeout' => env('LOGCENTER_BALE_TIMEOUT', 5),
