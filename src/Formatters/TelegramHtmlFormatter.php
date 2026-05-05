@@ -12,14 +12,13 @@ use Nabafzar\LogCenter\Enums\MessageFormatEnum;
 use Nabafzar\LogCenter\Enums\ParseModeEnum;
 use Throwable;
 
-final class TelegramHtmlFormatter implements LogFormatterInterface
+class TelegramHtmlFormatter implements LogFormatterInterface
 {
     public function format(LogPayload $payload): FormattedMessage
     {
         $sections = array_values(array_filter([
             $this->header($payload),
             $this->message($payload),
-            $this->channel($payload),
             $this->tags($payload),
             $this->context($payload),
             $this->extra($payload),
@@ -52,16 +51,9 @@ final class TelegramHtmlFormatter implements LogFormatterInterface
 
     private function message(LogPayload $payload): string
     {
-        return '<b>Message:</b>' . PHP_EOL . $this->escape(
-            $this->truncatePlain($payload->message, $this->sectionMaxLength())
-        );
-    }
-
-    private function channel(LogPayload $payload): ?string
-    {
-        return $payload->channel
-            ? '<b>Channel:</b> <code>' . $this->escape($payload->channel) . '</code>'
-            : null;
+        return '<b>Message:</b> ' . PHP_EOL . $this->escape(
+                $this->truncatePlain($payload->message, $this->sectionMaxLength())
+            );
     }
 
     private function tags(LogPayload $payload): ?string
@@ -87,9 +79,18 @@ final class TelegramHtmlFormatter implements LogFormatterInterface
 
     private function request(LogPayload $payload): ?string
     {
-        return empty($payload->request)
+        $request = $this->sanitizeRequest($payload->request);
+
+        return empty($request)
             ? null
-            : '<b>Request:</b>' . PHP_EOL . $this->pre($this->json($payload->request));
+            : PHP_EOL . implode(PHP_EOL, array_values(array_filter([
+                $this->requestLine('Method', $request['method'] ?? null),
+                $this->requestLine('URL', $request['url'] ?? null),
+                $this->requestLine('IP', $request['ip'] ?? null),
+                $this->requestLine('Referer', $request['referer'] ?? null),
+                $this->requestData('Query Params', $request['query'] ?? null),
+                $this->requestData('Body', $request['body'] ?? null),
+            ])));
     }
 
     private function exception(LogPayload $payload): ?string
@@ -129,6 +130,78 @@ final class TelegramHtmlFormatter implements LogFormatterInterface
         }
     }
 
+    private function sanitizeRequest(?array $request): ?array
+    {
+        if (empty($request)) {
+            return null;
+        }
+
+        if (!isset($request['referer']) && isset($request['headers'])) {
+            $request['referer'] = $this->extractHeaderValue($request['headers'], ['referer', 'referrer']);
+        }
+
+        if (isset($request['referer']) && is_string($request['referer']) && $request['referer'] !== '') {
+            $request['referer'] = rawurldecode($request['referer']);
+        }
+
+        unset($request['headers'], $request['cookies']);
+
+        return $request === [] ? null : $request;
+    }
+
+    private function extractHeaderValue(mixed $headers, array $candidates): ?string
+    {
+        if (!is_array($headers)) {
+            return null;
+        }
+
+        foreach ($candidates as $candidate) {
+            foreach ([$candidate, ucfirst($candidate), strtoupper($candidate)] as $key) {
+                if (!isset($headers[$key])) {
+                    continue;
+                }
+
+                $value = $headers[$key];
+
+                if (is_array($value)) {
+                    $value = $value[0] ?? null;
+                }
+
+                if (is_string($value) && $value !== '') {
+                    return $value;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function requestLine(string $label, mixed $value): ?string
+    {
+        if ($value === null || $value === '' || $value === []) {
+            return null;
+        }
+
+        return sprintf(
+            '<b>%s:</b> <code>%s</code>',
+            $this->escape($label),
+            $this->escape($this->truncatePlain((string)$value, 200))
+        );
+    }
+
+    private function requestData(string $label, mixed $value): ?string
+    {
+        if (!is_array($value) || $value === []) {
+            return null;
+        }
+
+        return sprintf(
+            '<b>%s:</b>' . PHP_EOL . '%s',
+            $this->escape($label),
+            $this->pre($this->json($value))
+        );
+    }
+
     private function escape(string $text): string
     {
         return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -145,7 +218,7 @@ final class TelegramHtmlFormatter implements LogFormatterInterface
         foreach ($sections as $section) {
             $candidate = $content === ''
                 ? $section
-                : $content . "\n\n" . $section;
+                : $content . "\n" . $section;
 
             if (mb_strlen($candidate) <= $this->maxLength()) {
                 $content = $candidate;
@@ -173,16 +246,16 @@ final class TelegramHtmlFormatter implements LogFormatterInterface
 
     private function sectionMaxLength(): int
     {
-        return max(500, (int) floor($this->maxLength() / 2));
+        return max(500, (int)floor($this->maxLength() / 2));
     }
 
     private function maxLength(): int
     {
-        return (int) config('logcenter.formatters.telegram_html.max_length', 3500);
+        return (int)config('logcenter.formatters.telegram_html.max_length', 3500);
     }
 
     private function traceMaxLength(): int
     {
-        return (int) config('logcenter.formatters.telegram_html.trace_max_length', 1200);
+        return (int)config('logcenter.formatters.telegram_html.trace_max_length', 1200);
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nabafzar\LogCenter\Factories;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\Client\RequestException;
 use Monolog\LogRecord;
 use Nabafzar\LogCenter\DTO\LogPayload;
 use Throwable;
@@ -48,13 +49,19 @@ class LogPayloadFactory
 
     private static function exceptionToArray(Throwable $exception): array
     {
-        return [
+        $data = [
             'class' => $exception::class,
             'message' => $exception->getMessage(),
             'code' => $exception->getCode(),
             'file' => $exception->getFile(),
             'line' => $exception->getLine(),
         ];
+
+        if ($exception instanceof RequestException) {
+            $data['status_code'] = $exception->response?->status();
+        }
+
+        return $data;
     }
 
     private static function extractRequest(array $context): ?array
