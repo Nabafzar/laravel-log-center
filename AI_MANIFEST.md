@@ -25,7 +25,7 @@ The package should let a Laravel app route log events to configurable transports
 - `bale`: send logs to Bale messenger.
 - `mattermost`: planned Mattermost incoming webhook transport.
 - `slack`: planned Slack webhook transport.
-- `webhook`: planned generic webhook transport.
+- `webhook`: send logs to a generic HTTP webhook endpoint.
 
 The package should eventually support:
 
@@ -62,6 +62,7 @@ Implemented code:
   - `src/Transports/Null/NullTransport.php`
   - `src/Transports/Telegram/TelegramTransport.php`
   - `src/Transports/Bale/BaleTransport.php`
+  - `src/Transports/Webhook/WebhookTransport.php`
 - Formatters:
   - `src/Formatters/PlainTextFormatter.php`
   - `src/Formatters/JsonFormatter.php`
@@ -78,7 +79,6 @@ Advertised or partially planned, but not implemented yet:
 
 - Slack transport
 - Mattermost transport
-- Generic webhook transport
 - queue job and retry/failover workflow
 - complete log viewer repository, routes, views, and config
 - formatter extension API
@@ -90,8 +90,8 @@ Advertised or partially planned, but not implemented yet:
 Do not assume config entries are implemented. Current gaps to resolve before a
 stable release:
 
-- Config references Slack, Mattermost, and webhook drivers, but factory
-  creation is still missing and classes are missing.
+- Config references Slack and Mattermost drivers, but factory creation is still
+  missing and classes are missing.
 - Config references a viewer through `logcenter.viewer.enabled`, but no viewer
   config key exists in `config/logcenter.php`.
 - `LogViewerController` references `Nabafzar\LogCenter\Viewer\LogFileRepository`,
@@ -294,11 +294,10 @@ Prefer this order for future work:
 
 1. Add HTTP fake tests for Telegram and dispatcher/processor tests for masking
    and driver-specific formatter selection.
-2. Implement generic webhook transport.
-3. Implement Slack and Mattermost webhook transports.
-4. Add queue job, retry strategy, and failure handling.
-5. Add the log viewer only after repository/routes/views/config are complete.
-6. Add README usage docs and broaden test coverage.
+2. Implement Slack and Mattermost webhook transports.
+3. Add queue job, retry strategy, and failure handling.
+4. Add the log viewer only after repository/routes/views/config are complete.
+5. Add README usage docs and broaden test coverage.
 
 ## Testing Expectations
 

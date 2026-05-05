@@ -8,7 +8,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | The default transport driver used to send logs.
-    | Supported: telegram, bale, null
+    | Supported: telegram, bale, webhook, null
     |
     */
     'default' => env('LOGCENTER_DRIVER', 'null'),
@@ -30,7 +30,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Determines how log messages are formatted before sending.
-    | Supported: plain, json, markdown, telegram_html
+    | Supported: plain, json, markdown, telegram_html, bale_markdown, bale_text
     |
     */
     'formatter' => env('LOGCENTER_FORMATTER', 'plain'),
