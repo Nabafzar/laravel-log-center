@@ -17,8 +17,25 @@ class LogPayloadFactory
         $context = $record->context;
         $exception = self::extractException($context);
         $request = self::extractRequest($context);
-        $user = self::arrayValue($context['user'] ?? null);
         $explicitRequest = self::arrayValue($context['request'] ?? null);
+        $resolvedRequest = $request ?? $explicitRequest;
+        $user = self::arrayValue($context['user'] ?? null);
+
+        if ($user === null) {
+            $user = self::requestUser($resolvedRequest);
+        } else {
+            $requestUser = self::requestUser($resolvedRequest);
+
+            if ($requestUser !== null) {
+                if (! array_key_exists('id', $user) || $user['id'] === null || $user['id'] === '') {
+                    $user['id'] = $requestUser['id'];
+                }
+
+                if (! array_key_exists('name', $user) || $user['name'] === null || $user['name'] === '') {
+                    $user['name'] = $requestUser['name'];
+                }
+            }
+        }
 
         unset($context['exception']);
         unset($context['request']);
@@ -35,7 +52,7 @@ class LogPayloadFactory
             environment: config('app.env'),
             application: config('app.name'),
             trace: $exception?->getTraceAsString() ?: self::stringValue($context['trace'] ?? null),
-            request: $request ?? $explicitRequest,
+            request: $resolvedRequest,
             user: $user,
         );
     }
@@ -101,9 +118,72 @@ class LogPayloadFactory
             'url' => $request->fullUrl(),
             'method' => $request->method(),
             'query' => $request->query(),
+            'user_id' => self::requestUserId($request),
+            'user_name' => self::requestUserName($request),
             'body' => $body,
             'headers' => $request->headers->all(),
         ], static fn (mixed $value): bool => $value !== null && $value !== [] && $value !== ''));
+    }
+
+    private static function requestUserId(Request $request): mixed
+    {
+        $user = $request->user();
+
+        if (! is_object($user) || ! method_exists($user, 'getAuthIdentifier')) {
+            return null;
+        }
+
+        $identifier = $user->getAuthIdentifier();
+
+        return $identifier === '' ? null : $identifier;
+    }
+
+    private static function requestUserName(Request $request): ?string
+    {
+        $user = $request->user();
+
+        if (! is_object($user)) {
+            return null;
+        }
+
+        foreach (['username', 'name'] as $property) {
+            if (! isset($user->{$property})) {
+                continue;
+            }
+
+            $value = $user->{$property};
+
+            if (is_string($value) && $value !== '') {
+                return $value;
+            }
+        }
+
+        if (method_exists($user, '__toString')) {
+            $value = (string) $user;
+
+            return $value !== '' ? $value : null;
+        }
+
+        return null;
+    }
+
+    private static function requestUser(?array $request): ?array
+    {
+        if ($request === null) {
+            return null;
+        }
+
+        $userId = $request['user_id'] ?? null;
+        $userName = $request['user_name'] ?? null;
+
+        if (($userId === null || $userId === '') && ($userName === null || $userName === '')) {
+            return null;
+        }
+
+        return array_filter([
+            'id' => $userId === '' ? null : $userId,
+            'name' => $userName === '' ? null : $userName,
+        ], static fn (mixed $value): bool => $value !== null && $value !== '');
     }
 
     private static function normalizeRequestArray(array $request): array
