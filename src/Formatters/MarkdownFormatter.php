@@ -18,6 +18,7 @@ class MarkdownFormatter implements LogFormatterInterface
     {
         $sections = array_filter([
             $this->header($payload),
+            $this->source($payload),
             $this->message($payload),
             $this->tags($payload),
             $this->user($payload),
@@ -319,5 +320,14 @@ class MarkdownFormatter implements LogFormatterInterface
     private function sectionMaxLength(): int
     {
         return max(500, (int) floor($this->maxLength() / 2));
+    }
+
+    private function source(LogPayload $payload): ?string
+    {
+        if (empty($payload->source)) {
+            return null;
+        }
+
+        return '*Source:* `' . $this->escapeInline($this->truncate((string) $payload->source, 100)) . '`';
     }
 }

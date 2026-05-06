@@ -23,13 +23,20 @@ class JsonFormatter implements LogFormatterInterface
             'channel' => $payload->channel,
             'environment' => $payload->environment ?? 'app',
             'application' => $payload->application ?? config('app.name'),
+            'source' => $payload->source,
 
             'tags' => $payload->tags ?? [],
             'context' => $payload->context ?? [],
             'extra' => $payload->extra ?? [],
             'request' => $payload->request,
+            'user' => $payload->user ? array_filter([
+                'id' => $payload->user['id'] ?? null,
+                'name' => $payload->user['name'] ?? null,
+            ], static fn (mixed $value): bool => $value !== null && $value !== '') : null,
 
-            'exception' => $payload->exception,
+            'exception' => $this->exceptionClass($payload),
+            'file' => $this->exceptionFile($payload),
+            'line' => $this->exceptionLine($payload),
 
             'trace' => ! empty($payload->trace)
                 ? $this->truncate($payload->trace, $this->traceMaxLength())
@@ -92,5 +99,28 @@ class JsonFormatter implements LogFormatterInterface
     private function traceMaxLength(): int
     {
         return (int) config('logcenter.formatters.json.trace_max_length', 5000);
+    }
+
+    private function exceptionClass(LogPayload $payload): ?string
+    {
+        if (empty($payload->exception)) {
+            return null;
+        }
+
+        return (string) ($payload->exception['class'] ?? $payload->exception['type'] ?? 'Exception');
+    }
+
+    private function exceptionFile(LogPayload $payload): ?string
+    {
+        $file = $payload->exception['file'] ?? null;
+
+        return is_string($file) && $file !== '' ? $file : null;
+    }
+
+    private function exceptionLine(LogPayload $payload): ?int
+    {
+        $line = $payload->exception['line'] ?? null;
+
+        return is_scalar($line) && (int) $line > 0 ? (int) $line : null;
     }
 }

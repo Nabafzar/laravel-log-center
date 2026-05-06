@@ -105,6 +105,7 @@ final class WebhookTransport implements LogTransportInterface
             'message' => $payload->message,
             'environment' => $payload->environment,
             'application' => $payload->application,
+            'source' => $payload->source,
             'tags' => $payload->tags,
             'context' => $payload->context,
             'extra' => $payload->extra,

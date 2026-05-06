@@ -18,8 +18,10 @@ class TelegramHtmlFormatter implements LogFormatterInterface
     {
         $sections = array_values(array_filter([
             $this->header($payload),
+            $this->source($payload),
             $this->message($payload),
             $this->tags($payload),
+            $this->user($payload),
             $this->context($payload),
             $this->extra($payload),
             $this->request($payload),
@@ -77,6 +79,18 @@ class TelegramHtmlFormatter implements LogFormatterInterface
             : '<b>Extra: </b>' . PHP_EOL . $this->pre($this->json($payload->extra));
     }
 
+    private function user(LogPayload $payload): ?string
+    {
+        if (empty($payload->user)) {
+            return null;
+        }
+
+        return implode(' / ', array_filter([
+            $this->userValue('User', $payload->user['id'] ?? null),
+            $this->userValue('Name', $payload->user['name'] ?? null),
+        ]));
+    }
+
     private function request(LogPayload $payload): ?string
     {
         $request = $this->sanitizeRequest($payload->request);
@@ -94,11 +108,15 @@ class TelegramHtmlFormatter implements LogFormatterInterface
 
     private function exception(LogPayload $payload): ?string
     {
-        return empty($payload->exception)
-            ? null
-            : PHP_EOL . '<b>Exception: </b>' . PHP_EOL . $this->pre(
-                $this->json($payload->exception)
-            );
+        if (empty($payload->exception)) {
+            return null;
+        }
+
+        return implode(PHP_EOL, array_filter([
+            '<b>Exception: </b> <code>' . $this->escape($this->exceptionClass($payload->exception)) . '</code>',
+            $this->exceptionFile($payload),
+            $this->exceptionLine($payload),
+        ]));
     }
 
     private function trace(LogPayload $payload): ?string
@@ -113,6 +131,42 @@ class TelegramHtmlFormatter implements LogFormatterInterface
     private function pre(string $text): string
     {
         return '<pre>' . $text . '</pre>';
+    }
+
+    private function exceptionClass(array $exception): string
+    {
+        return (string) ($exception['class'] ?? $exception['type'] ?? 'Exception');
+    }
+
+    private function userValue(string $label, mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return '<b>' . $this->escape($label) . ':</b> <code>' . $this->escape($this->truncatePlain((string) $value, 200)) . '</code>';
+    }
+
+    private function exceptionFile(LogPayload $payload): ?string
+    {
+        $file = $payload->exception['file'] ?? null;
+
+        if (! is_string($file) || $file === '') {
+            return null;
+        }
+
+        return '<b>File: </b> <code>' . $this->escape($this->truncatePlain($file, 250)) . '</code>';
+    }
+
+    private function exceptionLine(LogPayload $payload): ?string
+    {
+        $line = $payload->exception['line'] ?? null;
+
+        if (! is_scalar($line) || (int) $line <= 0) {
+            return null;
+        }
+
+        return '<b>Line: </b> <code>' . (int) $line . '</code>';
     }
 
     private function json(array $data): string
@@ -256,5 +310,14 @@ class TelegramHtmlFormatter implements LogFormatterInterface
     private function traceMaxLength(): int
     {
         return (int)config('logcenter.formatters.telegram_html.trace_max_length', 1200);
+    }
+
+    private function source(LogPayload $payload): ?string
+    {
+        if (empty($payload->source)) {
+            return null;
+        }
+
+        return '<b>Source: </b> <code>' . $this->escape($this->truncatePlain((string) $payload->source, 100)) . '</code>';
     }
 }

@@ -18,16 +18,19 @@ class PlainTextFormatter implements LogFormatterInterface
         $sections = array_filter([
             $this->header($payload),
             $this->message($payload),
+            $this->user($payload),
             $this->context($payload),
             $this->extra($payload),
             $this->request($payload),
             $this->exception($payload),
+            $this->exceptionFile($payload),
+            $this->exceptionLine($payload),
             $this->trace($payload),
         ]);
 
         return new FormattedMessage(
             content: $this->truncate(
-                implode(PHP_EOL . PHP_EOL, $sections),
+                implode(PHP_EOL, $sections),
                 $this->maxLength()
             ),
             meta: [
@@ -72,6 +75,18 @@ class PlainTextFormatter implements LogFormatterInterface
             : 'Extra:' . PHP_EOL . $this->encodeJson($payload->extra);
     }
 
+    private function user(LogPayload $payload): ?string
+    {
+        if (empty($payload->user)) {
+            return null;
+        }
+
+        return implode(' / ', array_filter([
+            $this->userValue('User', $payload->user['id'] ?? null),
+            $this->userValue('Name', $payload->user['name'] ?? null),
+        ]));
+    }
+
     private function request(LogPayload $payload): ?string
     {
         return empty($payload->request)
@@ -83,7 +98,11 @@ class PlainTextFormatter implements LogFormatterInterface
     {
         return empty($payload->exception)
             ? null
-            : 'Exception:' . PHP_EOL . $this->encodeJson($payload->exception);
+            : implode(PHP_EOL, array_filter([
+                'Exception: ' . $this->exceptionClass($payload),
+                $this->exceptionFile($payload),
+                $this->exceptionLine($payload),
+            ]));
     }
 
     private function trace(LogPayload $payload): ?string
@@ -129,6 +148,13 @@ class PlainTextFormatter implements LogFormatterInterface
         return (int) config('logcenter.formatters.plain.trace_max_length', 1200);
     }
 
+    private function source(LogPayload $payload): ?string
+    {
+        return empty($payload->source)
+            ? null
+            : 'Source: ' . $payload->source;
+    }
+
     private function levelIcon(string $level): string
     {
         return match (strtoupper($level)) {
@@ -139,5 +165,41 @@ class PlainTextFormatter implements LogFormatterInterface
             'DEBUG' => '⚪',
             default => 'ℹ️',
         };
+    }
+
+    private function exceptionFile(LogPayload $payload): ?string
+    {
+        $file = $payload->exception['file'] ?? null;
+
+        if (! is_string($file) || $file === '') {
+            return null;
+        }
+
+        return 'File: ' . $file;
+    }
+
+    private function exceptionLine(LogPayload $payload): ?string
+    {
+        $line = $payload->exception['line'] ?? null;
+
+        if (! is_scalar($line) || (int) $line <= 0) {
+            return null;
+        }
+
+        return 'Line: ' . (int) $line;
+    }
+
+    private function exceptionClass(LogPayload $payload): string
+    {
+        return (string) ($payload->exception['class'] ?? $payload->exception['type'] ?? 'Exception');
+    }
+
+    private function userValue(string $label, mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return $label . ': ' . $value;
     }
 }
