@@ -97,15 +97,7 @@ class LogPayloadFactory
             return $request === [] ? null : $request;
         }
 
-        if (app()->runningInConsole() || ! app()->bound('request')) {
-            return null;
-        }
-
-        $currentRequest = app('request');
-
-        return $currentRequest instanceof Request
-            ? (self::requestToArray($currentRequest) ?: null)
-            : null;
+        return null;
     }
 
     private static function requestToArray(Request $request): array

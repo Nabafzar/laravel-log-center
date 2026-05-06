@@ -25,12 +25,17 @@ class TransportManager
 
     public function formatter(?string $name = null, ?string $driver = null): LogFormatterInterface
     {
-        $formatter = $this->configuredName($name)
+        $formatter = $this->formatterName($name, $driver);
+
+        return $this->formatterFactory->make($formatter);
+    }
+
+    public function formatterName(?string $name = null, ?string $driver = null): string
+    {
+        return $this->configuredName($name)
             ?? $this->configuredName($driver ? config("logcenter.drivers.{$driver}.formatter") : null)
             ?? $this->configuredName(config('logcenter.formatter'))
             ?? 'plain';
-
-        return $this->formatterFactory->make($formatter);
     }
 
     public function defaultDriverName(): string

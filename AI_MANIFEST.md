@@ -73,13 +73,15 @@ Implemented code:
   - `src/Processors/PayloadProcessor.php`
 - Monolog handler:
   - `src/Logging/LogCenterHandler.php`
+- Queue job:
+  - `src/Jobs/DispatchLogJob.php`
 - Log viewer controller stub:
   - `src/Http/Controllers/LogViewerController.php`
 
 Advertised or partially planned, but not implemented yet:
 
 - Slack transport
-- queue job and retry/failover workflow
+- queue retry/failover workflow
 - complete log viewer repository, routes, views, and config
 - formatter extension API
 - tests
@@ -102,8 +104,8 @@ stable release:
   Laravel logging integration can instantiate it correctly.
 - Several source files contain mojibake where icons or Persian comments were
   likely saved with a wrong encoding. Prefer UTF-8 consistently.
-- Queue settings are configured but no queue job, retry policy, or failover
-  flow is implemented yet.
+- Queue settings are configured and async job dispatch is implemented, but
+  retry policy and failover flow are not implemented yet.
 - Telegram behavior now covers driver-specific formatter selection, masking,
   message limits, proxy, forum topics, notification options, and transport
   results, but it still needs HTTP fake tests before release.
@@ -148,9 +150,9 @@ Global keys:
 - `default`: active transport driver, defaults to `LOGCENTER_DRIVER` or `null`.
 - `level`: minimum log level, defaults to `LOGCENTER_LEVEL` or `error`.
 - `formatter`: global formatter, defaults to `LOGCENTER_FORMATTER` or `plain`.
-- `queue.enabled`: planned async dispatch toggle.
-- `queue.connection`: planned queue connection.
-- `queue.queue`: planned queue name.
+- `queue.enabled`: async dispatch toggle.
+- `queue.connection`: queue connection.
+- `queue.queue`: queue name.
 - `mask.replacement`: replacement string for sensitive data.
 - `mask.case_sensitive`: controls key/text masking case sensitivity.
 - `mask.keys`: sensitive keys.
@@ -308,7 +310,7 @@ Prefer this order for future work:
 1. Add HTTP fake tests for Telegram and dispatcher/processor tests for masking
    and driver-specific formatter selection.
 2. Implement Slack webhook transport.
-3. Add queue job, retry strategy, and failure handling.
+3. Add queue retry strategy and failure handling.
 4. Add the log viewer only after repository/routes/views/config are complete.
 5. Add README usage docs and broaden test coverage.
 
