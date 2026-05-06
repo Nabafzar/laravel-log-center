@@ -125,6 +125,8 @@ Formatter sections are assembled with `implode(PHP_EOL, $sections)`.
 Exception output is rendered from one formatter method as class, file, and
 line lines when available.
 User output is rendered as `User: ... / Name: ...` when both values are present.
+Source output is rendered as `Source: HTTP`, `Source: Console`, or a similar
+runtime label when available.
 
 Main extension points:
 

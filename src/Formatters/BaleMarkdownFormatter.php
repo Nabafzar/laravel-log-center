@@ -97,10 +97,7 @@ class BaleMarkdownFormatter implements LogFormatterInterface
             return null;
         }
 
-        return implode(PHP_EOL, array_filter([
-            $this->userValue('User', $payload->user['id'] ?? null),
-            $this->userValue('Name', $payload->user['name'] ?? null),
-        ]));
+        return $this->userValue('User', $payload->user['id'] . '-' . $payload->user['name'] ?? null);
     }
 
     private function request(LogPayload $payload): ?string
@@ -244,7 +241,7 @@ class BaleMarkdownFormatter implements LogFormatterInterface
             return null;
         }
 
-        return '*'.$this->escapeInline($label).':* ' . $this->escapeInline($this->truncate((string)$value, 200));
+        return '*' . $this->escapeInline($label) . ':* ' . $this->escapeInline($this->truncate((string)$value, 200));
     }
 
     private function exceptionFile(LogPayload $payload): ?string

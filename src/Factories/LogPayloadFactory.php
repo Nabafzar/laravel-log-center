@@ -37,9 +37,11 @@ class LogPayloadFactory
             }
         }
 
-        unset($context['exception']);
-        unset($context['request']);
-        unset($context['user']);
+        unset(
+            $context['exception'],
+            $context['request'],
+            $context['userId']
+        );
 
         return new LogPayload(
             level: $record->level->getName(),
