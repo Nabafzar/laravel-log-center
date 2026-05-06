@@ -3,12 +3,12 @@
 return [
 
     /*
-    |-------------------------------------------------------------------------- 
+    |--------------------------------------------------------------------------
     | Default Driver
     |--------------------------------------------------------------------------
     |
     | The default transport driver used to send logs.
-    | Supported: telegram, bale, webhook, null
+    | Supported: telegram, bale, mattermost, webhook, null
     |
     */
     'default' => env('LOGCENTER_DRIVER', 'null'),
@@ -174,6 +174,11 @@ return [
         ],
 
         'mattermost' => [
+            'formatter' => env('LOGCENTER_MATTERMOST_FORMATTER', 'markdown'),
+            'direction' => env('LOGCENTER_MATTERMOST_DIRECTION', 'ltr'),
+            'base_url' => env('LOGCENTER_MATTERMOST_BASE_URL'),
+            'bot_token' => env('LOGCENTER_MATTERMOST_BOT_TOKEN'),
+            'channel_id' => env('LOGCENTER_MATTERMOST_CHANNEL_ID'),
             'webhook_url' => env('LOGCENTER_MATTERMOST_WEBHOOK'),
             'channel' => env('LOGCENTER_MATTERMOST_CHANNEL'),
             'username' => env('LOGCENTER_MATTERMOST_USERNAME', 'Laravel Logs'),

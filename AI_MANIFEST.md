@@ -23,7 +23,7 @@ The package should let a Laravel app route log events to configurable transports
 - `null`: discard messages safely.
 - `telegram`: send logs to Telegram Bot API.
 - `bale`: send logs to Bale messenger.
-- `mattermost`: planned Mattermost incoming webhook transport.
+- `mattermost`: send logs to Mattermost incoming webhooks.
 - `slack`: planned Slack webhook transport.
 - `webhook`: send logs to a generic HTTP webhook endpoint.
 
@@ -62,6 +62,7 @@ Implemented code:
   - `src/Transports/Null/NullTransport.php`
   - `src/Transports/Telegram/TelegramTransport.php`
   - `src/Transports/Bale/BaleTransport.php`
+  - `src/Transports/Mattermost/MattermostTransport.php`
   - `src/Transports/Webhook/WebhookTransport.php`
 - Formatters:
   - `src/Formatters/PlainTextFormatter.php`
@@ -78,7 +79,6 @@ Implemented code:
 Advertised or partially planned, but not implemented yet:
 
 - Slack transport
-- Mattermost transport
 - queue job and retry/failover workflow
 - complete log viewer repository, routes, views, and config
 - formatter extension API
@@ -90,8 +90,8 @@ Advertised or partially planned, but not implemented yet:
 Do not assume config entries are implemented. Current gaps to resolve before a
 stable release:
 
-- Config references Slack and Mattermost drivers, but factory creation is still
-  missing and classes are missing.
+ - Config references Slack driver support, but factory creation is still missing
+  and classes are missing.
 - Config references a viewer through `logcenter.viewer.enabled`, but no viewer
   config key exists in `config/logcenter.php`.
 - `LogViewerController` references `Nabafzar\LogCenter\Viewer\LogFileRepository`,
@@ -246,6 +246,11 @@ Slack:
 
 Mattermost:
 
+- `LOGCENTER_MATTERMOST_FORMATTER`
+- `LOGCENTER_MATTERMOST_DIRECTION`
+- `LOGCENTER_MATTERMOST_BASE_URL`
+- `LOGCENTER_MATTERMOST_BOT_TOKEN`
+- `LOGCENTER_MATTERMOST_CHANNEL_ID`
 - `LOGCENTER_MATTERMOST_WEBHOOK`
 - `LOGCENTER_MATTERMOST_CHANNEL`
 - `LOGCENTER_MATTERMOST_USERNAME`
@@ -302,7 +307,7 @@ Prefer this order for future work:
 
 1. Add HTTP fake tests for Telegram and dispatcher/processor tests for masking
    and driver-specific formatter selection.
-2. Implement Slack and Mattermost webhook transports.
+2. Implement Slack webhook transport.
 3. Add queue job, retry strategy, and failure handling.
 4. Add the log viewer only after repository/routes/views/config are complete.
 5. Add README usage docs and broaden test coverage.
