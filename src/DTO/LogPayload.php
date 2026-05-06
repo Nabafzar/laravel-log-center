@@ -18,6 +18,7 @@ final readonly class LogPayload
 
         public ?string $environment = null,
         public ?string $application = null,
+        public ?string $source = null,
 
         public ?string $trace = null,
         public ?string $fingerprint = null,
