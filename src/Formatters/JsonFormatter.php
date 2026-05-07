@@ -19,6 +19,8 @@ class JsonFormatter implements LogFormatterInterface
             'timestamp' => $payload->datetime?->format(DATE_ATOM) ?? now()->toAtomString(),
             'level' => LogLevelEnum::fromString($payload->level)->label(),
             'message' => $payload->message,
+            'fingerprint' => $payload->fingerprint,
+            'viewer_url' => $this->viewerUrl($payload),
 
             'channel' => $payload->channel,
             'environment' => $payload->environment ?? 'app',
@@ -122,5 +124,21 @@ class JsonFormatter implements LogFormatterInterface
         $line = $payload->exception['line'] ?? null;
 
         return is_scalar($line) && (int) $line > 0 ? (int) $line : null;
+    }
+
+    private function viewerUrl(LogPayload $payload): ?string
+    {
+        if (! config('logcenter.viewer.enabled', false) || empty($payload->fingerprint)) {
+            return null;
+        }
+
+        $baseUrl = rtrim((string) config('app.url', ''), '/');
+        $prefix = trim((string) config('logcenter.viewer.route_prefix', 'log-viewer'), '/');
+
+        if ($baseUrl === '') {
+            return null;
+        }
+
+        return $baseUrl . '/' . $prefix . '?fingerprint=' . rawurlencode((string) $payload->fingerprint);
     }
 }

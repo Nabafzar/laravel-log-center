@@ -17,6 +17,7 @@ class PlainTextFormatter implements LogFormatterInterface
     {
         $sections = array_filter([
             $this->header($payload),
+            $this->viewerLink($payload),
             $this->message($payload),
             $this->user($payload),
             $this->context($payload),
@@ -59,6 +60,17 @@ class PlainTextFormatter implements LogFormatterInterface
             $payload->message,
             $payload->channel ? 'Channel: ' . $payload->channel : null,
         ]));
+    }
+
+    private function viewerLink(LogPayload $payload): ?string
+    {
+        $url = $this->viewerUrl($payload);
+
+        if ($url === null) {
+            return null;
+        }
+
+        return 'Log Center: ' . $url;
     }
 
     private function context(LogPayload $payload): ?string
@@ -201,5 +213,21 @@ class PlainTextFormatter implements LogFormatterInterface
         }
 
         return $label . ': ' . $value;
+    }
+
+    private function viewerUrl(LogPayload $payload): ?string
+    {
+        if (! config('logcenter.viewer.enabled', false) || empty($payload->fingerprint)) {
+            return null;
+        }
+
+        $baseUrl = rtrim((string) config('app.url', ''), '/');
+        $prefix = trim((string) config('logcenter.viewer.route_prefix', 'log-viewer'), '/');
+
+        if ($baseUrl === '') {
+            return null;
+        }
+
+        return $baseUrl . '/' . $prefix . '?fingerprint=' . rawurlencode((string) $payload->fingerprint);
     }
 }

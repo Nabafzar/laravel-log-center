@@ -75,14 +75,17 @@ Implemented code:
   - `src/Logging/LogCenterHandler.php`
 - Queue job:
   - `src/Jobs/DispatchLogJob.php`
-- Log viewer controller stub:
+- Log viewer:
   - `src/Http/Controllers/LogViewerController.php`
+  - `src/Viewer/LogFileRepository.php`
+  - `routes/web.php`
+  - `resources/views/index.blade.php`
 
 Advertised or partially planned, but not implemented yet:
 
 - Slack transport
 - queue retry/failover workflow
-- complete log viewer repository, routes, views, and config
+- log viewer hardening, tests, and richer interactions
 - formatter extension API
 - tests
 - README user documentation
@@ -94,12 +97,8 @@ stable release:
 
  - Config references Slack driver support, but factory creation is still missing
   and classes are missing.
-- Config references a viewer through `logcenter.viewer.enabled`, but no viewer
-  config key exists in `config/logcenter.php`.
-- `LogViewerController` references `Nabafzar\LogCenter\Viewer\LogFileRepository`,
-  but that class is missing.
-- `LogCenterServiceProvider` references `routes/web.php` and `resources/views`,
-  but those paths are missing.
+- Log viewer exists, but needs tests and larger-file performance work before
+  release.
 - `LogCenterHandler` requires a `LogDispatcher` constructor argument; verify the
   Laravel logging integration can instantiate it correctly.
 - Several source files contain mojibake where icons or Persian comments were
@@ -158,6 +157,15 @@ Global keys:
 - `mask.keys`: sensitive keys.
 - `truncate.message`: global fallback message limit.
 - `truncate.trace`: global fallback trace limit.
+- `viewer.enabled`: toggles the built-in local file viewer.
+- `viewer.route_prefix`: route prefix for the viewer.
+- `viewer.middleware`: middleware stack for viewer routes.
+- `viewer.auth.enabled`: adds auth middleware to viewer routes.
+- `viewer.auth.middleware`: middleware applied when auth is enabled.
+- `viewer.paths`: directories or files scanned for logs.
+- `viewer.per_page`: number of entries displayed per page.
+- `viewer.max_files`: maximum number of files shown in the sidebar.
+- `viewer.max_entry_lines`: future guardrail for large entries.
 - `formatters.*`: formatter-specific settings.
 - `drivers.*`: transport-specific settings.
 
@@ -191,6 +199,13 @@ Global:
 - `LOGCENTER_QUEUE_NAME`
 - `LOGCENTER_TRUNCATE_MESSAGE`
 - `LOGCENTER_TRUNCATE_TRACE`
+- `LOGCENTER_VIEWER_ENABLED`
+- `LOGCENTER_VIEWER_ROUTE_PREFIX`
+- `LOGCENTER_VIEWER_AUTH_ENABLED`
+- `LOGCENTER_VIEWER_PATH`
+- `LOGCENTER_VIEWER_PER_PAGE`
+- `LOGCENTER_VIEWER_MAX_FILES`
+- `LOGCENTER_VIEWER_MAX_ENTRY_LINES`
 
 Formatter:
 
@@ -311,7 +326,8 @@ Prefer this order for future work:
    and driver-specific formatter selection.
 2. Implement Slack webhook transport.
 3. Add queue retry strategy and failure handling.
-4. Add the log viewer only after repository/routes/views/config are complete.
+4. Harden the log viewer with parsing tests, file-size limits, and better
+   pagination/search behavior.
 5. Add README usage docs and broaden test coverage.
 
 ## Testing Expectations

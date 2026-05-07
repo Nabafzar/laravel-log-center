@@ -55,13 +55,17 @@ final class LogCenterServiceProvider extends ServiceProvider
             return;
         }
 
-        $this->publishes([
-            __DIR__ . '/../config/logcenter.php' => config_path('logcenter.php'),
-        ], 'logcenter-config');
+        if (is_file(__DIR__ . '/../config/logcenter.php')) {
+            $this->publishes([
+                __DIR__ . '/../config/logcenter.php' => config_path('logcenter.php'),
+            ], 'logcenter-config');
+        }
 
-        $this->publishes([
-            __DIR__ . '/../resources/views' => resource_path('views/vendor/logcenter'),
-        ], 'logcenter-views');
+        if (is_dir(__DIR__ . '/../resources/views')) {
+            $this->publishes([
+                __DIR__ . '/../resources/views' => resource_path('views/vendor/logcenter'),
+            ], 'logcenter-views');
+        }
     }
 
     private function bootRoutes(): void
@@ -70,14 +74,19 @@ final class LogCenterServiceProvider extends ServiceProvider
             return;
         }
 
-        $this->loadRoutesFrom(__DIR__ . '/../routes/web.php');
+        $routesPath = __DIR__ . '/../routes/web.php';
+
+        if (is_file($routesPath)) {
+            $this->loadRoutesFrom($routesPath);
+        }
     }
 
     private function bootViews(): void
     {
-        $this->loadViewsFrom(
-            __DIR__ . '/../resources/views',
-            'logcenter'
-        );
+        $viewsPath = __DIR__ . '/../resources/views';
+
+        if (is_dir($viewsPath)) {
+            $this->loadViewsFrom($viewsPath, 'logcenter');
+        }
     }
 }

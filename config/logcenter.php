@@ -90,6 +90,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Log Viewer
+    |--------------------------------------------------------------------------
+    |
+    | A lightweight built-in viewer for local log files.
+    |
+    */
+    'viewer' => [
+        'enabled' => env('LOGCENTER_VIEWER_ENABLED', false),
+        'route_prefix' => env('LOGCENTER_VIEWER_ROUTE_PREFIX', 'log-viewer'),
+        'middleware' => ['web'],
+        'auth' => [
+            'enabled' => env('LOGCENTER_VIEWER_AUTH_ENABLED', false),
+            'middleware' => ['auth'],
+        ],
+        'paths' => [
+            env('LOGCENTER_VIEWER_PATH', storage_path('logs')),
+        ],
+        'per_page' => env('LOGCENTER_VIEWER_PER_PAGE', 50),
+        'max_files' => env('LOGCENTER_VIEWER_MAX_FILES', 20),
+        'max_entry_lines' => env('LOGCENTER_VIEWER_MAX_ENTRY_LINES', 500),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Formatter Configuration
     |--------------------------------------------------------------------------
     |

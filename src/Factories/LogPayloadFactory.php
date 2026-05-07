@@ -27,11 +27,11 @@ class LogPayloadFactory
             $requestUser = self::requestUser($resolvedRequest);
 
             if ($requestUser !== null) {
-                if (! array_key_exists('id', $user) || $user['id'] === null || $user['id'] === '') {
+                if (!array_key_exists('id', $user) || $user['id'] === null || $user['id'] === '') {
                     $user['id'] = $requestUser['id'];
                 }
 
-                if (! array_key_exists('name', $user) || $user['name'] === null || $user['name'] === '') {
+                if (!array_key_exists('name', $user) || $user['name'] === null || $user['name'] === '') {
                     $user['name'] = $requestUser['name'];
                 }
             }
@@ -54,6 +54,12 @@ class LogPayloadFactory
             environment: config('app.env'),
             application: config('app.name'),
             trace: $exception?->getTraceAsString() ?: self::stringValue($context['trace'] ?? null),
+            fingerprint: self::fingerprint(
+                level: $record->level->getName(),
+                channel: $record->channel,
+                message: $record->message,
+                exception: $exception ? self::exceptionToArray($exception) : null,
+            ),
             request: $resolvedRequest,
             user: $user,
         );
@@ -102,7 +108,7 @@ class LogPayloadFactory
 
     private static function currentRequest(): ?array
     {
-        if (! app()->bound('request')) {
+        if (!app()->bound('request')) {
             return null;
         }
 
@@ -127,14 +133,14 @@ class LogPayloadFactory
             'user_name' => self::requestUserName($request),
             'body' => $body,
             'headers' => $request->headers->all(),
-        ], static fn (mixed $value): bool => $value !== null && $value !== [] && $value !== ''));
+        ], static fn(mixed $value): bool => $value !== null && $value !== [] && $value !== ''));
     }
 
     private static function requestUserId(Request $request): mixed
     {
         $user = $request->user();
 
-        if (! is_object($user) || ! method_exists($user, 'getAuthIdentifier')) {
+        if (!is_object($user) || !method_exists($user, 'getAuthIdentifier')) {
             return null;
         }
 
@@ -147,12 +153,12 @@ class LogPayloadFactory
     {
         $user = $request->user();
 
-        if (! is_object($user)) {
+        if (!is_object($user)) {
             return null;
         }
 
         foreach (['username', 'name'] as $property) {
-            if (! isset($user->{$property})) {
+            if (!isset($user->{$property})) {
                 continue;
             }
 
@@ -164,7 +170,7 @@ class LogPayloadFactory
         }
 
         if (method_exists($user, '__toString')) {
-            $value = (string) $user;
+            $value = (string)$user;
 
             return $value !== '' ? $value : null;
         }
@@ -188,7 +194,7 @@ class LogPayloadFactory
         return array_filter([
             'id' => $userId === '' ? null : $userId,
             'name' => $userName === '' ? null : $userName,
-        ], static fn (mixed $value): bool => $value !== null && $value !== '');
+        ], static fn(mixed $value): bool => $value !== null && $value !== '');
     }
 
     private static function normalizeRequestArray(array $request): array
@@ -217,7 +223,7 @@ class LogPayloadFactory
 
         if (is_object($value)) {
             return method_exists($value, '__toString')
-                ? (string) $value
+                ? (string)$value
                 : get_debug_type($value);
         }
 
@@ -232,5 +238,27 @@ class LogPayloadFactory
     private static function stringValue(mixed $value): ?string
     {
         return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    private static function fingerprint(
+        string $level,
+        string $channel,
+        string $message,
+        ?array $exception,
+    ): string
+    {
+        $payload = [
+            'level' => strtolower($level),
+            'channel' => $channel,
+            'message' => $message,
+            'exception_class' => $exception['class'] ?? null,
+            'exception_message' => $exception['message'] ?? null,
+            'exception_file' => $exception['file'] ?? null,
+            'exception_line' => $exception['line'] ?? null,
+        ];
+
+        return sha1(
+            json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: ''
+        );
     }
 }

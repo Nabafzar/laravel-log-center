@@ -18,6 +18,7 @@ class MarkdownFormatter implements LogFormatterInterface
     {
         $sections = array_filter([
             $this->header($payload),
+            $this->viewerLink($payload),
             $this->source($payload),
             $this->message($payload),
             $this->tags($payload),
@@ -57,6 +58,17 @@ class MarkdownFormatter implements LogFormatterInterface
     private function message(LogPayload $payload): string
     {
         return '*Message:*' . $this->escape($payload->message);
+    }
+
+    private function viewerLink(LogPayload $payload): ?string
+    {
+        $url = $this->viewerUrl($payload);
+
+        if ($url === null) {
+            return null;
+        }
+
+        return '*Log Center:* [' . $this->escapeInline('Open in viewer') . '](' . $this->escapeUrl($url) . ')';
     }
 
     private function channel(LogPayload $payload): ?string
@@ -329,5 +341,26 @@ class MarkdownFormatter implements LogFormatterInterface
         }
 
         return '*Source:* `' . $this->escapeInline($this->truncate((string) $payload->source, 100)) . '`';
+    }
+
+    private function viewerUrl(LogPayload $payload): ?string
+    {
+        if (! config('logcenter.viewer.enabled', false) || empty($payload->fingerprint)) {
+            return null;
+        }
+
+        $baseUrl = rtrim((string) config('app.url', ''), '/');
+        $prefix = trim((string) config('logcenter.viewer.route_prefix', 'log-viewer'), '/');
+
+        if ($baseUrl === '') {
+            return null;
+        }
+
+        return $baseUrl . '/' . $prefix . '?fingerprint=' . rawurlencode((string) $payload->fingerprint);
+    }
+
+    private function escapeUrl(string $url): string
+    {
+        return str_replace(['(', ')'], ['%28', '%29'], $url);
     }
 }

@@ -18,6 +18,7 @@ class TelegramHtmlFormatter implements LogFormatterInterface
     {
         $sections = array_values(array_filter([
             $this->header($payload),
+            $this->viewerLink($payload),
             $this->source($payload),
             $this->message($payload),
             $this->tags($payload),
@@ -56,6 +57,17 @@ class TelegramHtmlFormatter implements LogFormatterInterface
         return PHP_EOL . '<b>Message: </b> ' . $this->escape(
                 $this->truncatePlain($payload->message, $this->sectionMaxLength())
             );
+    }
+
+    private function viewerLink(LogPayload $payload): ?string
+    {
+        $url = $this->viewerUrl($payload);
+
+        if ($url === null) {
+            return null;
+        }
+
+        return PHP_EOL . '<b>Log Center: </b> <a href="' . $this->escapeAttribute($url) . '">Open in viewer</a>';
     }
 
     private function tags(LogPayload $payload): ?string
@@ -260,6 +272,11 @@ class TelegramHtmlFormatter implements LogFormatterInterface
         return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
+    private function escapeAttribute(string $text): string
+    {
+        return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+
     /**
      * @param list<string> $sections
      */
@@ -319,5 +336,21 @@ class TelegramHtmlFormatter implements LogFormatterInterface
         }
 
         return '<b>Source: </b> <code>' . $this->escape($this->truncatePlain((string) $payload->source, 100)) . '</code>';
+    }
+
+    private function viewerUrl(LogPayload $payload): ?string
+    {
+        if (! config('logcenter.viewer.enabled', false) || empty($payload->fingerprint)) {
+            return null;
+        }
+
+        $baseUrl = rtrim((string) config('app.url', ''), '/');
+        $prefix = trim((string) config('logcenter.viewer.route_prefix', 'log-viewer'), '/');
+
+        if ($baseUrl === '') {
+            return null;
+        }
+
+        return $baseUrl . '/' . $prefix . '?fingerprint=' . rawurlencode((string) $payload->fingerprint);
     }
 }

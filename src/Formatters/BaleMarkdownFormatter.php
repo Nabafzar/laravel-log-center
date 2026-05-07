@@ -18,6 +18,7 @@ class BaleMarkdownFormatter implements LogFormatterInterface
     {
         $sections = array_filter([
             $this->header($payload),
+            $this->viewerLink($payload),
             $this->message($payload),
             $this->request($payload),
             $this->user($payload),
@@ -56,6 +57,17 @@ class BaleMarkdownFormatter implements LogFormatterInterface
     private function message(LogPayload $payload): string
     {
         return PHP_EOL . '*Message:* ' . $this->escape($payload->message);
+    }
+
+    private function viewerLink(LogPayload $payload): ?string
+    {
+        $url = $this->viewerUrl($payload);
+
+        if ($url === null) {
+            return null;
+        }
+
+        return '*Log Center:* [' . $this->escapeInline('Open viewer') . '](' . $this->escapeUrl($url) . ')';
     }
 
     private function tags(LogPayload $payload): ?string
@@ -337,5 +349,25 @@ class BaleMarkdownFormatter implements LogFormatterInterface
     private function sectionMaxLength(): int
     {
         return max(500, (int)floor($this->maxLength() / 2));
+    }
+
+    private function viewerUrl(LogPayload $payload): ?string
+    {
+        if (! (bool) config('logcenter.viewer.enabled', false)) {
+            return null;
+        }
+
+        if (empty($payload->fingerprint)) {
+            return null;
+        }
+
+        $baseUrl = rtrim((string) config('app.url', ''), '/');
+        $prefix = trim((string) config('logcenter.viewer.route_prefix', 'log-viewer'), '/');
+
+        if ($baseUrl === '') {
+            return null;
+        }
+
+        return $baseUrl . '/' . $prefix . '?fingerprint=' . rawurlencode($payload->fingerprint);
     }
 }
