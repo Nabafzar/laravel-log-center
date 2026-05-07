@@ -16,7 +16,7 @@ class LogPayloadFactory
     {
         $context = $record->context;
         $exception = self::extractException($context);
-        $request = self::extractRequest($context);
+        $request = self::extractRequest($context) ?? self::currentRequest();
         $explicitRequest = self::arrayValue($context['request'] ?? null);
         $resolvedRequest = $request ?? $explicitRequest;
         $user = self::arrayValue($context['user'] ?? null);
@@ -98,6 +98,17 @@ class LogPayloadFactory
         }
 
         return null;
+    }
+
+    private static function currentRequest(): ?array
+    {
+        if (! app()->bound('request')) {
+            return null;
+        }
+
+        $request = app('request');
+
+        return $request instanceof Request ? self::requestToArray($request) : null;
     }
 
     private static function requestToArray(Request $request): array

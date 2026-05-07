@@ -113,6 +113,7 @@ class BaleMarkdownFormatter implements LogFormatterInterface
             $this->requestLink('URL', $request['url'] ?? null),
             $this->requestLine('IP', $request['ip'] ?? null),
             $this->requestLine('Referer', $request['referer'] ?? null),
+            $this->requestData('Body', $request['body'] ?? null),
         ]);
 
         return PHP_EOL . implode(PHP_EOL, $sections);
@@ -156,7 +157,7 @@ class BaleMarkdownFormatter implements LogFormatterInterface
             $request['referer'] = rawurldecode($request['referer']);
         }
 
-        unset($request['headers'], $request['cookies'], $request['body']);
+        unset($request['headers'], $request['cookies']);
 
         return $request === [] ? null : $request;
     }
