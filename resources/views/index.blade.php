@@ -2,7 +2,6 @@
     $title = config('logcenter.viewer.title', config('app.name', 'Log Center'));
     $selectedFileMeta = $selectedFileMeta ?? null;
     $groups = $groups ?? collect();
-    $timeline = $timeline ?? collect();
     $filters = $filters ?? ['level' => '', 'search' => ''];
     $pagination = $pagination ?? ['page' => 1, 'pageCount' => 1, 'hasMore' => false, 'hasPrevious' => false, 'total' => 0];
     $stats = $stats ?? ['total' => 0, 'levels' => []];
@@ -307,7 +306,7 @@
 
         .filter-row {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 160px 110px;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 180px 150px 110px;
             gap: 10px;
         }
 
@@ -448,16 +447,6 @@
             overflow: hidden;
         }
 
-        .timeline-card {
-            margin: 0 0 18px;
-            padding: 18px 22px 20px;
-            background: var(--panel);
-            backdrop-filter: blur(14px);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow);
-        }
-
         .toolbar {
             display: flex;
             flex-wrap: wrap;
@@ -485,47 +474,6 @@
             justify-items: end;
         }
 
-        .timeline {
-            display: grid;
-            gap: 10px;
-            max-height: 260px;
-            overflow: auto;
-            padding-right: 4px;
-        }
-
-        .timeline-item {
-            display: grid;
-            gap: 6px;
-            padding: 12px 13px;
-            text-decoration: none;
-            border-radius: 16px;
-            border: 1px solid rgba(148, 163, 184, .14);
-            background: rgba(255, 255, 255, .04);
-            transition: transform .15s ease, background-color .15s ease;
-        }
-
-        .timeline-item:hover {
-            transform: translateY(-1px);
-            background: rgba(255, 255, 255, .07);
-        }
-
-        .timeline-item.active {
-            background: rgba(59, 130, 246, .14);
-            border-color: rgba(96, 165, 250, .35);
-        }
-
-        .timeline-item strong {
-            color: #fff;
-            font-size: 13px;
-            line-height: 1.45;
-        }
-
-        .timeline-item span {
-            color: #cbd5e1;
-            font-size: 12px;
-            line-height: 1.4;
-        }
-
         html[data-theme="dark"] .theme-toggle {
             background: rgba(15, 23, 42, .86);
             border-color: rgba(148, 163, 184, .18);
@@ -543,7 +491,6 @@
         html[data-theme="dark"] .summary-tile,
         html[data-theme="dark"] .filter-card,
         html[data-theme="dark"] .summary-card,
-        html[data-theme="dark"] .timeline-card,
         html[data-theme="dark"] .panel,
         html[data-theme="dark"] .entry,
         html[data-theme="dark"] .occurrence-shell,
@@ -556,7 +503,6 @@
 
         html[data-theme="dark"] .pill strong,
         html[data-theme="dark"] .file-item strong,
-        html[data-theme="dark"] .timeline-item strong,
         html[data-theme="dark"] .entry-title,
         html[data-theme="dark"] .brand h1 {
             color: #f8fafc;
@@ -572,12 +518,10 @@
 
         html[data-theme="dark"] .entry > summary,
         html[data-theme="dark"] .occurrence-shell,
-        html[data-theme="dark"] .occurrence-item[open] > .occurrence-summary-row,
-        html[data-theme="dark"] .timeline-item.active {
+        html[data-theme="dark"] .occurrence-item[open] > .occurrence-summary-row {
             background: rgba(15, 23, 42, .88);
         }
 
-        html[data-theme="dark"] .timeline-item span,
         html[data-theme="dark"] .brand p,
         html[data-theme="dark"] .file-item span,
         html[data-theme="dark"] .hero-copy,
@@ -1179,9 +1123,6 @@
                 grid-template-columns: 1fr;
             }
 
-            .timeline-card {
-                padding-inline: 16px;
-            }
         }
 
         @media (max-width: 720px) {
@@ -1191,17 +1132,12 @@
             }
 
             .hero,
-            .timeline-card,
             .panel {
                 border-radius: 22px;
             }
 
             .hero {
                 padding: 18px 16px 16px;
-            }
-
-            .timeline-card {
-                padding: 16px 16px 18px;
             }
 
             .panel .toolbar,
@@ -1360,7 +1296,10 @@
 
             <div class="hero-grid">
                 <div class="filter-card">
-                    <form method="get" action="{{ request()->url() }}">
+                    <form
+                        method="get"
+                        action="{{ request()->url() }}"
+                    >
                         <input type="hidden" name="file" value="{{ $selectedFile }}">
                         <input type="hidden" name="page" value="1">
                         <div class="filter-row">
@@ -1372,7 +1311,7 @@
                                     <option value="{{ $level }}" @selected($currentLevel === $level)>{{ strtoupper($level) }}</option>
                                 @endforeach
                             </select>
-                            <button type="submit">Apply</button>
+                            <button type="submit" data-logcenter-apply-button>Apply</button>
                         </div>
 
                         <div class="quick-filters">
@@ -1388,15 +1327,15 @@
                 </div>
 
                 <div class="summary-card">
-                    <div class="summary-grid">
-                        <div class="summary-tile">
-                            <span>Total</span>
-                            <strong>{{ $stats['total'] }}</strong>
-                        </div>
-                        <div class="summary-tile">
-                            <span>Current file</span>
-                            <strong>{{ count($files) }}</strong>
-                        </div>
+                        <div class="summary-grid">
+                            <div class="summary-tile">
+                                <span>Total</span>
+                                <strong>{{ $stats['total'] }}</strong>
+                            </div>
+                            <div class="summary-tile">
+                                <span>Current file</span>
+                                <strong>{{ count($files) }}</strong>
+                            </div>
                         <div class="summary-tile">
                             <span>Visible page</span>
                             <strong>{{ count($groups) }}</strong>
@@ -1430,38 +1369,6 @@
                         @endforeach
                     </div>
                 </div>
-            </div>
-        </section>
-
-        <section class="timeline-card">
-            <div class="toolbar" style="padding: 0 0 14px; border-bottom: 0;">
-                <div>
-                    <h3>Incident Timeline</h3>
-                    <p>Jump to the most recent grouped incidents in the selected log file.</p>
-                </div>
-
-                <div class="toolbar-actions">
-                    <span class="pill">Visible <strong>{{ count($timeline) }}</strong> incidents</span>
-                </div>
-            </div>
-
-            <div class="timeline">
-                @forelse($timeline as $group)
-                    <a
-                        href="{{ $withQuery(['fingerprint' => $group['fingerprint'], 'page' => 1]) }}#group-{{ $group['fingerprint'] }}"
-                        class="timeline-item {{ $currentFingerprint !== '' && str_contains(strtolower((string) $group['fingerprint']), $currentFingerprint) ? 'active' : '' }}"
-                    >
-                        <strong>{{ $group['message'] ?: '[empty message]' }}</strong>
-                        <span>
-                            {{ $group['count'] }} occurrence(s)
-                            @if(! empty($group['first_timestamp']) || ! empty($group['last_timestamp']))
-                                &middot; {{ $group['first_timestamp'] ?: 'n/a' }} to {{ $group['last_timestamp'] ?: 'n/a' }}
-                            @endif
-                        </span>
-                    </a>
-                @empty
-                    <div class="muted">Timeline appears after a file is loaded.</div>
-                @endforelse
             </div>
         </section>
 
@@ -1840,6 +1747,17 @@
 
 <script>
     (function () {
+        const applyButton = document.querySelector('[data-logcenter-apply-button]');
+        const filterForm = applyButton ? applyButton.closest('form') : null;
+
+        if (filterForm && applyButton) {
+            filterForm.addEventListener('submit', () => {
+                applyButton.disabled = true;
+                applyButton.setAttribute('aria-busy', 'true');
+                applyButton.textContent = 'Applying...';
+            });
+        }
+
         const dialog = document.getElementById('logEntryDialog');
         const title = document.getElementById('dialogTitle');
         const meta = document.getElementById('dialogMeta');

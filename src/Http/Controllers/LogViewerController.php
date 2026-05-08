@@ -44,7 +44,6 @@ final class LogViewerController extends Controller
             'selectedFile' => $selectedFile,
             'selectedFileMeta' => $selectedFile !== null ? ($availableFiles[$selectedFile] ?? null) : null,
             'groups' => $items,
-            'timeline' => $allGroups->take(12),
             'pagination' => [
                 'page' => $page,
                 'perPage' => $perPage,
