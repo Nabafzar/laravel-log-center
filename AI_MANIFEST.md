@@ -80,6 +80,10 @@ Implemented code:
   - `src/Viewer/LogFileRepository.php`
   - `routes/web.php`
   - `resources/views/index.blade.php`
+- Tests:
+  - `tests/TestCase.php`
+  - unit tests for factories, formatters, transports, payload masking, and log parsing
+  - feature tests for package bindings and the log viewer route
 
 Advertised or partially planned, but not implemented yet:
 
@@ -87,7 +91,6 @@ Advertised or partially planned, but not implemented yet:
 - queue retry/failover workflow
 - log viewer hardening, tests, and richer interactions
 - formatter extension API
-- tests
 - README user documentation
 
 ## Known Technical Gaps
@@ -97,7 +100,7 @@ stable release:
 
  - Config references Slack driver support, but factory creation is still missing
   and classes are missing.
-- Log viewer exists, but needs tests and larger-file performance work before
+- Log viewer exists, but still needs larger-file performance work before
   release.
 - `LogCenterHandler` requires a `LogDispatcher` constructor argument; verify the
   Laravel logging integration can instantiate it correctly.

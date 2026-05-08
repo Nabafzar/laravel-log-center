@@ -28,6 +28,11 @@
       "Nabafzar\\LogCenter\\": "src/"
     }
   },
+  "autoload-dev": {
+    "psr-4": {
+      "Nabafzar\\LogCenter\\Tests\\": "tests/"
+    }
+  },
   "extra": {
     "laravel": {
       "providers": [
@@ -42,7 +47,13 @@
     "monolog/monolog": "^3.0"
   },
   "require-dev": {
+    "orchestra/testbench": "^9.0",
     "phpunit/phpunit": "^11.0"
+  },
+  "scripts": {
+    "test": [
+      "@php -d xdebug.mode=off vendor/bin/phpunit"
+    ]
   },
   "minimum-stability": "stable",
   "prefer-stable": true
