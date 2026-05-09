@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\View\View;
 use Nabafzar\LogCenter\Viewer\LogFileRepository;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 final class LogViewerController extends Controller
 {
@@ -63,5 +64,21 @@ final class LogViewerController extends Controller
                 'average' => $totalGroups > 0 ? round($entries->count() / $totalGroups, 2) : 0,
             ],
         ]);
+    }
+
+    public function download(Request $request): BinaryFileResponse
+    {
+        $availableFiles = $this->files->all();
+        $file = (string) $request->query('file', '');
+        $selectedFile = $file !== '' ? $file : (string) array_key_first($availableFiles);
+        $path = $selectedFile !== '' ? $this->files->path($selectedFile) : null;
+
+        abort_unless($path !== null, 404);
+
+        return response()->download(
+            $path,
+            basename($path),
+            ['Content-Type' => 'text/plain; charset=UTF-8']
+        );
     }
 }

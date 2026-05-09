@@ -71,6 +71,11 @@ final class LogFileRepository
         return $entries->values();
     }
 
+    public function path(string $file): ?string
+    {
+        return $this->resolvePath($file);
+    }
+
     public function stats(Collection $entries): array
     {
         $levels = [

@@ -28,4 +28,25 @@ LOG);
         $response->assertSee('Feature test failure');
         $response->assertSee('Log Center Test App');
     }
+
+    public function test_it_downloads_the_selected_log_file(): void
+    {
+        $directory = storage_path('logs/logcenter-feature-tests');
+        if (! is_dir($directory)) {
+            mkdir($directory, 0777, true);
+        }
+
+        $file = $directory . '/download.log';
+        file_put_contents($file, <<<LOG
+[2026-05-08 10:00:00] local.ERROR: Download test failure
+LOG);
+
+        config()->set('logcenter.viewer.paths', [$directory]);
+
+        $response = $this->get('/log-viewer/download?file=' . urlencode($file));
+
+        $response->assertOk();
+        $response->assertDownload('download.log');
+        $response->assertHeader('content-type', 'text/plain; charset=UTF-8');
+    }
 }

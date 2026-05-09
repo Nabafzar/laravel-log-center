@@ -80,6 +80,7 @@ Implemented code:
   - `src/Viewer/LogFileRepository.php`
   - `routes/web.php`
   - `resources/views/index.blade.php`
+  - log download action for the selected file
 - Tests:
   - `tests/TestCase.php`
   - unit tests for factories, formatters, transports, payload masking, and log parsing

@@ -16,4 +16,5 @@ Route::middleware($middleware)
     ->name('logcenter.viewer.')
     ->group(static function (): void {
         Route::get('/', [LogViewerController::class, 'index'])->name('index');
+        Route::get('/download', [LogViewerController::class, 'download'])->name('download');
     });
