@@ -14,6 +14,8 @@
     $selectedFileName = $selectedFileMeta['name'] ?? null;
     $selectedFileSize = isset($selectedFileMeta['size']) ? number_format(((int) $selectedFileMeta['size']) / 1024, 1) . ' KB' : null;
     $selectedFileModified = ! empty($selectedFileMeta['modified_at']) ? date('Y-m-d H:i:s', (int) $selectedFileMeta['modified_at']) : null;
+    $selectedFileAge = ! empty($selectedFileMeta['modified_at']) ? \Illuminate\Support\Carbon::createFromTimestamp((int) $selectedFileMeta['modified_at'])->diffForHumans() : null;
+    $selectedFileEntryCount = isset($selectedFileMeta['entry_count']) ? (int) $selectedFileMeta['entry_count'] : null;
     $downloadUrl = $selectedFile ? route('logcenter.viewer.download', ['file' => $selectedFile]) : null;
     $hasActiveFilters = ($filters['search'] ?? '') !== '' || $currentLevel !== '' || $currentFingerprint !== '';
     $baseQuery = request()->query();
@@ -1551,6 +1553,12 @@
                                 &middot; {{ date('Y-m-d H:i:s', (int) $file['modified_at']) }}
                             @endif
                         </span>
+                        <span>
+                            {{ (($file['entry_count'] ?? 0) === 1) ? '1 entry' : number_format((int) ($file['entry_count'] ?? 0)) . ' entries' }}
+                            @if(! empty($file['modified_at']))
+                                &middot; updated {{ \Illuminate\Support\Carbon::createFromTimestamp((int) $file['modified_at'])->diffForHumans() }}
+                            @endif
+                        </span>
                     </a>
                 @empty
                     <div class="muted">No readable log files were found.</div>
@@ -1567,6 +1575,12 @@
                         <span class="pill"><strong>{{ $selectedFileLabel }}</strong></span>
                         @if($selectedFileName)
                             <span class="pill">{{ $selectedFileName }}</span>
+                        @endif
+                        @if($selectedFileEntryCount !== null)
+                            <span class="pill">{{ $selectedFileEntryCount === 1 ? '1 entry' : number_format($selectedFileEntryCount) . ' entries' }}</span>
+                        @endif
+                        @if($selectedFileAge)
+                            <span class="pill">Updated <strong>{{ $selectedFileAge }}</strong></span>
                         @endif
                         <span class="pill">Page <strong>{{ $pagination['page'] }}</strong> / {{ $pagination['pageCount'] }}</span>
                     </div>

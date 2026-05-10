@@ -30,6 +30,7 @@ LOG);
 
         $response->assertOk();
         $response->assertSee('Feature test failure');
+        $response->assertSee('1 entry');
         $response->assertSee('Log Center Test App');
     }
 
@@ -52,6 +53,53 @@ LOG);
         $response->assertOk();
         $response->assertDownload('download.log');
         $response->assertHeader('content-type', 'text/plain; charset=UTF-8');
+    }
+
+    public function test_it_returns_a_404_for_files_outside_the_configured_viewer_roots(): void
+    {
+        $allowedDirectory = storage_path('logs/logcenter-feature-allowed');
+        $outsideDirectory = storage_path('logs/logcenter-feature-outside');
+
+        if (! is_dir($allowedDirectory)) {
+            mkdir($allowedDirectory, 0777, true);
+        }
+
+        if (! is_dir($outsideDirectory)) {
+            mkdir($outsideDirectory, 0777, true);
+        }
+
+        $allowedFile = $allowedDirectory . '/allowed.log';
+        $outsideFile = $outsideDirectory . '/outside.log';
+
+        file_put_contents($allowedFile, <<<LOG
+[2026-05-08 10:00:00] local.ERROR: Allowed file
+LOG);
+
+        file_put_contents($outsideFile, <<<LOG
+[2026-05-08 10:00:00] local.ERROR: Outside file
+LOG);
+
+        config()->set('logcenter.viewer.paths', [$allowedDirectory]);
+
+        $this->get('/log-viewer?file=' . urlencode($outsideFile))->assertNotFound();
+        $this->get('/log-viewer/download?file=' . urlencode($outsideFile))->assertNotFound();
+    }
+
+    public function test_it_returns_a_404_for_oversized_files(): void
+    {
+        $directory = storage_path('logs/logcenter-feature-large-tests');
+        if (! is_dir($directory)) {
+            mkdir($directory, 0777, true);
+        }
+
+        $largeFile = $directory . '/large.log';
+        file_put_contents($largeFile, str_repeat("[2026-05-08 10:00:00] local.ERROR: Oversized file\n", 5));
+
+        config()->set('logcenter.viewer.paths', [$directory]);
+        config()->set('logcenter.viewer.max_file_size', 64);
+
+        $this->get('/log-viewer?file=' . urlencode($largeFile))->assertNotFound();
+        $this->get('/log-viewer/download?file=' . urlencode($largeFile))->assertNotFound();
     }
 
     public function test_it_uses_the_fingerprint_to_pick_the_matching_file_when_no_file_is_provided(): void

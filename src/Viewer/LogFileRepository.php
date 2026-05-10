@@ -16,7 +16,7 @@ final class LogFileRepository
         $files = [];
 
         foreach ($this->candidateFiles() as $path) {
-            if (! is_file($path) || ! is_readable($path)) {
+            if (! $this->isReadableAllowedFile($path)) {
                 continue;
             }
 
@@ -34,8 +34,13 @@ final class LogFileRepository
         });
 
         $maxFiles = max(1, (int) config('logcenter.viewer.max_files', 20));
+        $files = array_slice($files, 0, $maxFiles, true);
 
-        return array_slice($files, 0, $maxFiles, true);
+        foreach ($files as $path => $file) {
+            $files[$path]['entry_count'] = $this->entryCountFor($path);
+        }
+
+        return $files;
     }
 
     public function entries(string $file, array $filters = []): Collection
@@ -149,24 +154,19 @@ final class LogFileRepository
     {
         $files = [];
 
-        foreach ((array) config('logcenter.viewer.paths', [storage_path('logs')]) as $path) {
-            $path = $this->normalizePath((string) $path);
-
-            if ($path === null) {
-                continue;
-            }
-
+        foreach ($this->viewerRoots() as $path) {
             if (is_file($path)) {
-                $files[] = $path;
-                continue;
-            }
+                if ($this->isReadableAllowedFile($path)) {
+                    $files[] = $path;
+                }
 
-            if (! is_dir($path)) {
                 continue;
             }
 
             foreach (glob($path . DIRECTORY_SEPARATOR . '*.log') ?: [] as $candidate) {
-                $files[] = $candidate;
+                if ($this->isReadableAllowedFile($candidate)) {
+                    $files[] = $candidate;
+                }
             }
         }
 
@@ -185,16 +185,27 @@ final class LogFileRepository
         }
 
         if (is_file($file) && is_readable($file)) {
-            return realpath($file) ?: $file;
+            $path = realpath($file);
+
+            return $path !== false && $this->isReadableAllowedFile($path) ? $path : null;
         }
 
         foreach ($this->candidateFiles() as $candidate) {
-            if ($candidate === $file || basename($candidate) === basename($file)) {
+            if ($candidate === $file) {
                 return $candidate;
             }
         }
 
         return null;
+    }
+
+    private function entryCountFor(string $path): int
+    {
+        if (! $this->isReadableAllowedFile($path)) {
+            return 0;
+        }
+
+        return $this->parseFile($path)->count();
     }
 
     private function parseFile(string $path): Collection
@@ -410,6 +421,74 @@ final class LogFileRepository
         }
 
         return $path;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function viewerRoots(): array
+    {
+        $roots = [];
+
+        foreach ((array) config('logcenter.viewer.paths', [storage_path('logs')]) as $path) {
+            $path = $this->normalizePath((string) $path);
+
+            if ($path === null) {
+                continue;
+            }
+
+            $real = realpath($path);
+
+            if ($real === false) {
+                continue;
+            }
+
+            $roots[] = $real;
+        }
+
+        return array_values(array_unique($roots));
+    }
+
+    private function isAllowedPath(string $path): bool
+    {
+        $real = realpath($path);
+
+        if ($real === false) {
+            return false;
+        }
+
+        foreach ($this->viewerRoots() as $root) {
+            if ($real === $root) {
+                return true;
+            }
+
+            if (is_dir($root) && str_starts_with($real, rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isReadableAllowedFile(string $path): bool
+    {
+        if (! $this->isAllowedPath($path) || ! is_file($path) || ! is_readable($path)) {
+            return false;
+        }
+
+        $maxFileSize = max(0, (int) config('logcenter.viewer.max_file_size', 10 * 1024 * 1024));
+
+        if ($maxFileSize === 0) {
+            return true;
+        }
+
+        $size = @filesize($path);
+
+        if ($size === false) {
+            return false;
+        }
+
+        return $size <= $maxFileSize;
     }
 
     private function normalizeFingerprintFilter(mixed $fingerprint): string

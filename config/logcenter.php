@@ -107,6 +107,7 @@ return [
         'paths' => [
             env('LOGCENTER_VIEWER_PATH', storage_path('logs')),
         ],
+        'max_file_size' => env('LOGCENTER_VIEWER_MAX_FILE_SIZE', 10 * 1024 * 1024),
         'per_page' => env('LOGCENTER_VIEWER_PER_PAGE', 50),
         'max_files' => env('LOGCENTER_VIEWER_MAX_FILES', 20),
         'max_entry_lines' => env('LOGCENTER_VIEWER_MAX_ENTRY_LINES', 500),

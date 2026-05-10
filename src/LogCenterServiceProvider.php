@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nabafzar\LogCenter;
 
 use Illuminate\Support\ServiceProvider;
+use Nabafzar\LogCenter\Console\Commands\TestLogCommand;
 use Nabafzar\LogCenter\Contracts\LogDispatcherInterface;
 use Nabafzar\LogCenter\Factories\FormatterFactory;
 use Nabafzar\LogCenter\Factories\TransportFactory;
@@ -22,6 +23,7 @@ final class LogCenterServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->bootPublishes();
+        $this->bootCommands();
         $this->bootRoutes();
         $this->bootViews();
     }
@@ -65,6 +67,19 @@ final class LogCenterServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__ . '/../resources/views' => resource_path('views/vendor/logcenter'),
             ], 'logcenter-views');
+        }
+    }
+
+    private function bootCommands(): void
+    {
+        if (! $this->app->runningInConsole()) {
+            return;
+        }
+
+        if (class_exists(TestLogCommand::class)) {
+            $this->commands([
+                TestLogCommand::class,
+            ]);
         }
     }
 

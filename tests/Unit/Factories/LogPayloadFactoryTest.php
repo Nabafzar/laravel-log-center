@@ -19,6 +19,9 @@ final class LogPayloadFactoryTest extends TestCase
             'password' => 'secret',
             'status' => 'pending',
         ]);
+        $request->headers->set('Referer', 'https://example.test/account?token=abc123');
+        $request->headers->set('Cookie', 'laravel_session=session-cookie');
+        $request->headers->set('Authorization', 'Bearer bearer-token');
         $request->setUserResolver(static function (): object {
             return new class () {
                 public function getAuthIdentifier(): int
@@ -62,10 +65,59 @@ final class LogPayloadFactoryTest extends TestCase
         $this->assertSame('Alice', $payload->user['name']);
         $this->assertSame('RuntimeException', $payload->exception['class']);
         $this->assertSame('Boom', $payload->exception['message']);
+        $this->assertSame('https://example.test/account', $payload->request['referer']);
         $this->assertNotEmpty($payload->trace);
         $this->assertStringContainsString('LogPayloadFactoryTest', $payload->trace ?? '');
         $this->assertNotEmpty($payload->fingerprint);
         $this->assertArrayNotHasKey('request', $payload->context);
         $this->assertArrayNotHasKey('userId', $payload->context);
+        $this->assertArrayNotHasKey('headers', $payload->request);
+    }
+
+    public function test_it_normalizes_referer_without_decoding_reserved_characters(): void
+    {
+        $request = Request::create('/orders', 'GET');
+        $request->headers->set('Referer', 'https://example.test/a%2Fb?token=abc%3F123#frag%0Ament');
+
+        $record = new LogRecord(
+            datetime: now()->toDateTimeImmutable(),
+            channel: 'testing',
+            level: Level::Error,
+            message: 'Referer test',
+            context: [
+                'request' => $request,
+            ],
+            extra: [],
+        );
+
+        $payload = LogPayloadFactory::fromLogRecord($record);
+
+        $this->assertSame('https://example.test/a%2Fb', $payload->request['referer']);
+        $this->assertStringNotContainsString("\n", $payload->request['referer']);
+        $this->assertStringNotContainsString('?', $payload->request['referer']);
+    }
+
+    public function test_it_sanitizes_request_referer_without_leaking_query_fragment_or_control_characters(): void
+    {
+        $request = Request::create('/orders', 'GET');
+        $request->headers->set('Referer', "https://example.test/path%2Fsegment?next=%2Fadmin#frag%0Ament");
+
+        $record = new LogRecord(
+            datetime: now()->toDateTimeImmutable(),
+            channel: 'testing',
+            level: Level::Error,
+            message: 'Sanitized referer test',
+            context: [
+                'request' => $request,
+            ],
+            extra: [],
+        );
+
+        $payload = LogPayloadFactory::fromLogRecord($record);
+
+        $this->assertSame('https://example.test/path%2Fsegment', $payload->request['referer']);
+        $this->assertStringNotContainsString('?', $payload->request['referer']);
+        $this->assertStringNotContainsString('#', $payload->request['referer']);
+        $this->assertStringNotContainsString("\n", $payload->request['referer']);
     }
 }

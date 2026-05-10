@@ -34,6 +34,7 @@ LOG);
         $entries = $repository->entries($file);
 
         $this->assertArrayHasKey(realpath($file) ?: $file, $files);
+        $this->assertSame(2, $files[realpath($file) ?: $file]['entry_count']);
         $this->assertCount(2, $entries);
         $this->assertSame('error', $entries[0]['level']);
         $this->assertSame('First failure', $entries[0]['message']);
@@ -43,6 +44,156 @@ LOG);
 
         $this->assertCount(1, $filtered);
         $this->assertSame('First failure', $filtered[0]['message']);
+    }
+
+    public function test_it_rejects_paths_outside_the_configured_viewer_roots(): void
+    {
+        $allowedDirectory = storage_path('logs/logcenter-allowed');
+        $outsideDirectory = storage_path('logs/logcenter-outside');
+
+        if (! is_dir($allowedDirectory)) {
+            mkdir($allowedDirectory, 0777, true);
+        }
+
+        if (! is_dir($outsideDirectory)) {
+            mkdir($outsideDirectory, 0777, true);
+        }
+
+        $allowedFile = $allowedDirectory . '/allowed.log';
+        $outsideFile = $outsideDirectory . '/outside.log';
+
+        file_put_contents($allowedFile, <<<LOG
+[2026-05-08 10:00:00] local.ERROR: Allowed file
+LOG);
+
+        file_put_contents($outsideFile, <<<LOG
+[2026-05-08 10:00:00] local.ERROR: Outside file
+LOG);
+
+        config()->set('logcenter.viewer.paths', [$allowedDirectory]);
+
+        $repository = new LogFileRepository();
+
+        $this->assertSame(realpath($allowedFile) ?: $allowedFile, $repository->path($allowedFile));
+        $this->assertNull($repository->path($outsideFile));
+        $this->assertCount(0, $repository->entries($outsideFile));
+    }
+
+    public function test_it_exposes_sidebar_metadata_for_readable_files(): void
+    {
+        $directory = storage_path('logs/logcenter-metadata-tests');
+
+        if (! is_dir($directory)) {
+            mkdir($directory, 0777, true);
+        }
+
+        $file = $directory . '/metadata.log';
+        file_put_contents($file, <<<LOG
+[2026-05-08 10:00:00] local.ERROR: First
+[2026-05-08 10:05:00] local.INFO: Second
+LOG);
+
+        config()->set('logcenter.viewer.paths', [$directory]);
+
+        $repository = new LogFileRepository();
+        $files = $repository->all();
+        $path = realpath($file) ?: $file;
+
+        $this->assertArrayHasKey($path, $files);
+        $this->assertSame(2, $files[$path]['entry_count']);
+        $this->assertSame(basename($file), $files[$path]['name']);
+        $this->assertSame($path, $files[$path]['path']);
+        $this->assertGreaterThan(0, (int) $files[$path]['size']);
+        $this->assertNotNull($files[$path]['modified_at']);
+    }
+
+    public function test_it_does_not_resolve_basename_collisions_for_outside_files(): void
+    {
+        $allowedDirectory = storage_path('logs/logcenter-collision-allowed');
+        $outsideDirectory = storage_path('logs/logcenter-collision-outside');
+
+        if (! is_dir($allowedDirectory)) {
+            mkdir($allowedDirectory, 0777, true);
+        }
+
+        if (! is_dir($outsideDirectory)) {
+            mkdir($outsideDirectory, 0777, true);
+        }
+
+        $allowedFile = $allowedDirectory . '/laravel.log';
+        $outsideFile = $outsideDirectory . '/laravel.log';
+
+        file_put_contents($allowedFile, <<<LOG
+[2026-05-08 10:00:00] local.ERROR: Allowed collision file
+LOG);
+
+        file_put_contents($outsideFile, <<<LOG
+[2026-05-08 10:00:00] local.ERROR: Outside collision file
+LOG);
+
+        config()->set('logcenter.viewer.paths', [$allowedDirectory]);
+
+        $repository = new LogFileRepository();
+
+        $this->assertSame(realpath($allowedFile) ?: $allowedFile, $repository->path($allowedFile));
+        $this->assertNull($repository->path($outsideFile));
+        $this->assertNull($repository->path('laravel.log'));
+    }
+
+    public function test_it_rejects_traversal_paths_that_escape_the_viewer_root(): void
+    {
+        $allowedDirectory = storage_path('logs/logcenter-traversal-allowed');
+        $outsideDirectory = storage_path('logs/logcenter-traversal-outside');
+
+        if (! is_dir($allowedDirectory)) {
+            mkdir($allowedDirectory, 0777, true);
+        }
+
+        if (! is_dir($outsideDirectory)) {
+            mkdir($outsideDirectory, 0777, true);
+        }
+
+        $outsideFile = $outsideDirectory . '/traversal.log';
+        file_put_contents($outsideFile, <<<LOG
+[2026-05-08 10:00:00] local.ERROR: Traversal file
+LOG);
+
+        config()->set('logcenter.viewer.paths', [$allowedDirectory]);
+
+        $repository = new LogFileRepository();
+        $traversalPath = $allowedDirectory . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . basename($outsideDirectory) . DIRECTORY_SEPARATOR . 'traversal.log';
+
+        $this->assertNull($repository->path($traversalPath));
+        $this->assertCount(0, $repository->entries($traversalPath));
+    }
+
+    public function test_it_skips_oversized_files_for_listing_lookup_and_entry_parsing(): void
+    {
+        $directory = storage_path('logs/logcenter-large-tests');
+
+        if (! is_dir($directory)) {
+            mkdir($directory, 0777, true);
+        }
+
+        $smallFile = $directory . '/small.log';
+        $largeFile = $directory . '/large.log';
+
+        file_put_contents($smallFile, <<<LOG
+[2026-05-08 10:00:00] local.ERROR: Small file
+LOG);
+
+        file_put_contents($largeFile, str_repeat("[2026-05-08 10:00:00] local.ERROR: Large file\n", 3));
+
+        config()->set('logcenter.viewer.paths', [$directory]);
+        config()->set('logcenter.viewer.max_file_size', strlen(file_get_contents($smallFile) ?: '') + 1);
+
+        $repository = new LogFileRepository();
+        $files = $repository->all();
+
+        $this->assertArrayHasKey(realpath($smallFile) ?: $smallFile, $files);
+        $this->assertArrayNotHasKey(realpath($largeFile) ?: $largeFile, $files);
+        $this->assertNull($repository->path($largeFile));
+        $this->assertCount(0, $repository->entries($largeFile));
     }
 
     public function test_it_matches_fingerprints_even_when_the_log_line_contains_json_context(): void

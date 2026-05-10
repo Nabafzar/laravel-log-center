@@ -129,11 +129,54 @@ class LogPayloadFactory
             'url' => $request->fullUrl(),
             'method' => $request->method(),
             'query' => $request->query(),
+            'referer' => self::requestReferer($request),
             'user_id' => self::requestUserId($request),
             'user_name' => self::requestUserName($request),
             'body' => $body,
-            'headers' => $request->headers->all(),
         ], static fn(mixed $value): bool => $value !== null && $value !== [] && $value !== ''));
+    }
+
+    private static function requestReferer(Request $request): ?string
+    {
+        $referer = $request->headers->get('referer') ?? $request->headers->get('referrer');
+
+        if (! is_string($referer) || $referer === '') {
+            return null;
+        }
+
+        $parts = parse_url($referer);
+
+        if (! is_array($parts)) {
+            return $referer;
+        }
+
+        $normalized = '';
+
+        if (isset($parts['scheme'])) {
+            $normalized .= $parts['scheme'] . '://';
+        }
+
+        if (isset($parts['user'])) {
+            $normalized .= $parts['user'];
+
+            if (isset($parts['pass'])) {
+                $normalized .= ':' . $parts['pass'];
+            }
+
+            $normalized .= '@';
+        }
+
+        if (isset($parts['host'])) {
+            $normalized .= $parts['host'];
+        }
+
+        if (isset($parts['port'])) {
+            $normalized .= ':' . $parts['port'];
+        }
+
+        $normalized .= $parts['path'] ?? '';
+
+        return $normalized !== '' ? $normalized : $referer;
     }
 
     private static function requestUserId(Request $request): mixed

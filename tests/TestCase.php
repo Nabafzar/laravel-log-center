@@ -32,6 +32,7 @@ abstract class TestCase extends Orchestra
         $app['config']->set('logcenter.viewer.enabled', true);
         $app['config']->set('logcenter.viewer.route_prefix', 'log-viewer');
         $app['config']->set('logcenter.viewer.paths', [storage_path('logs')]);
+        $app['config']->set('logcenter.viewer.max_file_size', 10 * 1024 * 1024);
         $app['config']->set('logcenter.viewer.max_files', 20);
         $app['config']->set('logcenter.viewer.max_entry_lines', 500);
 

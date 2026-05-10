@@ -36,6 +36,7 @@ The package should eventually support:
 - optional queue dispatch
 - per-level Telegram topics
 - log viewer routes/views guarded by configuration
+- viewer sidebar now shows file size, modified time, age, and entry count
 - extension with custom transports and custom formatters
 
 ## Current Implementation Status
@@ -44,6 +45,7 @@ Implemented code:
 
 - Service provider: `src/LogCenterServiceProvider.php`
 - Config file: `config/logcenter.php`
+- Console command: `src/Console/Commands/TestLogCommand.php`
 - Dispatcher: `src/Services/LogDispatcher.php`
 - Manager/factories:
   - `src/Managers/TransportManager.php`
@@ -170,6 +172,7 @@ Global keys:
 - `viewer.paths`: directories or files scanned for logs.
 - `viewer.per_page`: number of entries displayed per page.
 - `viewer.max_files`: maximum number of files shown in the sidebar.
+- `viewer.max_file_size`: maximum file size in bytes accepted by the viewer.
 - `viewer.max_entry_lines`: future guardrail for large entries.
 - `formatters.*`: formatter-specific settings.
 - `drivers.*`: transport-specific settings.
@@ -210,6 +213,7 @@ Global:
 - `LOGCENTER_VIEWER_PATH`
 - `LOGCENTER_VIEWER_PER_PAGE`
 - `LOGCENTER_VIEWER_MAX_FILES`
+- `LOGCENTER_VIEWER_MAX_FILE_SIZE`
 - `LOGCENTER_VIEWER_MAX_ENTRY_LINES`
 
 Formatter:

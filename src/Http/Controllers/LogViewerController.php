@@ -27,7 +27,12 @@ final class LogViewerController extends Controller
             'fingerprint' => $fingerprint,
         ];
 
-        $selectedFile = $this->resolveSelectedFile($availableFiles, $file, $filters);
+        $selectedFile = $file !== ''
+            ? $this->files->path($file)
+            : $this->resolveSelectedFile($availableFiles, $filters);
+
+        abort_if($file !== '' && $selectedFile === null, 404);
+
         $effectiveFilters = $this->effectiveFilters($selectedFile, $filters);
 
         $entries = $selectedFile !== null
@@ -71,8 +76,8 @@ final class LogViewerController extends Controller
     {
         $availableFiles = $this->files->all();
         $file = (string) $request->query('file', '');
-        $selectedFile = $file !== '' ? $file : (string) array_key_first($availableFiles);
-        $path = $selectedFile !== '' ? $this->files->path($selectedFile) : null;
+        $selectedFile = $file !== '' ? $this->files->path($file) : (string) array_key_first($availableFiles);
+        $path = $selectedFile !== '' ? $selectedFile : null;
 
         abort_unless($path !== null, 404);
 
@@ -90,12 +95,8 @@ final class LogViewerController extends Controller
      * @param array<string, array<string, mixed>> $availableFiles
      * @param array{level?: string, search?: string, fingerprint?: string} $filters
      */
-    private function resolveSelectedFile(array $availableFiles, string $file, array $filters): ?string
+    private function resolveSelectedFile(array $availableFiles, array $filters): ?string
     {
-        if ($file !== '') {
-            return $file;
-        }
-
         $defaultFile = array_key_first($availableFiles);
         $fingerprint = trim((string) ($filters['fingerprint'] ?? ''));
         $search = trim((string) ($filters['search'] ?? ''));

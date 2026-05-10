@@ -206,7 +206,7 @@ class TelegramHtmlFormatter implements LogFormatterInterface
         }
 
         if (isset($request['referer']) && is_string($request['referer']) && $request['referer'] !== '') {
-            $request['referer'] = rawurldecode($request['referer']);
+            $request['referer'] = $this->normalizeReferer($request['referer']);
         }
 
         unset($request['headers'], $request['cookies']);
@@ -239,6 +239,43 @@ class TelegramHtmlFormatter implements LogFormatterInterface
         }
 
         return null;
+    }
+
+    private function normalizeReferer(string $referer): string
+    {
+        $parts = parse_url($referer);
+
+        if (! is_array($parts)) {
+            return $referer;
+        }
+
+        $normalized = '';
+
+        if (isset($parts['scheme'])) {
+            $normalized .= $parts['scheme'] . '://';
+        }
+
+        if (isset($parts['user'])) {
+            $normalized .= $parts['user'];
+
+            if (isset($parts['pass'])) {
+                $normalized .= ':' . $parts['pass'];
+            }
+
+            $normalized .= '@';
+        }
+
+        if (isset($parts['host'])) {
+            $normalized .= $parts['host'];
+        }
+
+        if (isset($parts['port'])) {
+            $normalized .= ':' . $parts['port'];
+        }
+
+        $normalized .= $parts['path'] ?? '';
+
+        return $normalized !== '' ? $normalized : $referer;
     }
 
     private function requestLine(string $label, mixed $value): ?string
