@@ -25,6 +25,7 @@ final class LogCenterServiceProvider extends ServiceProvider
         $this->bootPublishes();
         $this->bootCommands();
         $this->bootRoutes();
+        $this->bootIncomingRoutes();
         $this->bootViews();
     }
 
@@ -90,6 +91,19 @@ final class LogCenterServiceProvider extends ServiceProvider
         }
 
         $routesPath = __DIR__ . '/../routes/web.php';
+
+        if (is_file($routesPath)) {
+            $this->loadRoutesFrom($routesPath);
+        }
+    }
+
+    private function bootIncomingRoutes(): void
+    {
+        if (! config('logcenter.incoming.enabled', false)) {
+            return;
+        }
+
+        $routesPath = __DIR__ . '/../routes/api.php';
 
         if (is_file($routesPath)) {
             $this->loadRoutesFrom($routesPath);

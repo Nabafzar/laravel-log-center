@@ -36,7 +36,8 @@ The package should eventually support:
 - optional queue dispatch
 - per-level Telegram topics
 - log viewer routes/views guarded by configuration
-- viewer sidebar now shows file size, modified time, age, and entry count
+- the viewer sidebar now shows file size, modified time, age, and entry count
+- incoming log ingress routes for external apps and clients
 - extension with custom transports and custom formatters
 
 ## Current Implementation Status
@@ -46,6 +47,10 @@ Implemented code:
 - Service provider: `src/LogCenterServiceProvider.php`
 - Config file: `config/logcenter.php`
 - Console command: `src/Console/Commands/TestLogCommand.php`
+- Incoming log ingress:
+  - `src/Http/Controllers/IncomingLogController.php`
+  - `src/Factories/IncomingLogPayloadFactory.php`
+  - `routes/api.php`
 - Dispatcher: `src/Services/LogDispatcher.php`
 - Manager/factories:
   - `src/Managers/TransportManager.php`
@@ -95,6 +100,7 @@ Advertised or partially planned, but not implemented yet:
 - queue retry/failover workflow
 - log viewer hardening, tests, and richer interactions
 - formatter extension API
+- incoming log ingress documentation
 - README user documentation
 
 ## Known Technical Gaps
@@ -174,6 +180,12 @@ Global keys:
 - `viewer.max_files`: maximum number of files shown in the sidebar.
 - `viewer.max_file_size`: maximum file size in bytes accepted by the viewer.
 - `viewer.max_entry_lines`: future guardrail for large entries.
+- `incoming.enabled`: toggles the incoming log ingress route.
+- `incoming.route_prefix`: route prefix for incoming logs.
+- `incoming.middleware`: middleware stack for incoming routes.
+- `incoming.auth.enabled`: toggles token protection for incoming logs.
+- `incoming.auth.header`: header used to pass the incoming token.
+- `incoming.auth.token`: token required to submit incoming logs.
 - `formatters.*`: formatter-specific settings.
 - `drivers.*`: transport-specific settings.
 
@@ -215,6 +227,11 @@ Global:
 - `LOGCENTER_VIEWER_MAX_FILES`
 - `LOGCENTER_VIEWER_MAX_FILE_SIZE`
 - `LOGCENTER_VIEWER_MAX_ENTRY_LINES`
+- `LOGCENTER_INCOMING_ENABLED`
+- `LOGCENTER_INCOMING_ROUTE_PREFIX`
+- `LOGCENTER_INCOMING_AUTH_ENABLED`
+- `LOGCENTER_INCOMING_AUTH_HEADER`
+- `LOGCENTER_INCOMING_TOKEN`
 
 Formatter:
 

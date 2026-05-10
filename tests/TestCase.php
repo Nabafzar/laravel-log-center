@@ -36,6 +36,13 @@ abstract class TestCase extends Orchestra
         $app['config']->set('logcenter.viewer.max_files', 20);
         $app['config']->set('logcenter.viewer.max_entry_lines', 500);
 
+        $app['config']->set('logcenter.incoming.enabled', true);
+        $app['config']->set('logcenter.incoming.route_prefix', 'incoming-logs');
+        $app['config']->set('logcenter.incoming.middleware', ['api']);
+        $app['config']->set('logcenter.incoming.auth.enabled', true);
+        $app['config']->set('logcenter.incoming.auth.header', 'X-LogCenter-Token');
+        $app['config']->set('logcenter.incoming.auth.token', 'test-incoming-token');
+
         $app['config']->set('logcenter.formatters.plain.max_length', 3500);
         $app['config']->set('logcenter.formatters.json.pretty', false);
         $app['config']->set('logcenter.formatters.json.trace_max_length', 5000);

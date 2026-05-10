@@ -115,6 +115,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Incoming Log Ingress
+    |--------------------------------------------------------------------------
+    |
+    | Accept structured logs from external apps and dispatch them through the
+    | configured transport driver.
+    |
+    */
+    'incoming' => [
+        'enabled' => env('LOGCENTER_INCOMING_ENABLED', false),
+        'route_prefix' => env('LOGCENTER_INCOMING_ROUTE_PREFIX', 'incoming-logs'),
+        'middleware' => ['api'],
+        'auth' => [
+            'enabled' => env('LOGCENTER_INCOMING_AUTH_ENABLED', true),
+            'header' => env('LOGCENTER_INCOMING_AUTH_HEADER', 'X-LogCenter-Token'),
+            'token' => env('LOGCENTER_INCOMING_TOKEN'),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Formatter Configuration
     |--------------------------------------------------------------------------
     |
