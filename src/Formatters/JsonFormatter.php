@@ -139,6 +139,29 @@ class JsonFormatter implements LogFormatterInterface
             return null;
         }
 
-        return $baseUrl . '/' . $prefix . '?fingerprint=' . rawurlencode((string) $payload->fingerprint);
+        $query = array_filter([
+            'fingerprint' => $this->viewerFingerprintToken($payload),
+            'search' => $this->viewerSearchTerm($payload),
+        ]);
+
+        return $baseUrl . '/' . $prefix . '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    private function viewerFingerprintToken(LogPayload $payload): string
+    {
+        return substr((string) $payload->fingerprint, 0, 14);
+    }
+
+    private function viewerSearchTerm(LogPayload $payload): ?string
+    {
+        $parts = array_filter([
+            $payload->message,
+            $payload->exception['class'] ?? null,
+            $payload->exception['message'] ?? null,
+        ]);
+
+        $term = trim(implode(' ', $parts));
+
+        return $term !== '' ? $term : null;
     }
 }

@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Nabafzar\LogCenter\Tests\Feature;
 
+use Illuminate\Support\Carbon;
+use Monolog\Level;
+use Monolog\LogRecord;
+use Nabafzar\LogCenter\Factories\LogPayloadFactory;
 use Nabafzar\LogCenter\Tests\TestCase;
 
 final class LogViewerControllerTest extends TestCase
@@ -48,5 +52,44 @@ LOG);
         $response->assertOk();
         $response->assertDownload('download.log');
         $response->assertHeader('content-type', 'text/plain; charset=UTF-8');
+    }
+
+    public function test_it_uses_the_fingerprint_to_pick_the_matching_file_when_no_file_is_provided(): void
+    {
+        $directory = storage_path('logs/logcenter-feature-fingerprint-tests');
+        if (! is_dir($directory)) {
+            mkdir($directory, 0777, true);
+        }
+
+        $record = new LogRecord(
+            datetime: Carbon::parse('2026-05-08 09:00:00')->toDateTimeImmutable(),
+            channel: 'local',
+            level: Level::Error,
+            message: 'Fingerprint target failure',
+            context: [],
+            extra: [],
+        );
+        $payload = LogPayloadFactory::fromLogRecord($record);
+
+        $matchingFile = $directory . '/older.log';
+        file_put_contents($matchingFile, <<<LOG
+[2026-05-08 09:00:00] local.ERROR: Fingerprint target failure
+LOG);
+
+        $otherFile = $directory . '/newer.log';
+        file_put_contents($otherFile, <<<LOG
+[2026-05-08 10:00:00] local.ERROR: Unrelated failure
+LOG);
+
+        touch($matchingFile, strtotime('2026-05-08 09:00:00'));
+        touch($otherFile, strtotime('2026-05-08 10:00:00'));
+
+        config()->set('logcenter.viewer.paths', [$directory]);
+
+        $response = $this->get('/log-viewer?fingerprint=' . urlencode($payload->fingerprint));
+
+        $response->assertOk();
+        $response->assertViewHas('selectedFile', realpath($matchingFile) ?: $matchingFile);
+        $response->assertSee('Fingerprint target failure');
     }
 }

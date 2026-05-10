@@ -353,7 +353,7 @@ class BaleMarkdownFormatter implements LogFormatterInterface
 
     private function viewerUrl(LogPayload $payload): ?string
     {
-        if (! (bool) config('logcenter.viewer.enabled', false)) {
+        if (!(bool)config('logcenter.viewer.enabled', false)) {
             return null;
         }
 
@@ -361,13 +361,31 @@ class BaleMarkdownFormatter implements LogFormatterInterface
             return null;
         }
 
-        $baseUrl = rtrim((string) config('app.url', ''), '/');
-        $prefix = trim((string) config('logcenter.viewer.route_prefix', 'log-viewer'), '/');
+        $baseUrl = rtrim((string)config('app.url', ''), '/');
+        $prefix = trim((string)config('logcenter.viewer.route_prefix', 'log-viewer'), '/');
 
         if ($baseUrl === '') {
             return null;
         }
 
-        return $baseUrl . '/' . $prefix . '?fingerprint=' . rawurlencode($payload->fingerprint);
+        return $baseUrl . '/' . $prefix . '?fingerprint=' . $this->viewerFingerprintToken($payload);
+    }
+
+    private function viewerFingerprintToken(LogPayload $payload): string
+    {
+        return substr((string)$payload->fingerprint, 0, 14);
+    }
+
+    private function viewerSearchTerm(LogPayload $payload): ?string
+    {
+        $parts = array_filter([
+            $payload->message,
+            $payload->exception['class'] ?? null,
+            $payload->exception['message'] ?? null,
+        ]);
+
+        $term = trim(implode(' ', $parts));
+
+        return $term !== '' ? $term : null;
     }
 }

@@ -81,6 +81,7 @@ Implemented code:
   - `routes/web.php`
   - `resources/views/index.blade.php`
   - log download action for the selected file
+  - viewer links now use a short fingerprint token plus a message search fallback
 - Tests:
   - `tests/TestCase.php`
   - unit tests for factories, formatters, transports, payload masking, and log parsing

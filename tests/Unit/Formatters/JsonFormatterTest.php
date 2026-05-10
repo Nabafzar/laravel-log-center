@@ -29,7 +29,10 @@ final class JsonFormatterTest extends TestCase
         $this->assertSame('ERROR', $data['level']);
         $this->assertSame('Something failed', $data['message']);
         $this->assertSame('fingerprint-123', $data['fingerprint']);
-        $this->assertSame('http://localhost/log-viewer?fingerprint=fingerprint-123', $data['viewer_url']);
+        $this->assertSame(
+            'http://localhost/log-viewer?fingerprint=' . substr('fingerprint-123', 0, 14) . '&search=Something%20failed',
+            $data['viewer_url']
+        );
         $this->assertSame('Log Center Test App', $data['application']);
     }
 

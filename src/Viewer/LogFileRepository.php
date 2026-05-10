@@ -50,7 +50,7 @@ final class LogFileRepository
 
         $level = isset($filters['level']) ? strtolower(trim((string) $filters['level'])) : '';
         $search = isset($filters['search']) ? mb_strtolower(trim((string) $filters['search'])) : '';
-        $fingerprint = isset($filters['fingerprint']) ? strtolower(trim((string) $filters['fingerprint'])) : '';
+        $fingerprint = $this->normalizeFingerprintFilter($filters['fingerprint'] ?? null);
 
         if ($level !== '' && $level !== 'all') {
             $entries = $entries->filter(static fn (array $entry): bool => $entry['level'] === $level);
@@ -252,12 +252,14 @@ final class LogFileRepository
             $content .= PHP_EOL . '... [truncated]';
         }
 
-        $message = trim((string) ($header['message'] ?? ''));
+        $rawMessage = trim((string) ($header['message'] ?? ''));
+        $message = $this->normalizeMessage($rawMessage);
         $stack = count($visibleLines) > 1 ? implode(PHP_EOL, array_slice($visibleLines, 1)) : null;
         $firstLine = (string) ($visibleLines[0] ?? $message);
-        $jsonContext = $this->extractJsonContext($message);
+        $jsonContext = $this->extractJsonContext($rawMessage);
         $exception = $this->extractExceptionDetails($message, $content, $visibleLines);
         $searchable = implode(' ', array_filter([
+            $rawMessage,
             $message,
             $jsonContext ? json_encode($jsonContext, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null,
             $exception['class'] ?? null,
@@ -314,6 +316,27 @@ final class LogFileRepository
         $decoded = json_decode($candidate, true);
 
         return is_array($decoded) && json_last_error() === JSON_ERROR_NONE ? $decoded : null;
+    }
+
+    private function normalizeMessage(string $message): string
+    {
+        $position = strrpos($message, '{');
+
+        if ($position === false) {
+            return $message;
+        }
+
+        $candidate = trim(substr($message, $position));
+
+        if ($candidate === '' || ! str_starts_with($candidate, '{') || ! str_ends_with($candidate, '}')) {
+            return $message;
+        }
+
+        if (json_decode($candidate, true) === null && json_last_error() !== JSON_ERROR_NONE) {
+            return $message;
+        }
+
+        return rtrim(substr($message, 0, $position));
     }
 
     private function extractExceptionDetails(string $message, string $content, array $lines): array
@@ -387,5 +410,22 @@ final class LogFileRepository
         }
 
         return $path;
+    }
+
+    private function normalizeFingerprintFilter(mixed $fingerprint): string
+    {
+        $fingerprint = strtolower(trim((string) $fingerprint));
+
+        if ($fingerprint === '') {
+            return '';
+        }
+
+        $fingerprint = ltrim($fingerprint, '#');
+
+        if (str_starts_with($fingerprint, 'group-')) {
+            $fingerprint = substr($fingerprint, 6);
+        }
+
+        return trim($fingerprint);
     }
 }

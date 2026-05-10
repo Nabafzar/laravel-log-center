@@ -28,7 +28,8 @@ final class PlainTextFormatterTest extends TestCase
         $this->assertStringContainsString('Extra:', $formatted->content);
         $this->assertStringContainsString('Request:', $formatted->content);
         $this->assertStringContainsString('Trace:', $formatted->content);
-        $this->assertStringContainsString('Log Center: http://localhost/log-viewer?fingerprint=fingerprint-123', $formatted->content);
+        $this->assertStringContainsString('Log Center: http://localhost/log-viewer?fingerprint=' . substr('fingerprint-123', 0, 14), $formatted->content);
+        $this->assertStringContainsString('search=Something%20failed', $formatted->content);
     }
 
     public function test_it_omits_the_viewer_link_when_viewer_is_disabled_or_fingerprint_is_missing(): void

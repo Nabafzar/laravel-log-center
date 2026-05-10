@@ -1729,7 +1729,7 @@
                                     <span class="badge {{ $groupLevel }}">{{ strtoupper($group['level_label'] ?? $groupLevel) }}</span>
                                     <span class="meta-chip">{{ $group['count'] }} occurrence(s)</span>
                                     @if(! empty($group['fingerprint']))
-                                        <span class="meta-chip">#{{ substr($group['fingerprint'], 0, 10) }}</span>
+                                        <span class="meta-chip">#{{ substr($group['fingerprint'], 0, 14) }}</span>
                                     @endif
                                     @if(! empty($group['truncated']))
                                         <span class="meta-chip">truncated</span>

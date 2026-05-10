@@ -20,17 +20,18 @@ final class LogViewerController extends Controller
         $file = (string) $request->query('file', '');
         $level = (string) $request->query('level', '');
         $search = (string) $request->query('search', '');
-        $fingerprint = (string) $request->query('fingerprint', '');
+        $fingerprint = $this->normalizeFingerprint((string) $request->query('fingerprint', ''));
+        $filters = [
+            'level' => $level,
+            'search' => $search,
+            'fingerprint' => $fingerprint,
+        ];
 
-        $selectedFile = $file !== '' ? $file : (string) array_key_first($availableFiles);
-        $selectedFile = $selectedFile !== '' ? $selectedFile : null;
+        $selectedFile = $this->resolveSelectedFile($availableFiles, $file, $filters);
+        $effectiveFilters = $this->effectiveFilters($selectedFile, $filters);
 
         $entries = $selectedFile !== null
-            ? $this->files->entries($selectedFile, [
-                'level' => $level,
-                'search' => $search,
-                'fingerprint' => $fingerprint,
-            ])
+            ? $this->files->entries($selectedFile, $effectiveFilters)
             : collect();
 
         $allGroups = $this->files->groupedEntries($entries);
@@ -76,9 +77,87 @@ final class LogViewerController extends Controller
         abort_unless($path !== null, 404);
 
         return response()->download(
-            $path,
-            basename($path),
-            ['Content-Type' => 'text/plain; charset=UTF-8']
+            file:$path,
+            name: basename($path),
+            headers:['Content-Type' => 'text/plain; charset=UTF-8']
         );
+    }
+
+    /**
+     * Prefer the explicitly selected file, but fall back to the first file that
+     * actually contains a matching fingerprint/search result.
+     *
+     * @param array<string, array<string, mixed>> $availableFiles
+     * @param array{level?: string, search?: string, fingerprint?: string} $filters
+     */
+    private function resolveSelectedFile(array $availableFiles, string $file, array $filters): ?string
+    {
+        if ($file !== '') {
+            return $file;
+        }
+
+        $defaultFile = array_key_first($availableFiles);
+        $fingerprint = trim((string) ($filters['fingerprint'] ?? ''));
+        $search = trim((string) ($filters['search'] ?? ''));
+        $level = trim((string) ($filters['level'] ?? ''));
+
+        if ($fingerprint === '' && $search === '' && ($level === '' || $level === 'all')) {
+            return is_string($defaultFile) && $defaultFile !== '' ? $defaultFile : null;
+        }
+
+        foreach (array_keys($availableFiles) as $candidate) {
+            $entries = $this->files->entries($candidate, $this->effectiveFilters($candidate, $filters));
+
+            if ($entries->isNotEmpty()) {
+                return $candidate;
+            }
+        }
+
+        return is_string($defaultFile) && $defaultFile !== '' ? $defaultFile : null;
+    }
+
+    /**
+     * If a link carries both fingerprint and search, fall back to search-only
+     * when the fingerprint does not line up with the parsed log file.
+     *
+     * @param array{level?: string, search?: string, fingerprint?: string} $filters
+     * @return array{level?: string, search?: string, fingerprint?: string}
+     */
+    private function effectiveFilters(?string $file, array $filters): array
+    {
+        $entries = $file !== null ? $this->files->entries($file, $filters) : collect();
+
+        if ($entries->isNotEmpty()) {
+            return $filters;
+        }
+
+        $fingerprint = trim((string) ($filters['fingerprint'] ?? ''));
+        $search = trim((string) ($filters['search'] ?? ''));
+
+        if ($fingerprint === '' || $search === '') {
+            return $filters;
+        }
+
+        $fallbackFilters = $filters;
+        $fallbackFilters['fingerprint'] = '';
+
+        return $fallbackFilters;
+    }
+
+    private function normalizeFingerprint(string $fingerprint): string
+    {
+        $fingerprint = strtolower(trim($fingerprint));
+
+        if ($fingerprint === '') {
+            return '';
+        }
+
+        $fingerprint = ltrim($fingerprint, '#');
+
+        if (str_starts_with($fingerprint, 'group-')) {
+            $fingerprint = substr($fingerprint, 6);
+        }
+
+        return trim($fingerprint);
     }
 }
