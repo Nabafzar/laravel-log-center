@@ -7,22 +7,23 @@ namespace Nabafzar\LogCenter\Transports\Webhook;
 use BackedEnum;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
-use Nabafzar\LogCenter\Contracts\LogTransportInterface;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\DTO\LogPayload;
 use Nabafzar\LogCenter\DTO\TransportResult;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
+use Nabafzar\LogCenter\Transports\AbstractTransport;
 use Throwable;
 
-final class WebhookTransport implements LogTransportInterface
+final class WebhookTransport extends AbstractTransport
 {
+    protected const DRIVER_NAME = 'webhook';
+
     public function send(LogPayload $payload, FormattedMessage $message): TransportResult
     {
         $url = $this->url();
 
         if ($url === null) {
-            return TransportResult::failed(
-                driver: 'webhook',
+            return $this->failed(
                 errorMessage: 'Webhook URL is not configured.',
             );
         }
@@ -36,8 +37,7 @@ final class WebhookTransport implements LogTransportInterface
                 )
                 ->throw();
 
-            return TransportResult::success(
-                driver: 'webhook',
+            return $this->success(
                 statusCode: $response->status(),
                 meta: [
                     'payload_type' => $this->payloadType(),
@@ -47,8 +47,7 @@ final class WebhookTransport implements LogTransportInterface
         } catch (Throwable $exception) {
             $statusCode = $this->statusCodeFromException($exception);
 
-            return TransportResult::failed(
-                driver: 'webhook',
+            return $this->failed(
                 errorMessage: $exception->getMessage(),
                 exception: $exception,
                 statusCode: $statusCode,
@@ -202,4 +201,5 @@ final class WebhookTransport implements LogTransportInterface
     {
         return $statusCode === null || $statusCode === 429 || $statusCode >= 500;
     }
+
 }

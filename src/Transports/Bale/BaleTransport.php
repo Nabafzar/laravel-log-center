@@ -7,25 +7,25 @@ namespace Nabafzar\LogCenter\Transports\Bale;
 use BackedEnum;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
-use Nabafzar\LogCenter\Contracts\LogTransportInterface;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\DTO\LogPayload;
 use Nabafzar\LogCenter\DTO\TransportResult;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
+use Nabafzar\LogCenter\Transports\AbstractTransport;
 use Throwable;
 
-final class BaleTransport implements LogTransportInterface
+final class BaleTransport extends AbstractTransport
 {
     private const DEFAULT_BASE_URL = 'https://tapi.bale.ai/bot';
+    protected const DRIVER_NAME = 'bale';
 
     public function send(LogPayload $payload, FormattedMessage $message): TransportResult
     {
         $token = $this->token();
         $chatId = $this->chatId();
 
-        if (! $token || ! $chatId) {
-            return TransportResult::failed(
-                driver: 'bale',
+        if (!$token || !$chatId) {
+            return $this->failed(
                 errorMessage: 'Bale token or chat ID is not configured.',
             );
         }
@@ -33,8 +33,7 @@ final class BaleTransport implements LogTransportInterface
         $content = trim($message->content);
 
         if ($content === '') {
-            return TransportResult::success(
-                driver: 'bale',
+            return $this->success(
                 meta: ['skipped' => true, 'reason' => 'empty_message'],
             );
         }
@@ -44,16 +43,14 @@ final class BaleTransport implements LogTransportInterface
                 ->post($this->endpoint($token), $this->payload($chatId, $content, $message))
                 ->throw();
 
-            return TransportResult::success(
-                driver: 'bale',
+            return $this->success(
                 statusCode: $response->status(),
                 messageId: $this->messageId($response->json()),
             );
         } catch (Throwable $exception) {
             $statusCode = $this->statusCodeFromException($exception);
 
-            return TransportResult::failed(
-                driver: 'bale',
+            return $this->failed(
                 errorMessage: $exception->getMessage(),
                 exception: $exception,
                 statusCode: $statusCode,
@@ -84,7 +81,7 @@ final class BaleTransport implements LogTransportInterface
 
         return array_filter(
             $payload,
-            static fn (mixed $value): bool => $value !== null
+            static fn(mixed $value): bool => $value !== null
         );
     }
 
@@ -97,7 +94,7 @@ final class BaleTransport implements LogTransportInterface
     {
         $baseUrl = config('logcenter.drivers.bale.base_url', self::DEFAULT_BASE_URL);
 
-        if (! is_string($baseUrl) || trim($baseUrl) === '') {
+        if (!is_string($baseUrl) || trim($baseUrl) === '') {
             return self::DEFAULT_BASE_URL;
         }
 
@@ -116,7 +113,7 @@ final class BaleTransport implements LogTransportInterface
 
     private function timeout(): int
     {
-        return max(1, (int) config('logcenter.drivers.bale.timeout', 5));
+        return max(1, (int)config('logcenter.drivers.bale.timeout', 5));
     }
 
     private function replyToMessageId(FormattedMessage $message): ?int
@@ -127,11 +124,11 @@ final class BaleTransport implements LogTransportInterface
             $replyToMessageId = $replyToMessageId->value;
         }
 
-        if (! is_scalar($replyToMessageId)) {
+        if (!is_scalar($replyToMessageId)) {
             return null;
         }
 
-        $replyToMessageId = (int) $replyToMessageId;
+        $replyToMessageId = (int)$replyToMessageId;
 
         return $replyToMessageId > 0 ? $replyToMessageId : null;
     }
@@ -144,24 +141,24 @@ final class BaleTransport implements LogTransportInterface
             $parseMode = $parseMode->value;
         }
 
-        if (! is_scalar($parseMode)) {
+        if (!is_scalar($parseMode)) {
             return null;
         }
 
-        $parseMode = trim((string) $parseMode);
+        $parseMode = trim((string)$parseMode);
 
         return $parseMode !== '' ? $parseMode : null;
     }
 
     private function messageId(mixed $response): ?string
     {
-        if (! is_array($response)) {
+        if (!is_array($response)) {
             return null;
         }
 
         $messageId = $response['result']['message_id'] ?? $response['message_id'] ?? null;
 
-        return $messageId === null ? null : (string) $messageId;
+        return $messageId === null ? null : (string)$messageId;
     }
 
     private function statusCodeFromException(Throwable $exception): ?int
@@ -184,11 +181,11 @@ final class BaleTransport implements LogTransportInterface
             $value = $value->value;
         }
 
-        if (! is_scalar($value)) {
+        if (!is_scalar($value)) {
             return null;
         }
 
-        $value = trim((string) $value);
+        $value = trim((string)$value);
 
         return $value !== '' ? $value : null;
     }
@@ -198,7 +195,7 @@ final class BaleTransport implements LogTransportInterface
         return [
             MessageFormatEnum::PLAIN,
             MessageFormatEnum::BALE_MARKDOWN,
-            MessageFormatEnum::BALE_TEXT,
         ];
     }
+
 }

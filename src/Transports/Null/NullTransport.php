@@ -4,23 +4,21 @@ declare(strict_types=1);
 
 namespace Nabafzar\LogCenter\Transports\Null;
 
-use Nabafzar\LogCenter\Contracts\LogTransportInterface;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\DTO\LogPayload;
 use Nabafzar\LogCenter\DTO\TransportResult;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
+use Nabafzar\LogCenter\Transports\AbstractTransport;
 
-final class NullTransport implements LogTransportInterface
+final class NullTransport extends AbstractTransport
 {
+    protected const DRIVER_NAME = 'null';
+
     public function send(LogPayload $payload, FormattedMessage $message): TransportResult
     {
-        return new TransportResult(
-            success: true,
-            driver: 'null',
-            meta: [
-                'discarded' => true,
-            ],
-        );
+        return $this->success(meta: [
+            'discarded' => true,
+        ]);
     }
 
     public function supportedFormats(): array

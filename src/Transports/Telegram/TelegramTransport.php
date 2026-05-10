@@ -7,18 +7,19 @@ namespace Nabafzar\LogCenter\Transports\Telegram;
 use BackedEnum;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
-use Nabafzar\LogCenter\Contracts\LogTransportInterface;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\DTO\LogPayload;
 use Nabafzar\LogCenter\DTO\TransportResult;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
+use Nabafzar\LogCenter\Transports\AbstractTransport;
 use Throwable;
 
-class TelegramTransport implements LogTransportInterface
+class TelegramTransport extends AbstractTransport
 {
     private const BASE_URL = 'https://api.telegram.org/bot';
     private const MAX_MESSAGE_LENGTH = 4096;
     private const TRUNCATED_MARKER = PHP_EOL . '... [truncated]';
+    protected const DRIVER_NAME = 'telegram';
 
     public function send(LogPayload $payload, FormattedMessage $message): TransportResult
     {
@@ -26,8 +27,7 @@ class TelegramTransport implements LogTransportInterface
         $chatId = $this->chatId();
 
         if (! $token || ! $chatId) {
-            return TransportResult::failed(
-                driver: 'telegram',
+            return $this->failed(
                 errorMessage: 'Telegram token or chat ID is not configured.',
             );
         }
@@ -35,8 +35,7 @@ class TelegramTransport implements LogTransportInterface
         $messages = $this->enforceMessageLimit($message->content);
 
         if ($messages === []) {
-            return TransportResult::success(
-                driver: 'telegram',
+            return $this->success(
                 meta: ['skipped' => true, 'reason' => 'empty_message'],
             );
         }
@@ -58,8 +57,7 @@ class TelegramTransport implements LogTransportInterface
                 }
             }
 
-            return TransportResult::success(
-                driver: 'telegram',
+            return $this->success(
                 statusCode: $lastStatusCode,
                 messageId: $lastMessageId,
                 meta: ['sent_messages' => count($messages)],
@@ -67,8 +65,7 @@ class TelegramTransport implements LogTransportInterface
         } catch (Throwable $e) {
             $statusCode = $this->statusCodeFromException($e);
 
-            return TransportResult::failed(
-                driver: 'telegram',
+            return $this->failed(
                 errorMessage: $e->getMessage(),
                 exception: $e,
                 statusCode: $statusCode,
@@ -295,4 +292,5 @@ class TelegramTransport implements LogTransportInterface
             MessageFormatEnum::TELEGRAM_HTML,
         ];
     }
+
 }

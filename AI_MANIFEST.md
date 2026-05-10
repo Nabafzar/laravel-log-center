@@ -66,6 +66,7 @@ Implemented code:
   - `src/Contracts/LogFormatterInterface.php`
   - `src/Contracts/LogDispatcherInterface.php`
 - Transports:
+  - shared transport base helper: `src/Transports/AbstractTransport.php`
   - `src/Transports/Null/NullTransport.php`
   - `src/Transports/Telegram/TelegramTransport.php`
   - `src/Transports/Bale/BaleTransport.php`

@@ -7,35 +7,34 @@ namespace Nabafzar\LogCenter\Transports\Mattermost;
 use BackedEnum;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
-use Nabafzar\LogCenter\Contracts\LogTransportInterface;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\DTO\LogPayload;
 use Nabafzar\LogCenter\DTO\TransportResult;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
+use Nabafzar\LogCenter\Transports\AbstractTransport;
 use Throwable;
 
-final class MattermostTransport implements LogTransportInterface
+final class MattermostTransport extends AbstractTransport
 {
     private const LTR_EMBEDDING = "\u{202A}";
     private const RTL_EMBEDDING = "\u{202B}";
     private const POP_DIRECTIONAL_FORMATTING = "\u{202C}";
     private const POSTS_ENDPOINT = '/api/v4/posts';
+    protected const DRIVER_NAME = 'mattermost';
 
     public function send(LogPayload $payload, FormattedMessage $message): TransportResult
     {
         $content = trim($message->content);
 
         if ($content === '') {
-            return TransportResult::success(
-                driver: 'mattermost',
+            return $this->success(
                 meta: ['skipped' => true, 'reason' => 'empty_message'],
             );
         }
 
         if ($this->botToken() !== null) {
             if ($this->baseUrl() === null) {
-                return TransportResult::failed(
-                    driver: 'mattermost',
+                return $this->failed(
                     errorMessage: 'Mattermost bot token is configured, but base URL is missing.',
                 );
             }
@@ -46,8 +45,7 @@ final class MattermostTransport implements LogTransportInterface
         $webhookUrl = $this->webhookUrl();
 
         if ($webhookUrl === null) {
-            return TransportResult::failed(
-                driver: 'mattermost',
+            return $this->failed(
                 errorMessage: 'Mattermost webhook URL or bot token is not configured.',
             );
         }
@@ -57,8 +55,7 @@ final class MattermostTransport implements LogTransportInterface
                 ->post($webhookUrl, $this->payload($content))
                 ->throw();
 
-            return TransportResult::success(
-                driver: 'mattermost',
+            return $this->success(
                 statusCode: $response->status(),
                 meta: [
                     'channel' => $this->channel(),
@@ -68,8 +65,7 @@ final class MattermostTransport implements LogTransportInterface
         } catch (Throwable $exception) {
             $statusCode = $this->statusCodeFromException($exception);
 
-            return TransportResult::failed(
-                driver: 'mattermost',
+            return $this->failed(
                 errorMessage: $exception->getMessage(),
                 exception: $exception,
                 statusCode: $statusCode,
@@ -105,8 +101,7 @@ final class MattermostTransport implements LogTransportInterface
         $channelId = $this->channelId();
 
         if ($channelId === null) {
-            return TransportResult::failed(
-                driver: 'mattermost',
+            return $this->failed(
                 errorMessage: 'Mattermost bot token is configured, but channel ID is missing.',
             );
         }
@@ -116,8 +111,7 @@ final class MattermostTransport implements LogTransportInterface
                 ->post($this->postsEndpoint(), $this->botPayload($channelId, $content))
                 ->throw();
 
-            return TransportResult::success(
-                driver: 'mattermost',
+            return $this->success(
                 statusCode: $response->status(),
                 messageId: $this->messageId($response->json()),
                 meta: [
@@ -128,8 +122,7 @@ final class MattermostTransport implements LogTransportInterface
         } catch (Throwable $exception) {
             $statusCode = $this->statusCodeFromException($exception);
 
-            return TransportResult::failed(
-                driver: 'mattermost',
+            return $this->failed(
                 errorMessage: $exception->getMessage(),
                 exception: $exception,
                 statusCode: $statusCode,
@@ -263,4 +256,5 @@ final class MattermostTransport implements LogTransportInterface
     {
         return $statusCode === null || $statusCode === 429 || $statusCode >= 500;
     }
+
 }
