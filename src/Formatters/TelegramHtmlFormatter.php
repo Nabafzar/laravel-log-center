@@ -10,9 +10,8 @@ use Nabafzar\LogCenter\DTO\LogPayload;
 use Nabafzar\LogCenter\Enums\LogLevelEnum;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
 use Nabafzar\LogCenter\Enums\ParseModeEnum;
-use Throwable;
 
-class TelegramHtmlFormatter implements LogFormatterInterface
+class TelegramHtmlFormatter extends AbstractFormatter implements LogFormatterInterface
 {
     public function format(LogPayload $payload): FormattedMessage
     {
@@ -31,7 +30,7 @@ class TelegramHtmlFormatter implements LogFormatterInterface
         ]));
 
         return new FormattedMessage(
-            content: $this->fitSections($sections),
+            content: parent::fitSections($sections, $this->maxLength()),
             meta: [
                 'format' => MessageFormatEnum::TELEGRAM_HTML->value,
                 'parse_mode' => ParseModeEnum::HTML->value,
@@ -47,15 +46,15 @@ class TelegramHtmlFormatter implements LogFormatterInterface
             '%s <b>[%s] %s.%s</b>',
             $level->icon(),
             $payload->datetime?->format('Y-m-d H:i:s') ?? now()->format('Y-m-d H:i:s'),
-            $this->escape($payload->environment ?? 'app'),
+            $this->escapeHtml($payload->environment ?? 'app'),
             $level->label()
         );
     }
 
     private function message(LogPayload $payload): string
     {
-        return PHP_EOL . '<b>Message: </b> ' . $this->escape(
-                $this->truncatePlain($payload->message, $this->sectionMaxLength())
+        return PHP_EOL . '<b>Message: </b> ' . $this->escapeHtml(
+                $this->truncatePlain($payload->message, parent::sectionMaxLength($this->maxLength()))
             );
     }
 
@@ -67,13 +66,13 @@ class TelegramHtmlFormatter implements LogFormatterInterface
             return null;
         }
 
-        return PHP_EOL . '<b>Log Center: </b> <a href="' . $this->escapeAttribute($url) . '">Open in viewer</a>';
+        return PHP_EOL . '<b>Log Center: </b> <a href="' . $this->escapeHtmlAttribute($url) . '">Open in viewer</a>';
     }
 
     private function tags(LogPayload $payload): ?string
     {
         return !empty($payload->tags)
-            ? '<b>Tags: </b> <code>' . $this->escape(implode(', ', $payload->tags)) . '</code>'
+            ? '<b>Tags: </b> <code>' . $this->escapeHtml(implode(', ', $payload->tags)) . '</code>'
             : null;
     }
 
@@ -81,14 +80,32 @@ class TelegramHtmlFormatter implements LogFormatterInterface
     {
         return empty($payload->context)
             ? null
-            : '<b>Context: </b>' . PHP_EOL . $this->pre($this->json($payload->context));
+            : '<b>Context: </b>' . PHP_EOL . $this->pre(
+                $this->escapeHtml($this->truncatePlain(
+                    $this->encodeJson(
+                        $payload->context,
+                        JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR,
+                        '[invalid json]'
+                    ),
+                    parent::sectionMaxLength($this->maxLength())
+                ))
+            );
     }
 
     private function extra(LogPayload $payload): ?string
     {
         return empty($payload->extra)
             ? null
-            : '<b>Extra: </b>' . PHP_EOL . $this->pre($this->json($payload->extra));
+            : '<b>Extra: </b>' . PHP_EOL . $this->pre(
+                $this->escapeHtml($this->truncatePlain(
+                    $this->encodeJson(
+                        $payload->extra,
+                        JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR,
+                        '[invalid json]'
+                    ),
+                    parent::sectionMaxLength($this->maxLength())
+                ))
+            );
     }
 
     private function user(LogPayload $payload): ?string
@@ -98,23 +115,23 @@ class TelegramHtmlFormatter implements LogFormatterInterface
         }
 
         return implode(' / ', array_filter([
-            $this->userValue('User', $payload->user['id'] ?? null),
-            $this->userValue('Name', $payload->user['name'] ?? null),
+            $this->formatHtmlUserValue('User', $payload->user['id'] ?? null),
+            $this->formatHtmlUserValue('Name', $payload->user['name'] ?? null),
         ]));
     }
 
     private function request(LogPayload $payload): ?string
     {
-        $request = $this->sanitizeRequest($payload->request);
+        $request = $this->sanitizeRequest($payload->request, keepReferer: true);
 
         return empty($request)
             ? null
             : PHP_EOL . implode(PHP_EOL, array_values(array_filter([
-                $this->requestLine('Method', $request['method'] ?? null),
-                $this->requestLine('URL', $request['url'] ?? null),
-                $this->requestLine('IP', $request['ip'] ?? null),
-                $this->requestLine('Referer', $request['referer'] ?? null),
-                $this->requestData('Body', $request['body'] ?? null),
+            $this->formatHtmlRequestLine('Method', $request['method'] ?? null),
+            $this->formatHtmlRequestLine('URL', $request['url'] ?? null),
+            $this->formatHtmlRequestLine('IP', $request['ip'] ?? null),
+            $this->formatHtmlRequestLine('Referer', $request['referer'] ?? null),
+            $this->formatHtmlRequestData('Body', $request['body'] ?? null),
             ])));
     }
 
@@ -125,9 +142,9 @@ class TelegramHtmlFormatter implements LogFormatterInterface
         }
 
         return implode(PHP_EOL, array_filter([
-            '<b>Exception: </b> <code>' . $this->escape($this->exceptionClass($payload->exception)) . '</code>',
-            $this->exceptionFile($payload),
-            $this->exceptionLine($payload),
+            '<b>Exception: </b> <code>' . $this->escapeHtml($this->exceptionClass($payload->exception)) . '</code>',
+            $this->formatHtmlExceptionFile($payload),
+            $this->formatHtmlExceptionLine($payload),
         ]));
     }
 
@@ -136,234 +153,18 @@ class TelegramHtmlFormatter implements LogFormatterInterface
         return empty($payload->trace)
             ? null
             : PHP_EOL . '<b>Trace: </b>' . PHP_EOL . $this->pre(
-                $this->escape($this->truncatePlain($payload->trace, $this->traceMaxLength()))
+                $this->escapeHtml($this->truncatePlain($payload->trace, $this->traceMaxLength()))
             );
-    }
-
-    private function pre(string $text): string
-    {
-        return '<pre>' . $text . '</pre>';
-    }
-
-    private function exceptionClass(array $exception): string
-    {
-        return (string) ($exception['class'] ?? $exception['type'] ?? 'Exception');
-    }
-
-    private function userValue(string $label, mixed $value): ?string
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        return '<b>' . $this->escape($label) . ':</b> <code>' . $this->escape($this->truncatePlain((string) $value, 200)) . '</code>';
-    }
-
-    private function exceptionFile(LogPayload $payload): ?string
-    {
-        $file = $payload->exception['file'] ?? null;
-
-        if (! is_string($file) || $file === '') {
-            return null;
-        }
-
-        return '<b>File: </b> <code>' . $this->escape($this->truncatePlain($file, 250)) . '</code>';
-    }
-
-    private function exceptionLine(LogPayload $payload): ?string
-    {
-        $line = $payload->exception['line'] ?? null;
-
-        if (! is_scalar($line) || (int) $line <= 0) {
-            return null;
-        }
-
-        return '<b>Line: </b> <code>' . (int) $line . '</code>';
-    }
-
-    private function json(array $data): string
-    {
-        try {
-            $json = json_encode(
-                $data,
-                JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR
-            );
-
-            return $this->escape($this->truncatePlain($json, $this->sectionMaxLength()));
-        } catch (Throwable) {
-            return '[invalid json]';
-        }
-    }
-
-    private function sanitizeRequest(?array $request): ?array
-    {
-        if (empty($request)) {
-            return null;
-        }
-
-        if (!isset($request['referer']) && isset($request['headers'])) {
-            $request['referer'] = $this->extractHeaderValue($request['headers'], ['referer', 'referrer']);
-        }
-
-        if (isset($request['referer']) && is_string($request['referer']) && $request['referer'] !== '') {
-            $request['referer'] = $this->normalizeReferer($request['referer']);
-        }
-
-        unset($request['headers'], $request['cookies']);
-
-        return $request === [] ? null : $request;
-    }
-
-    private function extractHeaderValue(mixed $headers, array $candidates): ?string
-    {
-        if (!is_array($headers)) {
-            return null;
-        }
-
-        foreach ($candidates as $candidate) {
-            foreach ([$candidate, ucfirst($candidate), strtoupper($candidate)] as $key) {
-                if (!isset($headers[$key])) {
-                    continue;
-                }
-
-                $value = $headers[$key];
-
-                if (is_array($value)) {
-                    $value = $value[0] ?? null;
-                }
-
-                if (is_string($value) && $value !== '') {
-                    return $value;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private function normalizeReferer(string $referer): string
-    {
-        $parts = parse_url($referer);
-
-        if (! is_array($parts)) {
-            return $referer;
-        }
-
-        $normalized = '';
-
-        if (isset($parts['scheme'])) {
-            $normalized .= $parts['scheme'] . '://';
-        }
-
-        if (isset($parts['user'])) {
-            $normalized .= $parts['user'];
-
-            if (isset($parts['pass'])) {
-                $normalized .= ':' . $parts['pass'];
-            }
-
-            $normalized .= '@';
-        }
-
-        if (isset($parts['host'])) {
-            $normalized .= $parts['host'];
-        }
-
-        if (isset($parts['port'])) {
-            $normalized .= ':' . $parts['port'];
-        }
-
-        $normalized .= $parts['path'] ?? '';
-
-        return $normalized !== '' ? $normalized : $referer;
-    }
-
-    private function requestLine(string $label, mixed $value): ?string
-    {
-        if ($value === null || $value === '' || $value === []) {
-            return null;
-        }
-
-        return sprintf(
-            '<b>%s: </b> <code>%s</code>',
-            $this->escape($label),
-            $this->escape($this->truncatePlain((string)$value, 200))
-        );
-    }
-
-    private function requestData(string $label, mixed $value): ?string
-    {
-        if (!is_array($value) || $value === []) {
-            return null;
-        }
-
-        return sprintf(
-            '<b>%s: </b>' . PHP_EOL . '%s',
-            $this->escape($label),
-            $this->pre($this->json($value))
-        );
-    }
-
-    private function escape(string $text): string
-    {
-        return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-    }
-
-    private function escapeAttribute(string $text): string
-    {
-        return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-    }
-
-    /**
-     * @param list<string> $sections
-     */
-    private function fitSections(array $sections): string
-    {
-        $content = '';
-        $notice = '<i>... [truncated]</i>';
-
-        foreach ($sections as $section) {
-            $candidate = $content === ''
-                ? $section
-                : $content . "\n" . $section;
-
-            if (mb_strlen($candidate) <= $this->maxLength()) {
-                $content = $candidate;
-                continue;
-            }
-
-            $candidateWithNotice = $content . "\n\n" . $notice;
-
-            return $content !== '' && mb_strlen($candidateWithNotice) <= $this->maxLength()
-                ? $candidateWithNotice
-                : $content;
-        }
-
-        return $content;
-    }
-
-    private function truncatePlain(string $text, int $limit): string
-    {
-        if (mb_strlen($text) <= $limit) {
-            return $text;
-        }
-
-        return mb_substr($text, 0, max(0, $limit - 16)) . PHP_EOL . '... [truncated]';
-    }
-
-    private function sectionMaxLength(): int
-    {
-        return max(500, (int)floor($this->maxLength() / 2));
     }
 
     private function maxLength(): int
     {
-        return (int)config('logcenter.formatters.telegram_html.max_length', 3500);
+        return $this->configInt('logcenter.formatters.telegram_html.max_length', 3500);
     }
 
     private function traceMaxLength(): int
     {
-        return (int)config('logcenter.formatters.telegram_html.trace_max_length', 1200);
+        return $this->configInt('logcenter.formatters.telegram_html.trace_max_length', 1200);
     }
 
     private function source(LogPayload $payload): ?string
@@ -372,45 +173,72 @@ class TelegramHtmlFormatter implements LogFormatterInterface
             return null;
         }
 
-        return '<b>Source: </b> <code>' . $this->escape($this->truncatePlain((string) $payload->source, 100)) . '</code>';
+        return '<b>Source: </b> <code>' . $this->escapeHtml($this->truncatePlain((string) $payload->source, 100)) . '</code>';
     }
 
-    private function viewerUrl(LogPayload $payload): ?string
+    private function pre(string $text): string
     {
-        if (! config('logcenter.viewer.enabled', false) || empty($payload->fingerprint)) {
+        return '<pre>' . $text . '</pre>';
+    }
+
+    private function formatHtmlUserValue(string $label, mixed $value): ?string
+    {
+        $value = $this->stringValue($value, 200);
+
+        return $value === null
+            ? null
+            : '<b>' . $this->escapeHtml($label) . ':</b> <code>' . $this->escapeHtml($value) . '</code>';
+    }
+
+    private function formatHtmlRequestLine(string $label, mixed $value): ?string
+    {
+        $value = $this->stringValue($value, 200);
+
+        return $value === null
+            ? null
+            : sprintf(
+                '<b>%s: </b> <code>%s</code>',
+                $this->escapeHtml($label),
+                $this->escapeHtml($value)
+            );
+    }
+
+    private function formatHtmlRequestData(string $label, mixed $value): ?string
+    {
+        if (! is_array($value) || $value === []) {
             return null;
         }
 
-        $baseUrl = rtrim((string) config('app.url', ''), '/');
-        $prefix = trim((string) config('logcenter.viewer.route_prefix', 'log-viewer'), '/');
-
-        if ($baseUrl === '') {
-            return null;
-        }
-
-        $query = array_filter([
-            'fingerprint' => $this->viewerFingerprintToken($payload),
-            'search' => $this->viewerSearchTerm($payload),
-        ]);
-
-        return $baseUrl . '/' . $prefix . '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+        return sprintf(
+            '<b>%s: </b>' . PHP_EOL . '%s',
+            $this->escapeHtml($label),
+            $this->pre($this->escapeHtml($this->truncatePlain(
+                $this->encodeJson(
+                    $value,
+                    JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR,
+                    '[invalid json]'
+                ),
+                parent::sectionMaxLength($this->maxLength())
+            )))
+        );
     }
 
-    private function viewerFingerprintToken(LogPayload $payload): string
+    private function formatHtmlExceptionFile(LogPayload $payload): ?string
     {
-        return substr((string) $payload->fingerprint, 0, 14);
+        $file = $this->exceptionFile($payload->exception ?? []);
+
+        return $file === null
+            ? null
+            : '<b>File: </b> <code>' . $this->escapeHtml($this->truncatePlain($file, 250)) . '</code>';
     }
 
-    private function viewerSearchTerm(LogPayload $payload): ?string
+    private function formatHtmlExceptionLine(LogPayload $payload): ?string
     {
-        $parts = array_filter([
-            $payload->message,
-            $payload->exception['class'] ?? null,
-            $payload->exception['message'] ?? null,
-        ]);
+        $line = $this->exceptionLine($payload->exception ?? []);
 
-        $term = trim(implode(' ', $parts));
-
-        return $term !== '' ? $term : null;
+        return $line === null
+            ? null
+            : '<b>Line: </b> <code>' . $line . '</code>';
     }
+
 }

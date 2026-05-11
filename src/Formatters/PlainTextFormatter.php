@@ -9,9 +9,8 @@ use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\DTO\LogPayload;
 use Nabafzar\LogCenter\Enums\LogLevelEnum;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
-use Throwable;
 
-class PlainTextFormatter implements LogFormatterInterface
+class PlainTextFormatter extends AbstractFormatter implements LogFormatterInterface
 {
     public function format(LogPayload $payload): FormattedMessage
     {
@@ -24,8 +23,8 @@ class PlainTextFormatter implements LogFormatterInterface
             $this->extra($payload),
             $this->request($payload),
             $this->exception($payload),
-            $this->exceptionFile($payload),
-            $this->exceptionLine($payload),
+            $this->formatPlainExceptionFile($payload),
+            $this->formatPlainExceptionLine($payload),
             $this->trace($payload),
         ]);
 
@@ -94,8 +93,8 @@ class PlainTextFormatter implements LogFormatterInterface
         }
 
         return implode(' / ', array_filter([
-            $this->userValue('User', $payload->user['id'] ?? null),
-            $this->userValue('Name', $payload->user['name'] ?? null),
+            $this->formatPlainUserValue('User', $payload->user['id'] ?? null),
+            $this->formatPlainUserValue('Name', $payload->user['name'] ?? null),
         ]));
     }
 
@@ -111,9 +110,9 @@ class PlainTextFormatter implements LogFormatterInterface
         return empty($payload->exception)
             ? null
             : implode(PHP_EOL, array_filter([
-                'Exception: ' . $this->exceptionClass($payload),
-                $this->exceptionFile($payload),
-                $this->exceptionLine($payload),
+                'Exception: ' . $this->exceptionClass($payload->exception ?? []),
+                $this->formatPlainExceptionFile($payload),
+                $this->formatPlainExceptionLine($payload),
             ]));
     }
 
@@ -129,35 +128,14 @@ class PlainTextFormatter implements LogFormatterInterface
         );
     }
 
-    private function encodeJson(array $data): string
-    {
-        try {
-            return json_encode(
-                $data,
-                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR
-            );
-        } catch (Throwable) {
-            return '[unserializable data]';
-        }
-    }
-
-    private function truncate(string $text, int $limit): string
-    {
-        if (mb_strlen($text) <= $limit) {
-            return $text;
-        }
-
-        return mb_substr($text, 0, $limit) . PHP_EOL . '... [truncated]';
-    }
-
     private function maxLength(): int
     {
-        return (int) config('logcenter.formatters.plain.max_length', 3500);
+        return $this->configInt('logcenter.formatters.plain.max_length', 3500);
     }
 
     private function traceMaxLength(): int
     {
-        return (int) config('logcenter.formatters.plain.trace_max_length', 1200);
+        return $this->configInt('logcenter.formatters.plain.trace_max_length', 1200);
     }
 
     private function source(LogPayload $payload): ?string
@@ -179,78 +157,33 @@ class PlainTextFormatter implements LogFormatterInterface
         };
     }
 
-    private function exceptionFile(LogPayload $payload): ?string
+    private function formatPlainExceptionFile(LogPayload $payload): ?string
     {
-        $file = $payload->exception['file'] ?? null;
+        $file = $this->exceptionFile($payload->exception ?? []);
 
-        if (! is_string($file) || $file === '') {
+        if ($file === null) {
             return null;
         }
 
         return 'File: ' . $file;
     }
 
-    private function exceptionLine(LogPayload $payload): ?string
+    private function formatPlainExceptionLine(LogPayload $payload): ?string
     {
-        $line = $payload->exception['line'] ?? null;
+        $line = $this->exceptionLine($payload->exception ?? []);
 
-        if (! is_scalar($line) || (int) $line <= 0) {
+        if ($line === null) {
             return null;
         }
 
-        return 'Line: ' . (int) $line;
+        return 'Line: ' . $line;
     }
 
-    private function exceptionClass(LogPayload $payload): string
+    private function formatPlainUserValue(string $label, mixed $value): ?string
     {
-        return (string) ($payload->exception['class'] ?? $payload->exception['type'] ?? 'Exception');
+        $value = $this->stringValue($value);
+
+        return $value === null ? null : $label . ': ' . $value;
     }
 
-    private function userValue(string $label, mixed $value): ?string
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        return $label . ': ' . $value;
-    }
-
-    private function viewerUrl(LogPayload $payload): ?string
-    {
-        if (! config('logcenter.viewer.enabled', false) || empty($payload->fingerprint)) {
-            return null;
-        }
-
-        $baseUrl = rtrim((string) config('app.url', ''), '/');
-        $prefix = trim((string) config('logcenter.viewer.route_prefix', 'log-viewer'), '/');
-
-        if ($baseUrl === '') {
-            return null;
-        }
-
-        $query = array_filter([
-            'fingerprint' => $this->viewerFingerprintToken($payload),
-            'search' => $this->viewerSearchTerm($payload),
-        ]);
-
-        return $baseUrl . '/' . $prefix . '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
-    }
-
-    private function viewerFingerprintToken(LogPayload $payload): string
-    {
-        return substr((string) $payload->fingerprint, 0, 14);
-    }
-
-    private function viewerSearchTerm(LogPayload $payload): ?string
-    {
-        $parts = array_filter([
-            $payload->message,
-            $payload->exception['class'] ?? null,
-            $payload->exception['message'] ?? null,
-        ]);
-
-        $term = trim(implode(' ', $parts));
-
-        return $term !== '' ? $term : null;
-    }
 }

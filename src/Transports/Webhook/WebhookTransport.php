@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Nabafzar\LogCenter\Transports\Webhook;
 
-use BackedEnum;
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\DTO\LogPayload;
@@ -171,35 +169,6 @@ final class WebhookTransport extends AbstractTransport
         $payloadType = $this->configuredString(config('logcenter.drivers.webhook.payload_type'));
 
         return $payloadType !== null ? strtolower($payloadType) : 'json';
-    }
-
-    private function configuredString(mixed $value): ?string
-    {
-        if ($value instanceof BackedEnum) {
-            $value = $value->value;
-        }
-
-        if (! is_scalar($value)) {
-            return null;
-        }
-
-        $value = trim((string) $value);
-
-        return $value !== '' ? $value : null;
-    }
-
-    private function statusCodeFromException(Throwable $exception): ?int
-    {
-        if ($exception instanceof RequestException) {
-            return $exception->response->status();
-        }
-
-        return null;
-    }
-
-    private function isRetryable(?int $statusCode): bool
-    {
-        return $statusCode === null || $statusCode === 429 || $statusCode >= 500;
     }
 
 }

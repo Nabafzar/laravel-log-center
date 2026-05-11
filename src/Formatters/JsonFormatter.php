@@ -9,9 +9,8 @@ use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\DTO\LogPayload;
 use Nabafzar\LogCenter\Enums\LogLevelEnum;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
-use Throwable;
 
-class JsonFormatter implements LogFormatterInterface
+class JsonFormatter extends AbstractFormatter implements LogFormatterInterface
 {
     public function format(LogPayload $payload): FormattedMessage
     {
@@ -36,12 +35,12 @@ class JsonFormatter implements LogFormatterInterface
                 'name' => $payload->user['name'] ?? null,
             ], static fn (mixed $value): bool => $value !== null && $value !== '') : null,
 
-            'exception' => $this->exceptionClass($payload),
-            'file' => $this->exceptionFile($payload),
-            'line' => $this->exceptionLine($payload),
+            'exception' => empty($payload->exception) ? null : $this->exceptionClass($payload->exception),
+            'file' => empty($payload->exception) ? null : $this->exceptionFile($payload->exception),
+            'line' => empty($payload->exception) ? null : $this->exceptionLine($payload->exception),
 
             'trace' => ! empty($payload->trace)
-                ? $this->truncate($payload->trace, $this->traceMaxLength())
+                ? $this->truncateNullable($payload->trace, $this->traceMaxLength(), '... [truncated]')
                 : null,
 
             'meta' => array_merge(
@@ -54,24 +53,16 @@ class JsonFormatter implements LogFormatterInterface
         ];
 
         return new FormattedMessage(
-            content: $this->encode($data),
+            content: $this->encodeJson(
+                $data,
+                $this->jsonFlags() | JSON_THROW_ON_ERROR,
+                '{"level":"ERROR","message":"Failed to encode log payload as JSON."}'
+            ),
             meta: [
                 'format' => 'json',
                 'content_type' => 'application/json',
             ],
         );
-    }
-
-    private function encode(array $data): string
-    {
-        try {
-            return json_encode(
-                $data,
-                $this->jsonFlags() | JSON_THROW_ON_ERROR
-            );
-        } catch (Throwable) {
-            return '{"level":"ERROR","message":"Failed to encode log payload as JSON."}';
-        }
     }
 
     private function jsonFlags(): int
@@ -85,83 +76,9 @@ class JsonFormatter implements LogFormatterInterface
         return $flags;
     }
 
-    private function truncate(?string $text, int $limit): ?string
-    {
-        if ($text === null || $text === '') {
-            return null;
-        }
-
-        if (mb_strlen($text) <= $limit) {
-            return $text;
-        }
-
-        return mb_substr($text, 0, $limit) . '... [truncated]';
-    }
-
     private function traceMaxLength(): int
     {
-        return (int) config('logcenter.formatters.json.trace_max_length', 5000);
+        return $this->configInt('logcenter.formatters.json.trace_max_length', 5000);
     }
 
-    private function exceptionClass(LogPayload $payload): ?string
-    {
-        if (empty($payload->exception)) {
-            return null;
-        }
-
-        return (string) ($payload->exception['class'] ?? $payload->exception['type'] ?? 'Exception');
-    }
-
-    private function exceptionFile(LogPayload $payload): ?string
-    {
-        $file = $payload->exception['file'] ?? null;
-
-        return is_string($file) && $file !== '' ? $file : null;
-    }
-
-    private function exceptionLine(LogPayload $payload): ?int
-    {
-        $line = $payload->exception['line'] ?? null;
-
-        return is_scalar($line) && (int) $line > 0 ? (int) $line : null;
-    }
-
-    private function viewerUrl(LogPayload $payload): ?string
-    {
-        if (! config('logcenter.viewer.enabled', false) || empty($payload->fingerprint)) {
-            return null;
-        }
-
-        $baseUrl = rtrim((string) config('app.url', ''), '/');
-        $prefix = trim((string) config('logcenter.viewer.route_prefix', 'log-viewer'), '/');
-
-        if ($baseUrl === '') {
-            return null;
-        }
-
-        $query = array_filter([
-            'fingerprint' => $this->viewerFingerprintToken($payload),
-            'search' => $this->viewerSearchTerm($payload),
-        ]);
-
-        return $baseUrl . '/' . $prefix . '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
-    }
-
-    private function viewerFingerprintToken(LogPayload $payload): string
-    {
-        return substr((string) $payload->fingerprint, 0, 14);
-    }
-
-    private function viewerSearchTerm(LogPayload $payload): ?string
-    {
-        $parts = array_filter([
-            $payload->message,
-            $payload->exception['class'] ?? null,
-            $payload->exception['message'] ?? null,
-        ]);
-
-        $term = trim(implode(' ', $parts));
-
-        return $term !== '' ? $term : null;
-    }
 }

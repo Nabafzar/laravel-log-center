@@ -10,9 +10,8 @@ use Nabafzar\LogCenter\DTO\LogPayload;
 use Nabafzar\LogCenter\Enums\LogLevelEnum;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
 use Nabafzar\LogCenter\Enums\ParseModeEnum;
-use Throwable;
 
-class BaleMarkdownFormatter implements LogFormatterInterface
+class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInterface
 {
     public function format(LogPayload $payload): FormattedMessage
     {
@@ -109,12 +108,12 @@ class BaleMarkdownFormatter implements LogFormatterInterface
             return null;
         }
 
-        return $this->userValue('User', $payload->user['id'] . '-' . $payload->user['name'] ?? null);
+        return $this->formatBaleUserValue($payload);
     }
 
     private function request(LogPayload $payload): ?string
     {
-        $request = $this->sanitizeRequest($payload->request);
+        $request = $this->sanitizeRequest($payload->request, keepBody: true, keepReferer: true);
 
         if (empty($request)) {
             return null;
@@ -139,8 +138,8 @@ class BaleMarkdownFormatter implements LogFormatterInterface
 
         return PHP_EOL . implode(PHP_EOL, array_filter([
                 '*Exception:* ' . $this->escapeInline($this->exceptionClass($payload->exception)),
-                $this->exceptionFile($payload),
-                $this->exceptionLine($payload),
+                $this->formatBaleExceptionFile($payload),
+                $this->formatBaleExceptionLine($payload),
             ]));
     }
 
@@ -153,89 +152,6 @@ class BaleMarkdownFormatter implements LogFormatterInterface
         return PHP_EOL . '*Trace:* ' . $this->codeBlock(
                 $this->truncate($payload->trace, $this->traceMaxLength())
             );
-    }
-
-    private function sanitizeRequest(?array $request): ?array
-    {
-        if (empty($request)) {
-            return null;
-        }
-
-        if (!isset($request['referer']) && isset($request['headers'])) {
-            $request['referer'] = $this->extractHeaderValue($request['headers'], ['referer', 'referrer']);
-        }
-
-        if (isset($request['referer']) && is_string($request['referer']) && $request['referer'] !== '') {
-            $request['referer'] = $this->normalizeReferer($request['referer']);
-        }
-
-        unset($request['headers'], $request['cookies']);
-
-        return $request === [] ? null : $request;
-    }
-
-    private function extractHeaderValue(mixed $headers, array $candidates): ?string
-    {
-        if (!is_array($headers)) {
-            return null;
-        }
-
-        foreach ($candidates as $candidate) {
-            foreach ([$candidate, ucfirst($candidate), strtoupper($candidate)] as $key) {
-                if (!isset($headers[$key])) {
-                    continue;
-                }
-
-                $value = $headers[$key];
-
-                if (is_array($value)) {
-                    $value = $value[0] ?? null;
-                }
-
-                if (is_string($value) && $value !== '') {
-                    return $value;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private function normalizeReferer(string $referer): string
-    {
-        $parts = parse_url($referer);
-
-        if (! is_array($parts)) {
-            return $referer;
-        }
-
-        $normalized = '';
-
-        if (isset($parts['scheme'])) {
-            $normalized .= $parts['scheme'] . '://';
-        }
-
-        if (isset($parts['user'])) {
-            $normalized .= $parts['user'];
-
-            if (isset($parts['pass'])) {
-                $normalized .= ':' . $parts['pass'];
-            }
-
-            $normalized .= '@';
-        }
-
-        if (isset($parts['host'])) {
-            $normalized .= $parts['host'];
-        }
-
-        if (isset($parts['port'])) {
-            $normalized .= ':' . $parts['port'];
-        }
-
-        $normalized .= $parts['path'] ?? '';
-
-        return $normalized !== '' ? $normalized : $referer;
     }
 
     private function requestLine(string $label, mixed $value): ?string
@@ -280,63 +196,6 @@ class BaleMarkdownFormatter implements LogFormatterInterface
         );
     }
 
-    private function exceptionClass(array $exception): string
-    {
-        return (string)($exception['class'] ?? $exception['type'] ?? 'Exception');
-    }
-
-    private function userValue(string $label, mixed $value): ?string
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        return '*' . $this->escapeInline($label) . ':* ' . $this->escapeInline($this->truncate((string)$value, 200));
-    }
-
-    private function exceptionFile(LogPayload $payload): ?string
-    {
-        $file = $payload->exception['file'] ?? null;
-
-        if (!is_string($file) || $file === '') {
-            return null;
-        }
-
-        return '*File:* ' . $this->escapeInline($this->truncate($file, 250));
-    }
-
-    private function exceptionLine(LogPayload $payload): ?string
-    {
-        $line = $payload->exception['line'] ?? null;
-
-        if (!is_scalar($line) || (int)$line <= 0) {
-            return null;
-        }
-
-        return '*Line:* ' . (int)$line;
-    }
-
-    private function codeBlock(string $content, ?string $language = null): string
-    {
-        $language = $language ?: '';
-
-        return '```' . $language . PHP_EOL
-            . $content . PHP_EOL
-            . '```';
-    }
-
-    private function encodeJson(array $data): string
-    {
-        try {
-            return json_encode(
-                $data,
-                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR
-            );
-        } catch (Throwable) {
-            return '[unserializable data]';
-        }
-    }
-
     private function escape(string $text): string
     {
         return str_replace(
@@ -364,65 +223,42 @@ class BaleMarkdownFormatter implements LogFormatterInterface
         );
     }
 
-    private function truncate(string $text, int $limit): string
-    {
-        if (mb_strlen($text) <= $limit) {
-            return $text;
-        }
-
-        return mb_substr($text, 0, $limit) . PHP_EOL . '... [truncated]';
-    }
-
     private function maxLength(): int
     {
-        return (int)config('logcenter.formatters.bale_markdown.max_length', 3500);
+        return $this->configInt('logcenter.formatters.bale_markdown.max_length', 3500);
     }
 
     private function traceMaxLength(): int
     {
-        return (int)config('logcenter.formatters.bale_markdown.trace_max_length', 1200);
+        return $this->configInt('logcenter.formatters.bale_markdown.trace_max_length', 1200);
     }
 
-    private function sectionMaxLength(): int
-    {
-        return max(500, (int)floor($this->maxLength() / 2));
-    }
-
-    private function viewerUrl(LogPayload $payload): ?string
-    {
-        if (!(bool)config('logcenter.viewer.enabled', false)) {
-            return null;
-        }
-
-        if (empty($payload->fingerprint)) {
-            return null;
-        }
-
-        $baseUrl = rtrim((string)config('app.url', ''), '/');
-        $prefix = trim((string)config('logcenter.viewer.route_prefix', 'log-viewer'), '/');
-
-        if ($baseUrl === '') {
-            return null;
-        }
-
-        return $baseUrl . '/' . $prefix . '?fingerprint=' . $this->viewerFingerprintToken($payload);
-    }
-
-    private function viewerFingerprintToken(LogPayload $payload): string
-    {
-        return substr((string)$payload->fingerprint, 0, 14);
-    }
-
-    private function viewerSearchTerm(LogPayload $payload): ?string
+    private function formatBaleUserValue(LogPayload $payload): ?string
     {
         $parts = array_filter([
-            $payload->message,
-            $payload->exception['class'] ?? null,
-            $payload->exception['message'] ?? null,
+            $this->stringValue($payload->user['id'] ?? null, 200),
+            $this->stringValue($payload->user['name'] ?? null, 200),
         ]);
 
-        $term = trim(implode(' ', $parts));
-
-        return $term !== '' ? $term : null;
+        return $parts === []
+            ? null
+            : '*' . $this->escapeInline('User') . ':* ' . $this->escapeInline(implode('-', $parts));
     }
+
+    private function formatBaleExceptionFile(LogPayload $payload): ?string
+    {
+        $file = $this->exceptionFile($payload->exception ?? []);
+
+        return $file === null
+            ? null
+            : '*File:* ' . $this->escapeInline($this->truncate($file, 250));
+    }
+
+    private function formatBaleExceptionLine(LogPayload $payload): ?string
+    {
+        $line = $this->exceptionLine($payload->exception ?? []);
+
+        return $line === null ? null : '*Line:* ' . $line;
+    }
+
 }

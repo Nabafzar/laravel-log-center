@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Nabafzar\LogCenter\Transports;
 
+use BackedEnum;
+use Illuminate\Http\Client\RequestException;
 use Nabafzar\LogCenter\Contracts\LogTransportInterface;
 use Nabafzar\LogCenter\DTO\TransportResult;
 use LogicException;
@@ -54,5 +56,34 @@ abstract class AbstractTransport implements LogTransportInterface
         }
 
         return $driverName;
+    }
+
+    final protected function configuredString(mixed $value): ?string
+    {
+        if ($value instanceof BackedEnum) {
+            $value = $value->value;
+        }
+
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        return $value !== '' ? $value : null;
+    }
+
+    final protected function statusCodeFromException(Throwable $exception): ?int
+    {
+        if ($exception instanceof RequestException) {
+            return $exception->response->status();
+        }
+
+        return null;
+    }
+
+    final protected function isRetryable(?int $statusCode): bool
+    {
+        return $statusCode === null || $statusCode === 429 || $statusCode >= 500;
     }
 }
