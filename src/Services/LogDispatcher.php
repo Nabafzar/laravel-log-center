@@ -5,6 +5,8 @@ namespace Nabafzar\LogCenter\Services;
 use Nabafzar\LogCenter\Contracts\LogDispatcherInterface;
 use Nabafzar\LogCenter\DTO\LogPayload;
 use Nabafzar\LogCenter\DTO\TransportResult;
+use Nabafzar\LogCenter\Events\LogDispatched;
+use Nabafzar\LogCenter\Events\LogDispatchFailed;
 use Nabafzar\LogCenter\Jobs\DispatchLogJob;
 use Nabafzar\LogCenter\Managers\TransportManager;
 use Nabafzar\LogCenter\Processors\PayloadProcessor;
@@ -35,9 +37,17 @@ final class LogDispatcher implements LogDispatcherInterface
             driver: $driverName
         );
 
-        return $this->transportManager
+        $result = $this->transportManager
             ->driver($driverName)
             ->send($payload, $formatter->format($payload));
+
+        if ($result->isSuccess()) {
+            event(new LogDispatched($payload, $result));
+        } else {
+            event(new LogDispatchFailed($payload, $result, $result->retryable));
+        }
+
+        return $result;
     }
 
     private function queue(LogPayload $payload): TransportResult

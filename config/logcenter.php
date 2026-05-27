@@ -47,6 +47,10 @@ return [
         'enabled' => env('LOGCENTER_QUEUE_ENABLED', false),
         'connection' => env('LOGCENTER_QUEUE_CONNECTION'),
         'queue' => env('LOGCENTER_QUEUE_NAME', 'logs'),
+        // Maximum attempts before the job is moved to failed_jobs.
+        'tries' => env('LOGCENTER_QUEUE_TRIES', 3),
+        // Seconds to wait before each retry attempt (one value per attempt).
+        'backoff' => [10, 60, 300],
     ],
 
     /*
