@@ -32,14 +32,51 @@ final class LogDispatcher implements LogDispatcherInterface
         $driverName ??= $this->transportManager->defaultDriverName();
         $payload = $this->payloadProcessor->process($payload);
 
+        $result = $this->attemptSend($payload, $driverName, $formatterName);
+
+        if ($result->isSuccess()) {
+            event(new LogDispatched($payload, $result));
+            return $result;
+        }
+
+        // Primary failed — notify listeners first, then try the fallback driver.
+        event(new LogDispatchFailed($payload, $result, $result->retryable));
+
+        $fallbackResult = $this->tryFallback($payload, $driverName);
+
+        return $fallbackResult ?? $result;
+    }
+
+    /**
+     * Perform a single send attempt through the given driver, without masking
+     * or fallback logic. Called by sendNow() and tryFallback().
+     */
+    private function attemptSend(LogPayload $payload, string $driverName, ?string $formatterName): TransportResult
+    {
         $formatter = $this->transportManager->formatter(
             name: $formatterName,
-            driver: $driverName
+            driver: $driverName,
         );
 
-        $result = $this->transportManager
+        return $this->transportManager
             ->driver($driverName)
             ->send($payload, $formatter->format($payload));
+    }
+
+    /**
+     * Try the configured fallback driver. Fires its own events and returns the
+     * fallback result, or null when no fallback is configured or the fallback
+     * driver is the same as the primary (guard against config mistakes).
+     */
+    private function tryFallback(LogPayload $payload, string $primaryDriver): ?TransportResult
+    {
+        $fallbackDriver = $this->fallbackDriverName();
+
+        if ($fallbackDriver === null || $fallbackDriver === $primaryDriver) {
+            return null;
+        }
+
+        $result = $this->attemptSend($payload, $fallbackDriver, null);
 
         if ($result->isSuccess()) {
             event(new LogDispatched($payload, $result));
@@ -48,6 +85,17 @@ final class LogDispatcher implements LogDispatcherInterface
         }
 
         return $result;
+    }
+
+    private function fallbackDriverName(): ?string
+    {
+        $driver = config('logcenter.fallback');
+
+        if (! is_string($driver) || trim($driver) === '') {
+            return null;
+        }
+
+        return trim($driver);
     }
 
     private function queue(LogPayload $payload): TransportResult

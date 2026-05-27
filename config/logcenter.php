@@ -15,6 +15,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Fallback Driver
+    |--------------------------------------------------------------------------
+    |
+    | When the primary driver fails, this driver is tried before giving up.
+    | Set to null to disable. Must not be the same as the primary driver.
+    | Example: 'webhook' sends to a generic endpoint when Telegram is down.
+    |
+    */
+    'fallback' => env('LOGCENTER_FALLBACK_DRIVER', null),
+
+    /*
+    |--------------------------------------------------------------------------
     | Minimum Log Level
     |--------------------------------------------------------------------------
     |
