@@ -15,6 +15,7 @@ use Nabafzar\LogCenter\Jobs\DispatchLogJob;
 use Nabafzar\LogCenter\Managers\TransportManager;
 use Nabafzar\LogCenter\Processors\PayloadProcessor;
 use Nabafzar\LogCenter\Services\LogDispatcher;
+use Nabafzar\LogCenter\Suppression\SuppressionManager;
 use Nabafzar\LogCenter\Tests\TestCase;
 use RuntimeException;
 
@@ -69,7 +70,7 @@ final class DispatchLogJobTest extends TestCase
 
         $manager->method('defaultDriverName')->willReturn('telegram');
 
-        $dispatcher = new LogDispatcher($manager, new PayloadProcessor());
+        $dispatcher = new LogDispatcher($manager, new PayloadProcessor(), new SuppressionManager());
 
         $job->handle($dispatcher);
 
@@ -152,6 +153,6 @@ final class DispatchLogJobTest extends TestCase
         $manager->method('formatter')->willReturn($formatter);
         $manager->method('driver')->willReturn($transport);
 
-        return new LogDispatcher($manager, new PayloadProcessor());
+        return new LogDispatcher($manager, new PayloadProcessor(), new SuppressionManager());
     }
 }

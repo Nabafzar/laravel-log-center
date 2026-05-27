@@ -15,6 +15,7 @@ use Nabafzar\LogCenter\Events\LogDispatchFailed;
 use Nabafzar\LogCenter\Managers\TransportManager;
 use Nabafzar\LogCenter\Processors\PayloadProcessor;
 use Nabafzar\LogCenter\Services\LogDispatcher;
+use Nabafzar\LogCenter\Suppression\SuppressionManager;
 use Nabafzar\LogCenter\Tests\TestCase;
 
 final class LogDispatcherEventsTest extends TestCase
@@ -104,6 +105,6 @@ final class LogDispatcherEventsTest extends TestCase
         $manager->method('formatter')->willReturn($formatter);
         $manager->method('driver')->willReturn($transport);
 
-        return new LogDispatcher($manager, new PayloadProcessor());
+        return new LogDispatcher($manager, new PayloadProcessor(), new SuppressionManager());
     }
 }

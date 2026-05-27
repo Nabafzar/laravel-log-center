@@ -27,6 +27,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Alert Suppression
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, identical errors (same fingerprint) are suppressed after
+    | the first successful send for the duration of the TTL window. Subsequent
+    | occurrences fire a LogSuppressed event with an occurrence counter so
+    | listeners can track frequency without flooding the transport.
+    |
+    */
+    'suppression' => [
+        'enabled' => env('LOGCENTER_SUPPRESSION_ENABLED', false),
+        'ttl'     => env('LOGCENTER_SUPPRESSION_TTL', 300),   // seconds
+        'store'   => env('LOGCENTER_SUPPRESSION_STORE', null), // null = default cache
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Minimum Log Level
     |--------------------------------------------------------------------------
     |

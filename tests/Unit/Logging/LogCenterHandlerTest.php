@@ -15,6 +15,7 @@ use Nabafzar\LogCenter\Logging\LogCenterHandler;
 use Nabafzar\LogCenter\Managers\TransportManager;
 use Nabafzar\LogCenter\Processors\PayloadProcessor;
 use Nabafzar\LogCenter\Services\LogDispatcher;
+use Nabafzar\LogCenter\Suppression\SuppressionManager;
 use Nabafzar\LogCenter\Tests\TestCase;
 use RuntimeException;
 
@@ -36,7 +37,7 @@ final class LogCenterHandlerTest extends TestCase
         $manager->method('formatter')->willReturn($formatter);
         $manager->method('driver')->willReturn($transport);
 
-        $dispatcher = new LogDispatcher($manager, new PayloadProcessor());
+        $dispatcher = new LogDispatcher($manager, new PayloadProcessor(), new SuppressionManager());
         $handler = new LogCenterHandler($dispatcher);
 
         $result = $handler->handle(new LogRecord(

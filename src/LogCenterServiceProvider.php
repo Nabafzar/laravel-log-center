@@ -11,6 +11,7 @@ use Nabafzar\LogCenter\Factories\FormatterFactory;
 use Nabafzar\LogCenter\Factories\TransportFactory;
 use Nabafzar\LogCenter\Managers\TransportManager;
 use Nabafzar\LogCenter\Services\LogDispatcher;
+use Nabafzar\LogCenter\Suppression\SuppressionManager;
 
 final class LogCenterServiceProvider extends ServiceProvider
 {
@@ -44,6 +45,8 @@ final class LogCenterServiceProvider extends ServiceProvider
         $this->app->singleton(TransportFactory::class);
 
         $this->app->singleton(TransportManager::class);
+
+        $this->app->singleton(SuppressionManager::class);
 
         $this->app->singleton(LogDispatcher::class);
 

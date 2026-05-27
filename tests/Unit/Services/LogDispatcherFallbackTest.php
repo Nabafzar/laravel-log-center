@@ -15,6 +15,7 @@ use Nabafzar\LogCenter\Events\LogDispatchFailed;
 use Nabafzar\LogCenter\Managers\TransportManager;
 use Nabafzar\LogCenter\Processors\PayloadProcessor;
 use Nabafzar\LogCenter\Services\LogDispatcher;
+use Nabafzar\LogCenter\Suppression\SuppressionManager;
 use Nabafzar\LogCenter\Tests\TestCase;
 
 final class LogDispatcherFallbackTest extends TestCase
@@ -184,6 +185,6 @@ final class LogDispatcherFallbackTest extends TestCase
             static fn (string $driver) => $driver === 'telegram' ? $primaryTransport : $fallbackTransport
         );
 
-        return new LogDispatcher($manager, new PayloadProcessor());
+        return new LogDispatcher($manager, new PayloadProcessor(), new SuppressionManager());
     }
 }

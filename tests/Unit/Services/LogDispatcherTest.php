@@ -14,6 +14,7 @@ use Nabafzar\LogCenter\Jobs\DispatchLogJob;
 use Nabafzar\LogCenter\Managers\TransportManager;
 use Nabafzar\LogCenter\Processors\PayloadProcessor;
 use Nabafzar\LogCenter\Services\LogDispatcher;
+use Nabafzar\LogCenter\Suppression\SuppressionManager;
 use Nabafzar\LogCenter\Tests\TestCase;
 
 final class LogDispatcherTest extends TestCase
@@ -76,7 +77,7 @@ final class LogDispatcherTest extends TestCase
 
         $manager->method('defaultDriverName')->willReturn('telegram');
 
-        $dispatcher = new LogDispatcher($manager, new PayloadProcessor());
+        $dispatcher = new LogDispatcher($manager, new PayloadProcessor(), new SuppressionManager());
         $result = $dispatcher->sendNow($payload, 'telegram', 'plain');
 
         $this->assertTrue($result->isSuccess());
@@ -101,7 +102,7 @@ final class LogDispatcherTest extends TestCase
         $manager->method('formatterName')->willReturn('telegram_html');
         $manager->expects($this->never())->method('driver');
 
-        $dispatcher = new LogDispatcher($manager, new PayloadProcessor());
+        $dispatcher = new LogDispatcher($manager, new PayloadProcessor(), new SuppressionManager());
         $result = $dispatcher->dispatch($this->makePayload());
 
         $this->assertTrue($result->isSuccess());
@@ -126,7 +127,7 @@ final class LogDispatcherTest extends TestCase
         $manager->method('defaultDriverName')->willReturn('telegram');
         $manager->method('formatterName')->willReturn('telegram_html');
 
-        $dispatcher = new LogDispatcher($manager, new PayloadProcessor());
+        $dispatcher = new LogDispatcher($manager, new PayloadProcessor(), new SuppressionManager());
         $dispatcher->dispatch($this->makePayload([
             'message' => 'login password=hunter2',
             'context' => ['password' => 'hunter2'],
