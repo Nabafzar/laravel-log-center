@@ -30,6 +30,8 @@ abstract class TestCase extends Orchestra
         $app['config']->set('logcenter.formatter', 'plain');
         $app['config']->set('logcenter.queue.enabled', false);
         $app['config']->set('logcenter.viewer.enabled', true);
+        // Viewer behavior tests run unauthenticated; auth gating is covered separately.
+        $app['config']->set('logcenter.viewer.auth.enabled', false);
         $app['config']->set('logcenter.viewer.route_prefix', 'log-viewer');
         $app['config']->set('logcenter.viewer.paths', [storage_path('logs')]);
         $app['config']->set('logcenter.viewer.max_file_size', 10 * 1024 * 1024);

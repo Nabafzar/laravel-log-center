@@ -115,4 +115,27 @@ final class LogDispatcherTest extends TestCase
                 && $job->formatter === 'telegram_html';
         });
     }
+
+    public function test_it_masks_the_payload_before_queueing_so_secrets_never_reach_the_queue(): void
+    {
+        Bus::fake();
+        config()->set('logcenter.queue.enabled', true);
+        config()->set('logcenter.default', 'telegram');
+
+        $manager = $this->createMock(TransportManager::class);
+        $manager->method('defaultDriverName')->willReturn('telegram');
+        $manager->method('formatterName')->willReturn('telegram_html');
+
+        $dispatcher = new LogDispatcher($manager, new PayloadProcessor());
+        $dispatcher->dispatch($this->makePayload([
+            'message' => 'login password=hunter2',
+            'context' => ['password' => 'hunter2'],
+        ]));
+
+        Bus::assertDispatched(DispatchLogJob::class, static function (DispatchLogJob $job): bool {
+            return str_contains($job->payload->message, 'password=******')
+                && ! str_contains($job->payload->message, 'hunter2')
+                && $job->payload->context['password'] === '******';
+        });
+    }
 }

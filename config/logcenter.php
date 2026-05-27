@@ -101,7 +101,9 @@ return [
         'route_prefix' => env('LOGCENTER_VIEWER_ROUTE_PREFIX', 'log-viewer'),
         'middleware' => ['web'],
         'auth' => [
-            'enabled' => env('LOGCENTER_VIEWER_AUTH_ENABLED', false),
+            // Secure default: the viewer exposes raw log contents and downloads,
+            // so it requires authentication unless explicitly opted out.
+            'enabled' => env('LOGCENTER_VIEWER_AUTH_ENABLED', true),
             'middleware' => ['auth'],
         ],
         'paths' => [

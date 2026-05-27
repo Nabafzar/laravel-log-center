@@ -41,13 +41,15 @@ class PayloadProcessor
         $keys = $this->maskKeys();
 
         foreach ($data as $key => $value) {
-            if (is_array($value)) {
-                $data[$key] = $this->maskArray($value);
+            // Check the key first: a sensitive key must mask its entire value,
+            // including array values such as ['token' => ['real-secret']].
+            if ($this->shouldMaskKey($key, $keys)) {
+                $data[$key] = $this->replacement();
                 continue;
             }
 
-            if ($this->shouldMaskKey($key, $keys)) {
-                $data[$key] = $this->replacement();
+            if (is_array($value)) {
+                $data[$key] = $this->maskArray($value);
                 continue;
             }
 

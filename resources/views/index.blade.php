@@ -1318,6 +1318,91 @@
             color: var(--muted);
         }
 
+        mark.search-hit {
+            padding: 0 2px;
+            border-radius: 4px;
+            background: rgba(250, 204, 21, .55);
+            color: inherit;
+        }
+
+        html[data-theme="dark"] mark.search-hit {
+            background: rgba(250, 204, 21, .32);
+            color: #fde68a;
+        }
+
+        .search-field {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-field input {
+            width: 100%;
+        }
+
+        .search-kbd {
+            position: absolute;
+            right: 10px;
+            display: inline-flex;
+            align-items: center;
+            pointer-events: none;
+            padding: 2px 7px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: rgba(148, 163, 184, .12);
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .search-field input:focus ~ .search-kbd {
+            opacity: 0;
+        }
+
+        .bulk-actions {
+            display: inline-flex;
+            gap: 8px;
+        }
+
+        .bulk-actions .button-link {
+            width: auto;
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+
+        .back-to-top {
+            position: fixed;
+            right: 22px;
+            bottom: 22px;
+            z-index: 20;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            width: auto;
+            padding: 11px 16px;
+            border: 1px solid transparent;
+            border-radius: 999px;
+            color: #fff;
+            font-weight: 800;
+            font-size: 13px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            box-shadow: 0 16px 32px rgba(37, 99, 235, .28);
+            opacity: 0;
+            transform: translateY(12px);
+            pointer-events: none;
+            transition: opacity .2s ease, transform .2s ease;
+        }
+
+        .back-to-top.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .back-to-top:hover {
+            transform: translateY(-2px);
+        }
+
         .empty-state {
             padding: 36px 22px 42px;
             text-align: center;
@@ -1631,7 +1716,10 @@
                         <input type="hidden" name="file" value="{{ $selectedFile }}">
                         <input type="hidden" name="page" value="1">
                         <div class="filter-row">
-                            <input type="text" name="search" value="{{ $filters['search'] }}" placeholder="Search messages, files, exceptions, or context">
+                            <div class="search-field">
+                                <input type="search" name="search" value="{{ $filters['search'] }}" placeholder="Search messages, files, exceptions, or context" aria-label="Search log entries" data-logcenter-search autocomplete="off">
+                                <kbd class="search-kbd" aria-hidden="true">/</kbd>
+                            </div>
                             <input type="text" name="fingerprint" value="{{ $currentFingerprint }}" placeholder="Fingerprint or incident id">
                             <select name="level">
                                 <option value="">All levels</option>
@@ -1720,6 +1808,12 @@
                 <div class="toolbar-actions">
                     <span class="pill">Selected level: <strong>{{ $currentLevel !== '' ? strtoupper($currentLevel) : 'ALL' }}</strong></span>
                     <span class="pill">Showing <strong>{{ count($groups) }}</strong> cards</span>
+                    @if(count($groups) > 0)
+                        <div class="bulk-actions">
+                            <button type="button" class="button-link" data-logcenter-expand-all>Expand all</button>
+                            <button type="button" class="button-link" data-logcenter-collapse-all>Collapse all</button>
+                        </div>
+                    @endif
                 </div>
             </div>
 
@@ -1900,7 +1994,8 @@
 
             @php $entryStore = $entryStore ?? []; @endphp
             <script>
-                window.logCenterEntries = @json($entryStore, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                window.logCenterEntries = @json($entryStore, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+                window.logCenterSearch = @json((string) ($filters['search'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
             </script>
 
             <div class="pagination">
@@ -1924,6 +2019,10 @@
     </main>
 </div>
 
+<button type="button" class="back-to-top" id="backToTop" aria-label="Scroll back to top">
+    <span aria-hidden="true">&uarr;</span> Top
+</button>
+
 <dialog class="entry-dialog" id="logEntryDialog">
     <form method="dialog" class="entry-dialog-panel">
         <div class="entry-dialog-head">
@@ -1932,7 +2031,10 @@
                 <h3 id="dialogTitle">Log entry</h3>
                 <p id="dialogMeta" class="muted"></p>
             </div>
-            <button type="submit" class="button-link" style="width:auto;">Close</button>
+            <div class="dialog-head-actions">
+                <button type="button" class="button-link" id="dialogCopyTrace" style="width:auto;">Copy trace</button>
+                <button type="submit" class="button-link" style="width:auto;">Close</button>
+            </div>
         </div>
 
         <div class="dialog-strip">
@@ -1980,6 +2082,12 @@
         align-items: start;
         justify-content: space-between;
         margin-bottom: 16px;
+    }
+
+    .dialog-head-actions {
+        display: inline-flex;
+        flex-shrink: 0;
+        gap: 8px;
     }
 
     .entry-dialog-head h3 {
@@ -2152,6 +2260,18 @@
             });
         });
 
+        const copyTrace = document.getElementById('dialogCopyTrace');
+
+        if (copyTrace) {
+            copyTrace.addEventListener('click', () => {
+                const text = (stack && stack.textContent) || '';
+
+                if (window.logCenterCopyLink) {
+                    window.logCenterCopyLink(text, copyTrace, 'Copied', 'Copy trace');
+                }
+            });
+        }
+
     })();
 </script>
 <script>
@@ -2205,7 +2325,7 @@
             }
         };
 
-        window.logCenterCopyLink = async function (linkValue, button) {
+        window.logCenterCopyLink = async function (linkValue, button, successLabel, restoreLabel) {
             if (! linkValue) {
                 return;
             }
@@ -2213,8 +2333,8 @@
             try {
                 await navigator.clipboard.writeText(linkValue);
                 if (button) {
-                    const label = button.textContent;
-                    button.textContent = 'Copied';
+                    const label = restoreLabel || button.textContent;
+                    button.textContent = successLabel || 'Copied';
                     window.setTimeout(() => {
                         button.textContent = label;
                     }, 1200);
@@ -2223,6 +2343,136 @@
                 window.prompt('Copy log link', linkValue);
             }
         };
+    })();
+</script>
+<script>
+    (function () {
+        const cards = Array.from(document.querySelectorAll('details.entry'));
+
+        // Expand / collapse all grouped cards.
+        const setAll = (open) => cards.forEach((card) => { card.open = open; });
+        const expandAll = document.querySelector('[data-logcenter-expand-all]');
+        const collapseAll = document.querySelector('[data-logcenter-collapse-all]');
+
+        if (expandAll) {
+            expandAll.addEventListener('click', () => setAll(true));
+        }
+
+        if (collapseAll) {
+            collapseAll.addEventListener('click', () => setAll(false));
+        }
+
+        // Press "/" anywhere to jump to the search field.
+        const searchInput = document.querySelector('[data-logcenter-search]');
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) {
+                return;
+            }
+
+            const active = document.activeElement;
+            const tag = active ? active.tagName : '';
+
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+                return;
+            }
+
+            if (searchInput) {
+                event.preventDefault();
+                searchInput.focus();
+                searchInput.select();
+            }
+        });
+
+        // Highlight the active search term inside titles and previews.
+        const term = (window.logCenterSearch || '').trim();
+
+        if (term) {
+            const safe = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const matcher = new RegExp(safe, 'gi');
+
+            const highlight = (element) => {
+                const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+                const nodes = [];
+
+                while (walker.nextNode()) {
+                    nodes.push(walker.currentNode);
+                }
+
+                nodes.forEach((node) => {
+                    const value = node.nodeValue || '';
+                    matcher.lastIndex = 0;
+
+                    if (! matcher.test(value)) {
+                        return;
+                    }
+
+                    matcher.lastIndex = 0;
+                    const fragment = document.createDocumentFragment();
+                    let lastIndex = 0;
+                    let match;
+
+                    while ((match = matcher.exec(value)) !== null) {
+                        if (match.index > lastIndex) {
+                            fragment.appendChild(document.createTextNode(value.slice(lastIndex, match.index)));
+                        }
+
+                        const mark = document.createElement('mark');
+                        mark.className = 'search-hit';
+                        mark.textContent = match[0];
+                        fragment.appendChild(mark);
+
+                        lastIndex = match.index + match[0].length;
+
+                        if (match[0].length === 0) {
+                            matcher.lastIndex++;
+                        }
+                    }
+
+                    if (lastIndex < value.length) {
+                        fragment.appendChild(document.createTextNode(value.slice(lastIndex)));
+                    }
+
+                    node.parentNode.replaceChild(fragment, node);
+                });
+            };
+
+            document.querySelectorAll('.entry-title, .occurrence-preview').forEach(highlight);
+        }
+
+        // Scroll the linked group into view when arriving via a fingerprint link.
+        if (window.location.hash) {
+            let target = null;
+
+            try {
+                target = document.querySelector(window.location.hash);
+            } catch (error) {
+                target = null;
+            }
+
+            if (target && target.classList.contains('entry')) {
+                target.open = true;
+                window.requestAnimationFrame(() => {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+            }
+        }
+
+        // Floating back-to-top button.
+        const backToTop = document.getElementById('backToTop');
+
+        if (backToTop) {
+            const toggleBackToTop = () => {
+                backToTop.classList.toggle('is-visible', window.scrollY > 480);
+            };
+
+            window.addEventListener('scroll', toggleBackToTop, { passive: true });
+            toggleBackToTop();
+
+            backToTop.addEventListener('click', () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        }
     })();
 </script>
 </body>

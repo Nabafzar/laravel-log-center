@@ -18,11 +18,7 @@ final class LogDispatcher implements LogDispatcherInterface
 
     public function dispatch(LogPayload $payload): TransportResult
     {
-        if ($this->shouldQueue()) {
-            return $this->queue($payload);
-        }
-
-        return $this->sendNow($payload);
+        return $this->shouldQueue() ? $this->queue($payload) : $this->sendNow($payload);
     }
 
     public function sendNow(
@@ -48,6 +44,11 @@ final class LogDispatcher implements LogDispatcherInterface
     {
         $driverName = $this->transportManager->defaultDriverName();
         $formatterName = $this->transportManager->formatterName(driver: $driverName);
+
+        // Mask before the payload is serialized onto the queue so secrets never
+        // reach the queue backend or the failed_jobs table. sendNow() masks again
+        // when the job runs, which is idempotent.
+        $payload = $this->payloadProcessor->process($payload);
 
         $job = new DispatchLogJob(
             payload: $payload,

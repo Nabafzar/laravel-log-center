@@ -50,4 +50,23 @@ final class PayloadProcessorTest extends TestCase
         $this->assertSame('******', $processed->user['access_token']);
         $this->assertSame('******', $processed->labels['authorization']);
     }
+
+    public function test_it_masks_array_valued_secret_keys(): void
+    {
+        $payload = $this->makePayload([
+            'context' => [
+                'token' => ['real-secret', 'another-secret'],
+                'headers' => [
+                    'authorization' => ['Bearer real-secret'],
+                ],
+                'visible' => ['kept'],
+            ],
+        ]);
+
+        $processed = (new PayloadProcessor())->process($payload);
+
+        $this->assertSame('******', $processed->context['token']);
+        $this->assertSame('******', $processed->context['headers']['authorization']);
+        $this->assertSame(['kept'], $processed->context['visible']);
+    }
 }
