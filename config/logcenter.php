@@ -160,7 +160,7 @@ return [
     'incoming' => [
         'enabled' => env('LOGCENTER_INCOMING_ENABLED', false),
         'route_prefix' => env('LOGCENTER_INCOMING_ROUTE_PREFIX', 'incoming-logs'),
-        'middleware' => ['api'],
+        'middleware' => ['api', 'throttle:60,1'],
         'auth' => [
             'enabled' => env('LOGCENTER_INCOMING_AUTH_ENABLED', true),
             'header' => env('LOGCENTER_INCOMING_AUTH_HEADER', 'X-LogCenter-Token'),

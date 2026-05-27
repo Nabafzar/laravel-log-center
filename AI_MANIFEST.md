@@ -90,26 +90,29 @@ Implemented code:
   - `resources/views/index.blade.php`
   - log download action for the selected file
   - viewer links now use a short fingerprint token plus a message search fallback
+- Events:
+  - `src/Events/LogDispatched.php`
+  - `src/Events/LogDispatchFailed.php`
+  - `src/Events/LogSuppressed.php`
+- Suppression:
+  - `src/Suppression/SuppressionManager.php`
 - Tests:
   - `tests/TestCase.php`
-  - unit tests for factories, formatters, transports, payload masking, and log parsing
-  - feature tests for package bindings and the log viewer route
+  - unit tests for factories, formatters, transports (including Http::fake HTTP error scenarios), payload masking, suppression, fallback, events, and log parsing
+  - feature tests for package bindings, the log viewer route, and viewer auth gating
 
 Advertised or partially planned, but not implemented yet:
 
 - Slack transport
-- queue retry/failover workflow
-- log viewer hardening, tests, and richer interactions
-- formatter extension API
-- incoming log ingress documentation
-- README user documentation
+- formatter extension API (custom formatter registration parity with `TransportFactory::extend()`)
+- README is now complete; incoming log ingress documentation is in README
 
 ## Known Technical Gaps
 
 Do not assume config entries are implemented. Current gaps to resolve before a
 stable release:
 
- - Config references Slack driver support, but factory creation is still missing
+- Config references Slack driver support, but factory creation is still missing
   and classes are missing.
 - Log viewer exists, but still needs larger-file performance work before
   release.
@@ -117,11 +120,8 @@ stable release:
   Laravel logging integration can instantiate it correctly.
 - Several source files contain mojibake where icons or Persian comments were
   likely saved with a wrong encoding. Prefer UTF-8 consistently.
-- Queue settings are configured and async job dispatch is implemented, but
-  retry policy and failover flow are not implemented yet.
-- Telegram behavior now covers driver-specific formatter selection, masking,
-  message limits, proxy, forum topics, notification options, and transport
-  results, but it still needs HTTP fake tests before release.
+- `FormatterFactory` has no extension mechanism; only `TransportFactory` supports
+  custom driver registration via `extend()`.
 
 ## Architecture
 
@@ -349,13 +349,13 @@ transform a `LogPayload` into transport-ready text or JSON.
 
 Prefer this order for future work:
 
-1. Add HTTP fake tests for Telegram and dispatcher/processor tests for masking
-   and driver-specific formatter selection.
-2. Implement Slack webhook transport.
-3. Add queue retry strategy and failure handling.
-4. Harden the log viewer with parsing tests, file-size limits, and better
+1. Implement Slack webhook transport (class, factory registration, config, tests).
+2. Add `FormatterFactory::extend()` so custom formatters can be registered the
+   same way custom transports are.
+3. Harden the log viewer with parsing tests, file-size limits, and better
    pagination/search behavior.
-5. Add README usage docs and broaden test coverage.
+4. Add integration tests that exercise Laravel logging channel configuration
+   end-to-end (from `Log::error()` through to the transport).
 
 ## Testing Expectations
 
@@ -388,10 +388,12 @@ Before tagging a release:
 
 - `composer validate` passes.
 - PHP syntax checks pass for all `src` and `config` PHP files.
-- Unit and integration tests pass.
+- Unit and integration tests pass (currently 122 tests / 424 assertions).
 - README documents installation, Laravel channel setup, environment variables,
-  supported drivers, extension examples, and security notes.
-- Config does not advertise unimplemented drivers as production-ready.
+  supported drivers, extension examples, and security notes. ✓
+- CHANGELOG.md exists and is up to date. ✓
+- Config does not advertise unimplemented drivers as production-ready. ✓ (Slack is absent from the `default` driver comment)
 - All provider paths referenced by `LogCenterServiceProvider` exist or are
   guarded safely.
 - No real credentials, chat IDs, webhook URLs, or tokens are committed.
+- Remaining gap: Slack transport — do not tag `v1.0.0` until implemented or removed from keywords.
