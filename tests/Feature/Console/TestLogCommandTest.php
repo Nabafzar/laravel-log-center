@@ -54,6 +54,11 @@ final class TestLogCommandTest extends TestCase
             {
                 return [];
             }
+
+            public function supportsTopics(): bool
+            {
+                return false;
+            }
         };
 
         $manager = $this->createMock(TransportManager::class);

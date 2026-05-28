@@ -140,4 +140,9 @@ final class TelegramTransportTest extends TestCase
         $this->assertContains(MessageFormatEnum::MARKDOWN, $formats);
         $this->assertContains(MessageFormatEnum::TELEGRAM_HTML, $formats);
     }
+
+    public function test_it_supports_topics(): void
+    {
+        $this->assertTrue((new TelegramTransport())->supportsTopics());
+    }
 }

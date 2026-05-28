@@ -25,7 +25,8 @@ final class MarkdownFormatterTest extends TestCase
         $this->assertSame('markdown', $formatted->meta['format']);
         $this->assertSame('Markdown', $formatted->meta['parse_mode']);
         $this->assertStringContainsString('*Message:*', $formatted->content);
-        $this->assertStringContainsString('*Tags:*', $formatted->content);
+        $this->assertStringContainsString('#payments', $formatted->content);
+        $this->assertStringContainsString('#checkout', $formatted->content);
         $this->assertStringContainsString('*Source:*', $formatted->content);
         $this->assertStringContainsString('*Log Center:* [Open in viewer]', $formatted->content);
     }
@@ -42,5 +43,38 @@ final class MarkdownFormatterTest extends TestCase
         $this->assertStringContainsString('\*bold\*', $formatted->content);
         $this->assertStringContainsString('\_italics\_', $formatted->content);
         $this->assertStringContainsString('\`code\`', $formatted->content);
+    }
+
+    public function test_it_omits_tags_when_payload_has_none(): void
+    {
+        config()->set('logcenter.viewer.enabled', false);
+
+        $formatted = (new MarkdownFormatter())->format($this->makePayload(['tags' => []]));
+
+        $this->assertStringNotContainsString('#payments', $formatted->content);
+    }
+
+    public function test_it_renders_exception_class_file_and_line(): void
+    {
+        config()->set('logcenter.viewer.enabled', false);
+
+        $formatted = (new MarkdownFormatter())->format($this->makePayload([
+            'exception' => ['class' => 'RuntimeException', 'message' => 'Boom', 'code' => 0, 'file' => '/app/Foo.php', 'line' => 42],
+        ]));
+
+        $this->assertStringContainsString('RuntimeException', $formatted->content);
+        $this->assertStringContainsString('*File:*', $formatted->content);
+        $this->assertStringContainsString('/app/Foo.php', $formatted->content);
+        $this->assertStringContainsString('*Line:*', $formatted->content);
+        $this->assertStringContainsString('42', $formatted->content);
+    }
+
+    public function test_it_omits_viewer_link_when_viewer_is_disabled(): void
+    {
+        config()->set('logcenter.viewer.enabled', false);
+
+        $formatted = (new MarkdownFormatter())->format($this->makePayload());
+
+        $this->assertStringNotContainsString('Log Center', $formatted->content);
     }
 }

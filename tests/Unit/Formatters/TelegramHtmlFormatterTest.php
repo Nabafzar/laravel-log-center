@@ -42,4 +42,68 @@ final class TelegramHtmlFormatterTest extends TestCase
         $this->assertStringContainsString('&lt;worker&gt;', $formatted->content);
         $this->assertStringNotContainsString('Open in viewer', $formatted->content);
     }
+
+    public function test_tags_are_rendered_as_telegram_hashtags(): void
+    {
+        $formatted = (new TelegramHtmlFormatter())->format($this->makePayload([
+            'tags' => ['payments', 'my-order'],
+        ]));
+
+        $this->assertStringContainsString('<b>Tags: </b> #payments #my_order', $formatted->content);
+    }
+
+    public function test_tags_are_absent_when_payload_has_no_tags(): void
+    {
+        $formatted = (new TelegramHtmlFormatter())->format($this->makePayload(['tags' => []]));
+
+        $this->assertStringNotContainsString('<b>Tags:', $formatted->content);
+    }
+
+    public function test_it_renders_exception_class_file_and_line(): void
+    {
+        $formatted = (new TelegramHtmlFormatter())->format($this->makePayload([
+            'exception' => ['class' => 'RuntimeException', 'message' => 'Boom', 'code' => 0, 'file' => '/app/Foo.php', 'line' => 42],
+        ]));
+
+        $this->assertStringContainsString('RuntimeException', $formatted->content);
+        $this->assertStringContainsString('/app/Foo.php', $formatted->content);
+        $this->assertStringContainsString('42', $formatted->content);
+    }
+
+    public function test_it_renders_user_id_and_name(): void
+    {
+        $formatted = (new TelegramHtmlFormatter())->format($this->makePayload([
+            'user' => ['id' => 77, 'name' => 'Bob'],
+        ]));
+
+        $this->assertStringContainsString('<b>User:</b>', $formatted->content);
+        $this->assertStringContainsString('77', $formatted->content);
+        $this->assertStringContainsString('Bob', $formatted->content);
+    }
+
+    public function test_it_renders_trace_in_a_pre_block(): void
+    {
+        $formatted = (new TelegramHtmlFormatter())->format($this->makePayload([
+            'trace' => '#0 /app/Foo.php(10): bar()',
+        ]));
+
+        $this->assertStringContainsString('<b>Trace: </b>', $formatted->content);
+        $this->assertStringContainsString('<pre>', $formatted->content);
+        $this->assertStringContainsString('#0 /app/Foo.php(10): bar()', $formatted->content);
+    }
+
+    public function test_it_omits_source_when_absent(): void
+    {
+        $payload = new \Nabafzar\LogCenter\DTO\LogPayload(
+            level: 'error',
+            message: 'Something failed',
+            channel: 'testing',
+            datetime: \Illuminate\Support\Carbon::parse('2026-05-08 10:00:00')->toDateTimeImmutable(),
+            source: null,
+        );
+
+        $formatted = (new TelegramHtmlFormatter())->format($payload);
+
+        $this->assertStringNotContainsString('<b>Source: </b>', $formatted->content);
+    }
 }

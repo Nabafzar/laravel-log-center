@@ -151,6 +151,11 @@ final class LogDispatcherSuppressionTest extends TestCase
             {
                 return [];
             }
+
+            public function supportsTopics(): bool
+            {
+                return false;
+            }
         };
 
         $formatter = new class () implements LogFormatterInterface {

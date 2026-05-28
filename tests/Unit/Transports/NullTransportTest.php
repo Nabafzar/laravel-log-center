@@ -21,4 +21,9 @@ final class NullTransportTest extends TestCase
         $this->assertTrue($result->meta['discarded']);
         $this->assertContains(MessageFormatEnum::PLAIN, $transport->supportedFormats());
     }
+
+    public function test_it_does_not_support_topics(): void
+    {
+        $this->assertFalse((new NullTransport())->supportsTopics());
+    }
 }

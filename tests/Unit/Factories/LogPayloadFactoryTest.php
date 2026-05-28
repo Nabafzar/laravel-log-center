@@ -7,6 +7,7 @@ namespace Nabafzar\LogCenter\Tests\Unit\Factories;
 use Illuminate\Http\Request;
 use Monolog\Level;
 use Monolog\LogRecord;
+use Nabafzar\LogCenter\Attributes\LogTopic;
 use Nabafzar\LogCenter\Factories\LogPayloadFactory;
 use Nabafzar\LogCenter\Tests\TestCase;
 use RuntimeException;
@@ -119,5 +120,71 @@ final class LogPayloadFactoryTest extends TestCase
         $this->assertStringNotContainsString('?', $payload->request['referer']);
         $this->assertStringNotContainsString('#', $payload->request['referer']);
         $this->assertStringNotContainsString("\n", $payload->request['referer']);
+    }
+
+    public function test_it_adds_all_log_topic_tags_to_the_payload(): void
+    {
+        $record = new LogRecord(
+            datetime: now()->toDateTimeImmutable(),
+            channel: 'testing',
+            level: Level::Error,
+            message: 'Tagged log',
+            context: [],
+            extra: [],
+        );
+
+        $payload = LogPayloadFactory::fromLogRecord($record, new LogTopic(tags: ['payments', 'checkout']));
+
+        $this->assertSame(['payments', 'checkout'], $payload->tags);
+    }
+
+    public function test_it_uses_empty_tags_and_meta_when_no_topic_is_passed(): void
+    {
+        $record = new LogRecord(
+            datetime: now()->toDateTimeImmutable(),
+            channel: 'testing',
+            level: Level::Error,
+            message: 'No topic',
+            context: [],
+            extra: [],
+        );
+
+        $payload = LogPayloadFactory::fromLogRecord($record);
+
+        $this->assertSame([], $payload->tags);
+        $this->assertSame([], $payload->meta);
+    }
+
+    public function test_it_uses_empty_meta_when_topic_has_no_topic_id(): void
+    {
+        $record = new LogRecord(
+            datetime: now()->toDateTimeImmutable(),
+            channel: 'testing',
+            level: Level::Error,
+            message: 'Tag only',
+            context: [],
+            extra: [],
+        );
+
+        $payload = LogPayloadFactory::fromLogRecord($record, new LogTopic('payments'));
+
+        $this->assertSame(['payments'], $payload->tags);
+        $this->assertSame([], $payload->meta);
+    }
+
+    public function test_it_preserves_string_topic_id_in_payload_meta(): void
+    {
+        $record = new LogRecord(
+            datetime: now()->toDateTimeImmutable(),
+            channel: 'testing',
+            level: Level::Error,
+            message: 'Tagged log',
+            context: [],
+            extra: [],
+        );
+
+        $payload = LogPayloadFactory::fromLogRecord($record, new LogTopic('mattermost', topicId: 'thread-abc'));
+
+        $this->assertSame('thread-abc', $payload->meta['logcenter_topic_id']);
     }
 }

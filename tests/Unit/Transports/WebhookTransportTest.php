@@ -134,4 +134,9 @@ final class WebhookTransportTest extends TestCase
 
         $this->assertContains(MessageFormatEnum::JSON, $formats);
     }
+
+    public function test_it_does_not_support_topics(): void
+    {
+        $this->assertFalse((new WebhookTransport())->supportsTopics());
+    }
 }

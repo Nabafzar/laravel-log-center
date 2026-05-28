@@ -32,6 +32,23 @@ final class PlainTextFormatterTest extends TestCase
         $this->assertStringContainsString('search=Something%20failed', $formatted->content);
     }
 
+    public function test_it_renders_tags_as_plain_text(): void
+    {
+        $formatted = (new PlainTextFormatter())->format($this->makePayload([
+            'tags' => ['payments', 'checkout'],
+        ]));
+
+        $this->assertStringContainsString('#payments', $formatted->content);
+        $this->assertStringContainsString('#checkout', $formatted->content);
+    }
+
+    public function test_it_omits_tags_section_when_tags_are_empty(): void
+    {
+        $formatted = (new PlainTextFormatter())->format($this->makePayload(['tags' => []]));
+
+        $this->assertStringNotContainsString('#', $formatted->content);
+    }
+
     public function test_it_omits_the_viewer_link_when_viewer_is_disabled_or_fingerprint_is_missing(): void
     {
         config()->set('logcenter.viewer.enabled', false);
@@ -41,5 +58,26 @@ final class PlainTextFormatterTest extends TestCase
         ]));
 
         $this->assertStringNotContainsString('Log Center:', $formatted->content);
+    }
+
+    public function test_it_renders_exception_class_file_and_line(): void
+    {
+        $formatted = (new PlainTextFormatter())->format($this->makePayload([
+            'exception' => ['class' => 'RuntimeException', 'message' => 'Boom', 'code' => 0, 'file' => '/app/Foo.php', 'line' => 42],
+        ]));
+
+        $this->assertStringContainsString('Exception: RuntimeException', $formatted->content);
+        $this->assertStringContainsString('File: /app/Foo.php', $formatted->content);
+        $this->assertStringContainsString('Line: 42', $formatted->content);
+    }
+
+    public function test_it_renders_user_id_and_name(): void
+    {
+        $formatted = (new PlainTextFormatter())->format($this->makePayload([
+            'user' => ['id' => 55, 'name' => 'Carol'],
+        ]));
+
+        $this->assertStringContainsString('User: 55', $formatted->content);
+        $this->assertStringContainsString('Name: Carol', $formatted->content);
     }
 }

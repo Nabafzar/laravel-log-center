@@ -135,4 +135,9 @@ final class MattermostTransportTest extends TestCase
         $this->assertContains(MessageFormatEnum::PLAIN, $formats);
         $this->assertContains(MessageFormatEnum::MARKDOWN, $formats);
     }
+
+    public function test_it_does_not_support_topics(): void
+    {
+        $this->assertFalse((new MattermostTransport())->supportsTopics());
+    }
 }

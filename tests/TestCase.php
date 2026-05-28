@@ -74,6 +74,7 @@ abstract class TestCase extends Orchestra
         $app['config']->set('logcenter.drivers.telegram.split_long_messages', false);
         $app['config']->set('logcenter.drivers.telegram.delay_between_messages', false);
         $app['config']->set('logcenter.drivers.telegram.topics_level', []);
+        $app['config']->set('logcenter.drivers.telegram.tag_topics', []);
 
         $app['config']->set('logcenter.drivers.bale.token', null);
         $app['config']->set('logcenter.drivers.bale.chat_id', null);

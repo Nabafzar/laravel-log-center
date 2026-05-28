@@ -55,6 +55,11 @@ final class DispatchLogJobTest extends TestCase
             {
                 return [];
             }
+
+            public function supportsTopics(): bool
+            {
+                return false;
+            }
         };
 
         $manager = $this->createMock(TransportManager::class);
@@ -135,6 +140,11 @@ final class DispatchLogJobTest extends TestCase
             public function supportedFormats(): array
             {
                 return [];
+            }
+
+            public function supportsTopics(): bool
+            {
+                return false;
             }
         };
     }

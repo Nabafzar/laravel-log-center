@@ -165,6 +165,11 @@ final class LogDispatcherFallbackTest extends TestCase
                 {
                     return [];
                 }
+
+                public function supportsTopics(): bool
+                {
+                    return false;
+                }
             };
         };
 
