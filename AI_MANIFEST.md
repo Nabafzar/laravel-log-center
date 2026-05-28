@@ -96,9 +96,12 @@ Implemented code:
   - `src/Events/LogSuppressed.php`
 - Suppression:
   - `src/Suppression/SuppressionManager.php`
+- Attributes:
+  - `src/Attributes/LogTopic.php` — PHP 8 attribute; `topicId` routes to a specific Telegram thread; single `tag` or multiple `tags` map via `drivers.telegram.tag_topics` config on topic-aware drivers, or append `#tag` on non-topic drivers
+  - `src/Attributes/AttributeResolver.php` — scanner that finds `#[LogTopic]` in the real call stack, then falls back to the current Laravel route action; result cached per class::method
 - Tests:
   - `tests/TestCase.php`
-  - unit tests for factories, formatters, transports (including Http::fake HTTP error scenarios), payload masking, suppression, fallback, events, and log parsing
+  - unit tests for factories, formatters, transports (including Http::fake HTTP error scenarios), payload masking, suppression, fallback, events, log parsing, and `#[LogTopic]` attribute resolution from stack/current route, tag-to-topic routing, and hashtag injection for non-topic drivers
   - feature tests for package bindings, the log viewer route, and viewer auth gating
 
 Advertised or partially planned, but not implemented yet:
@@ -128,13 +131,15 @@ stable release:
 Primary dispatch flow:
 
 1. Monolog emits a `Monolog\LogRecord`.
-2. `LogCenterHandler::write()` converts the record with `LogPayloadFactory`,
-   which lifts `exception`, request data, and the authenticated user id out of
-   context before building the DTO.
+2. `LogCenterHandler::write()` calls `AttributeResolver::resolve()` to find any
+   `#[LogTopic]` in the call stack or current Laravel route action, then converts the record with `LogPayloadFactory`
+   (which lifts `exception`, request data, and the authenticated user id out of context
+   before building the DTO). Topic ID and tag(s) are embedded in `LogPayload.meta` / `.tags`.
 3. `LogDispatcher::dispatch()` calls `sendNow()`.
 4. `TransportManager` resolves the active formatter and transport.
 5. The formatter converts `LogPayload` to `FormattedMessage`.
-6. The transport sends or discards the formatted message.
+6. `LogDispatcher::attemptSend()` checks `transport->supportsTopics()`. If false, `withHashtags()` appends `#tag` lines for any non-empty `tags`. If true (Telegram), hashtag injection is skipped — the transport handles tag routing internally.
+7. The transport sends or discards the formatted message. `TelegramTransport` reads `meta.logcenter_topic_id` (explicit attribute topicId), then `drivers.telegram.tag_topics` (tag→topicId map), then `topics_level` (per-level map), then `topic_id` (default) to resolve the forum thread.
 
 Formatter sections are assembled with `implode(PHP_EOL, $sections)`.
 Exception output is rendered from one formatter method as class, file, and
@@ -388,7 +393,7 @@ Before tagging a release:
 
 - `composer validate` passes.
 - PHP syntax checks pass for all `src` and `config` PHP files.
-- Unit and integration tests pass (currently 122 tests / 424 assertions).
+- Unit and integration tests pass (currently 173 tests / 531 assertions).
 - README documents installation, Laravel channel setup, environment variables,
   supported drivers, extension examples, and security notes. ✓
 - CHANGELOG.md exists and is up to date. ✓

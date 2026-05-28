@@ -79,6 +79,20 @@ LOGCENTER_TELEGRAM_TIMEOUT=5
 ],
 ```
 
+**Tag-to-topic routing** — map tag names (from `#[LogTopic]`) to specific thread IDs; overrides `topics_level`:
+
+```php
+// config/logcenter.php
+'drivers' => [
+    'telegram' => [
+        'tag_topics' => [
+            'payments' => 1010,
+            'checkout' => 1011,
+        ],
+    ],
+],
+```
+
 **Message splitting** — split messages exceeding the limit into multiple messages instead of truncating:
 
 ```dotenv
@@ -292,6 +306,54 @@ The endpoint is token-protected and rate-limited to 60 requests per minute by de
     'middleware' => ['api', 'throttle:120,1'],
 ],
 ```
+
+## Log Topic Attribute
+
+Route logs to a specific Telegram topic thread — and add a hashtag to every other driver — by decorating the originating method or class with `#[LogTopic]`:
+
+The resolver checks the active call stack and the current Laravel route action, so controller attributes still apply when Laravel logs an exception after the action has unwound.
+
+```php
+use Nabafzar\LogCenter\Attributes\LogTopic;
+
+#[LogTopic(tag: 'payments', topicId: 1234)]
+public function register(ReserveRegisterV2Request $request): JsonResponse
+{
+    // Any log fired from within this method is automatically:
+    //   Telegram  → routed to forum topic 1234
+    //   All others → message body gets "#payments" appended
+}
+```
+
+**Tag only** — no topic ID, topic routing falls back to the config mapping:
+
+```php
+#[LogTopic('checkout')]
+public function pay(PayRequest $request): JsonResponse { ... }
+```
+
+**Multiple tags** — all non-topic drivers render every tag as a hashtag:
+
+```php
+#[LogTopic(tags: ['payments', 'checkout'])]
+public function index(Request $request): JsonResponse { ... }
+```
+
+**Class-level** — applies to every method in the class:
+
+```php
+#[LogTopic('billing', topicId: 2000)]
+final class BillingController extends Controller { ... }
+```
+
+**Priority** (highest to lowest for Telegram topic selection):
+
+1. `topicId` from the `#[LogTopic]` attribute
+2. `tag_topics` config mapping (tag → topic ID)
+3. `topics_level` config mapping (level → topic ID)
+4. `drivers.telegram.topic_id` config default
+
+The `tag` is always appended as a hashtag (`#payments`) to the formatted message on every driver, making logs searchable across all notification channels.
 
 ## Custom Transports
 
