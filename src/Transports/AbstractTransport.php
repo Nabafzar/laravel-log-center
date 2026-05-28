@@ -86,4 +86,9 @@ abstract class AbstractTransport implements LogTransportInterface
     {
         return $statusCode === null || $statusCode === 429 || $statusCode >= 500;
     }
+
+    public function supportsTopics(): bool
+    {
+        return false;
+    }
 }

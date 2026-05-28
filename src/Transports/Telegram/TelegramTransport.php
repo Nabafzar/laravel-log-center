@@ -150,8 +150,35 @@ class TelegramTransport extends AbstractTransport
         return $this->configuredInt(config('logcenter.drivers.telegram.topic_id'));
     }
 
+    public function supportsTopics(): bool
+    {
+        return true;
+    }
+
     private function topicIdForPayload(LogPayload $payload): ?int
     {
+        // #[LogTopic(topicId: X)] attribute takes highest priority.
+        $attributeTopicId = isset($payload->meta['logcenter_topic_id'])
+            ? $this->configuredInt($payload->meta['logcenter_topic_id'])
+            : null;
+
+        if ($attributeTopicId !== null) {
+            return $attributeTopicId;
+        }
+
+        // Tag-to-topic mapping from config (e.g. tag_topics = ['payments' => 1234]).
+        if (! empty($payload->tags)) {
+            $tagTopics = config('logcenter.drivers.telegram.tag_topics', []);
+            if (is_array($tagTopics)) {
+                foreach ($payload->tags as $tag) {
+                    $topicId = $this->configuredInt($tagTopics[$tag] ?? null);
+                    if ($topicId !== null) {
+                        return $topicId;
+                    }
+                }
+            }
+        }
+
         $topics = config('logcenter.drivers.telegram.topics_level', []);
 
         if (! is_array($topics)) {

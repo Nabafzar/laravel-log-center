@@ -70,14 +70,11 @@ final class LogDispatcher implements LogDispatcherInterface
      */
     private function attemptSend(LogPayload $payload, string $driverName, ?string $formatterName): TransportResult
     {
-        $formatter = $this->transportManager->formatter(
-            name: $formatterName,
-            driver: $driverName,
-        );
+        $message = $this->transportManager
+            ->formatter(name: $formatterName, driver: $driverName)
+            ->format($payload);
 
-        return $this->transportManager
-            ->driver($driverName)
-            ->send($payload, $formatter->format($payload));
+        return $this->transportManager->driver($driverName)->send($payload, $message);
     }
 
     /**

@@ -7,12 +7,13 @@ namespace Nabafzar\LogCenter\Factories;
 use Illuminate\Http\Request;
 use Illuminate\Http\Client\RequestException;
 use Monolog\LogRecord;
+use Nabafzar\LogCenter\Attributes\LogTopic;
 use Nabafzar\LogCenter\DTO\LogPayload;
 use Throwable;
 
 class LogPayloadFactory
 {
-    public static function fromLogRecord(LogRecord $record): LogPayload
+    public static function fromLogRecord(LogRecord $record, ?LogTopic $topic = null): LogPayload
     {
         $context = $record->context;
         $exception = self::extractException($context);
@@ -43,6 +44,11 @@ class LogPayloadFactory
             $context['userId']
         );
 
+        $tags = $topic?->tags ?? [];
+        $meta = ($topic !== null && $topic->topicId !== null)
+            ? ['logcenter_topic_id' => $topic->topicId]
+            : [];
+
         return new LogPayload(
             level: $record->level->getName(),
             message: $record->message,
@@ -60,8 +66,10 @@ class LogPayloadFactory
                 message: $record->message,
                 exception: $exception ? self::exceptionToArray($exception) : null,
             ),
+            tags: $tags,
             request: $resolvedRequest,
             user: $user,
+            meta: $meta,
         );
     }
 

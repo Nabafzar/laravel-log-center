@@ -244,6 +244,10 @@ return [
                 'info' => env('LOGCENTER_TELEGRAM_INFORMATION_TOPIC_ID'),
                 'low_priority' => env('LOGCENTER_TELEGRAM_LOW_PRIORITY_TOPIC_ID'),
             ],
+
+            // Map tag names (from #[LogTopic(tag: '...')]) to Telegram forum thread IDs.
+            // Takes priority over topics_level. Example: 'payments' => 1234
+            'tag_topics' => [],
         ],
 
         'slack' => [

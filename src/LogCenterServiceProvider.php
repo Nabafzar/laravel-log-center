@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nabafzar\LogCenter;
 
 use Illuminate\Support\ServiceProvider;
+use Nabafzar\LogCenter\Attributes\AttributeResolver;
 use Nabafzar\LogCenter\Console\Commands\TestLogCommand;
 use Nabafzar\LogCenter\Contracts\LogDispatcherInterface;
 use Nabafzar\LogCenter\Factories\FormatterFactory;
@@ -40,6 +41,8 @@ final class LogCenterServiceProvider extends ServiceProvider
 
     private function registerBindings(): void
     {
+        $this->app->singleton(AttributeResolver::class);
+
         $this->app->singleton(FormatterFactory::class);
 
         $this->app->singleton(TransportFactory::class);
