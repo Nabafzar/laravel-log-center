@@ -85,7 +85,10 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
             return null;
         }
 
-        return '*Tags:* `' . $this->escapeMarkdownInline(implode(', ', $payload->tags)) . '`';
+        return implode('  ', array_map(
+            static fn(string $tag) => '#' . preg_replace('/[^\w]/u', '_', $tag),
+            $payload->tags,
+        ));
     }
 
     private function context(LogPayload $payload): ?string

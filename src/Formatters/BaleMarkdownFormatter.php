@@ -75,7 +75,12 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
             return null;
         }
 
-        return '*Tags:* `' . $this->escapeInline(implode(', ', $payload->tags)) . '`';
+        $hashtags = array_map(
+            static fn(string $tag) => '#' . preg_replace('/[^\w]/u', '_', $tag),
+            $payload->tags,
+        );
+
+        return PHP_EOL.'*Tags:* ' . implode(' ', $hashtags);
     }
 
     private function context(LogPayload $payload): ?string

@@ -20,13 +20,13 @@ class TelegramHtmlFormatter extends AbstractFormatter implements LogFormatterInt
             $this->viewerLink($payload),
             $this->source($payload),
             $this->message($payload),
-            $this->tags($payload),
             $this->user($payload),
             $this->context($payload),
             $this->extra($payload),
             $this->request($payload),
             $this->exception($payload),
             $this->trace($payload),
+            $this->tags($payload),
         ]));
 
         return new FormattedMessage(
@@ -71,9 +71,16 @@ class TelegramHtmlFormatter extends AbstractFormatter implements LogFormatterInt
 
     private function tags(LogPayload $payload): ?string
     {
-        return !empty($payload->tags)
-            ? '<b>Tags: </b> <code>' . $this->escapeHtml(implode(', ', $payload->tags)) . '</code>'
-            : null;
+        if (empty($payload->tags)) {
+            return null;
+        }
+
+        $hashtags = array_map(
+            static fn(string $tag) => '#' . preg_replace('/[^\w]/u', '_', $tag),
+            $payload->tags,
+        );
+
+        return PHP_EOL . '<b>Tags: </b> ' . implode(' ', $hashtags);
     }
 
     private function context(LogPayload $payload): ?string

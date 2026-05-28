@@ -18,6 +18,7 @@ class PlainTextFormatter extends AbstractFormatter implements LogFormatterInterf
             $this->header($payload),
             $this->viewerLink($payload),
             $this->message($payload),
+            $this->tags($payload),
             $this->user($payload),
             $this->context($payload),
             $this->extra($payload),
@@ -70,6 +71,18 @@ class PlainTextFormatter extends AbstractFormatter implements LogFormatterInterf
         }
 
         return 'Log Center: ' . $url;
+    }
+
+    private function tags(LogPayload $payload): ?string
+    {
+        if (empty($payload->tags)) {
+            return null;
+        }
+
+        return implode('  ', array_map(
+            static fn(string $tag) => '#' . preg_replace('/[^\w]/u', '_', $tag),
+            $payload->tags,
+        ));
     }
 
     private function context(LogPayload $payload): ?string
