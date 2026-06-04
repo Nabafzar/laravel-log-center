@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nabafzar\LogCenter\Transports\Bale;
 
+use BackedEnum;
 use Illuminate\Support\Facades\Http;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\DTO\LogPayload;
