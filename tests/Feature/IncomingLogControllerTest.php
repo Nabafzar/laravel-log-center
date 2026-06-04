@@ -67,4 +67,26 @@ final class IncomingLogControllerTest extends TestCase
             'message' => 'missing token',
         ])->assertUnauthorized();
     }
+
+    public function test_it_rejects_invalid_log_level(): void
+    {
+        $this->postJson('/incoming-logs', [
+            'level' => 'banana',
+            'message' => 'something happened',
+        ], [
+            'X-LogCenter-Token' => 'test-incoming-token',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['level']);
+    }
+
+    public function test_it_rejects_uppercase_log_level(): void
+    {
+        $this->postJson('/incoming-logs', [
+            'level' => 'ERROR',
+            'message' => 'something happened',
+        ], [
+            'X-LogCenter-Token' => 'test-incoming-token',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['level']);
+    }
 }

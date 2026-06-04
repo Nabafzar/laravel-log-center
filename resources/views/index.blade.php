@@ -17,6 +17,8 @@
     $selectedFileAge = ! empty($selectedFileMeta['modified_at']) ? \Illuminate\Support\Carbon::createFromTimestamp((int) $selectedFileMeta['modified_at'])->diffForHumans() : null;
     $selectedFileEntryCount = isset($selectedFileMeta['entry_count']) ? (int) $selectedFileMeta['entry_count'] : null;
     $downloadUrl = $selectedFile ? route('logcenter.viewer.download', ['file' => $selectedFile]) : null;
+    $tailUrl = $selectedFile ? route('logcenter.viewer.tail', ['file' => $selectedFile]) : null;
+    $tailPollUrl = $selectedFile ? route('logcenter.viewer.tail.poll', ['file' => $selectedFile]) : null;
     $hasActiveFilters = ($filters['search'] ?? '') !== '' || $currentLevel !== '' || $currentFingerprint !== '';
     $baseQuery = request()->query();
     $withQuery = static function (array $overrides) use ($baseQuery): string {
@@ -1874,6 +1876,126 @@
             .pagination-btn,
             .pagination-page-info { flex: 1 1 100%; }
         }
+
+        /* ── Live Tail ───────────────────────────────────────────── */
+        .live-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: var(--radius-md);
+            border: 1.5px solid var(--border-strong);
+            background: var(--panel-strong);
+            color: var(--muted);
+            font-size: .75rem;
+            font-weight: 600;
+            letter-spacing: .04em;
+            cursor: pointer;
+            transition: border-color .15s, color .15s, background .15s;
+            white-space: nowrap;
+        }
+
+        .live-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        .live-btn.is-live {
+            border-color: var(--success);
+            color: var(--success);
+            background: color-mix(in srgb, var(--success) 8%, transparent);
+        }
+
+        .live-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: currentColor;
+            flex-shrink: 0;
+        }
+
+        .live-btn.is-live .live-dot {
+            animation: live-pulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes live-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%       { opacity: .4; transform: scale(.7); }
+        }
+
+        .live-feed {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .live-feed.has-entries { display: flex; }
+
+        .live-feed-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: .72rem;
+            color: var(--muted);
+            font-weight: 600;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+
+        .live-clear-btn {
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-size: .72rem;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .live-clear-btn:hover { color: var(--text); }
+
+        .live-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: var(--radius-md);
+            background: var(--panel);
+            border: 1px solid var(--border);
+            font-size: .8rem;
+            animation: live-card-in .25s ease-out both;
+        }
+
+        @keyframes live-card-in {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .live-card-time {
+            color: var(--muted);
+            font-family: var(--font-mono);
+            font-size: .72rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .live-card-msg {
+            color: var(--text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            font-family: var(--font-mono);
+            font-size: .75rem;
+        }
+
+        .live-rotated-notice {
+            padding: 8px 12px;
+            border-radius: var(--radius-md);
+            background: color-mix(in srgb, var(--warning) 10%, transparent);
+            border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+            color: var(--warning);
+            font-size: .8rem;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -2122,7 +2244,29 @@
                             <button type="button" class="button-link" data-logcenter-collapse-all>Collapse all</button>
                         </div>
                     @endif
+                    @if($tailUrl)
+                        <button
+                            type="button"
+                            class="live-btn"
+                            id="liveTailBtn"
+                            data-tail-url="{{ $tailUrl }}"
+                            data-poll-url="{{ $tailPollUrl }}"
+                            aria-pressed="false"
+                            title="Stream new log entries in real time"
+                        >
+                            <span class="live-dot" aria-hidden="true"></span>
+                            <span class="live-label">Live</span>
+                        </button>
+                    @endif
                 </div>
+            </div>
+
+            <div class="live-feed" id="liveFeed" aria-live="polite">
+                <div class="live-feed-header">
+                    <span>Live entries</span>
+                    <button type="button" class="live-clear-btn" id="liveClearBtn">Clear</button>
+                </div>
+                <div id="liveFeedItems"></div>
             </div>
 
             <section class="entries">
@@ -2911,6 +3055,135 @@
                 });
             }
         }
+
+        /* ── Live Tail ───────────────────────────────────────────── */
+        (function () {
+            const btn    = document.getElementById('liveTailBtn');
+            const feed   = document.getElementById('liveFeed');
+            const items  = document.getElementById('liveFeedItems');
+            const clearBtn = document.getElementById('liveClearBtn');
+
+            if (!btn || !feed || !items) return;
+
+            const LEVEL_COLORS = {
+                emergency: '#dc2626', alert: '#dc2626', critical: '#dc2626',
+                error: '#dc2626', warning: '#d97706', notice: '#0891b2',
+                info: '#0f766e', debug: '#64748b',
+            };
+
+            let isLive    = false;
+            let eventSrc  = null;
+            let pollTimer = null;
+            let offset    = 0;
+            let useSSE    = typeof EventSource !== 'undefined';
+
+            function levelBadge(level) {
+                const color = LEVEL_COLORS[level] || '#64748b';
+                return `<span class="level-badge" style="background:${color};color:#fff;padding:1px 6px;border-radius:4px;font-size:.68rem;font-weight:700;letter-spacing:.05em;flex-shrink:0">${level.toUpperCase()}</span>`;
+            }
+
+            function renderEntry(entry) {
+                const card = document.createElement('div');
+                card.className = 'live-card';
+                const time = entry.timestamp
+                    ? `<span class="live-card-time">${entry.timestamp}</span>`
+                    : '';
+                card.innerHTML = `${time}${levelBadge(entry.level || 'info')}<span class="live-card-msg" title="${(entry.message || '').replace(/"/g, '&quot;')}">${entry.message || ''}</span>`;
+                return card;
+            }
+
+            function renderRotated() {
+                const div = document.createElement('div');
+                div.className = 'live-rotated-notice';
+                div.textContent = 'Log file was rotated — reading from beginning.';
+                return div;
+            }
+
+            function applyResult(result) {
+                if (result.heartbeat || result.done) return;
+
+                if (result.rotated) {
+                    items.prepend(renderRotated());
+                    feed.classList.add('has-entries');
+                }
+
+                if (result.entries && result.entries.length > 0) {
+                    offset = result.offset;
+                    const frag = document.createDocumentFragment();
+                    result.entries.forEach(e => frag.prepend(renderEntry(e)));
+                    items.prepend(frag);
+                    feed.classList.add('has-entries');
+                }
+            }
+
+            function startSSE(url) {
+                if (eventSrc) { eventSrc.close(); eventSrc = null; }
+
+                const src = new EventSource(url + '&offset=' + offset);
+                src.onmessage = (e) => {
+                    try { applyResult(JSON.parse(e.data)); } catch (_) {}
+                };
+                src.onerror = () => {
+                    src.close();
+                    eventSrc = null;
+                    if (isLive) {
+                        // Reconnect after 3 s on error
+                        setTimeout(() => isLive && startSSE(url), 3000);
+                    }
+                };
+                eventSrc = src;
+            }
+
+            function startPoll(pollUrl) {
+                if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+
+                async function poll() {
+                    try {
+                        const res  = await fetch(pollUrl + '&offset=' + offset);
+                        const data = await res.json();
+                        applyResult(data);
+                        if (data.offset) offset = data.offset;
+                    } catch (_) {}
+                }
+
+                pollTimer = setInterval(poll, 2000);
+                poll();
+            }
+
+            function stop() {
+                if (eventSrc) { eventSrc.close(); eventSrc = null; }
+                if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+            }
+
+            btn.addEventListener('click', () => {
+                isLive = !isLive;
+                btn.classList.toggle('is-live', isLive);
+                btn.setAttribute('aria-pressed', isLive ? 'true' : 'false');
+                btn.querySelector('.live-label').textContent = isLive ? 'Stop' : 'Live';
+
+                if (isLive) {
+                    const tailUrl = btn.dataset.tailUrl;
+                    const pollUrl = btn.dataset.pollUrl;
+
+                    if (useSSE) {
+                        startSSE(tailUrl);
+                    } else {
+                        startPoll(pollUrl);
+                    }
+                } else {
+                    stop();
+                }
+            });
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', () => {
+                    items.innerHTML = '';
+                    feed.classList.remove('has-entries');
+                });
+            }
+
+            window.addEventListener('beforeunload', stop);
+        })();
 
         /* ── Back-to-top ─────────────────────────────────────────── */
         const backToTop = document.getElementById('backToTop');

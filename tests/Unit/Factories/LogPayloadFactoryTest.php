@@ -73,6 +73,7 @@ final class LogPayloadFactoryTest extends TestCase
         $this->assertArrayNotHasKey('request', $payload->context);
         $this->assertArrayNotHasKey('userId', $payload->context);
         $this->assertArrayNotHasKey('headers', $payload->request);
+        $this->assertContains($payload->source, ['http', 'console']);
     }
 
     public function test_it_normalizes_referer_without_decoding_reserved_characters(): void

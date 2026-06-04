@@ -11,15 +11,13 @@ use Nabafzar\LogCenter\Attributes\LogTopic;
 use Nabafzar\LogCenter\DTO\LogPayload;
 use Throwable;
 
-class LogPayloadFactory
+final class LogPayloadFactory
 {
     public static function fromLogRecord(LogRecord $record, ?LogTopic $topic = null): LogPayload
     {
         $context = $record->context;
         $exception = self::extractException($context);
-        $request = self::extractRequest($context) ?? self::currentRequest();
-        $explicitRequest = self::arrayValue($context['request'] ?? null);
-        $resolvedRequest = $request ?? $explicitRequest;
+        $resolvedRequest = self::extractRequest($context) ?? self::currentRequest();
         $user = self::arrayValue($context['user'] ?? null);
 
         if ($user === null) {
@@ -59,6 +57,7 @@ class LogPayloadFactory
             extra: self::normalizeArray($record->extra),
             environment: config('app.env'),
             application: config('app.name'),
+            source: app()->runningInConsole() ? 'console' : 'http',
             trace: $exception?->getTraceAsString() ?: self::stringValue($context['trace'] ?? null),
             fingerprint: self::fingerprint(
                 level: $record->level->getName(),
@@ -148,13 +147,13 @@ class LogPayloadFactory
     {
         $referer = $request->headers->get('referer') ?? $request->headers->get('referrer');
 
-        if (! is_string($referer) || $referer === '') {
+        if (!is_string($referer) || $referer === '') {
             return null;
         }
 
         $parts = parse_url($referer);
 
-        if (! is_array($parts)) {
+        if (!is_array($parts)) {
             return $referer;
         }
 

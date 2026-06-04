@@ -202,7 +202,6 @@ Formatter names currently intended:
 - `markdown`
 - `telegram_html`
 - `bale_markdown`
-- `bale_text`
 
 Driver names currently intended:
 
@@ -249,8 +248,6 @@ Formatter:
 - `LOGCENTER_TELEGRAM_HTML_FORMATTER_TRACE_MAX_LENGTH`
 - `LOGCENTER_BALE_MARKDOWN_FORMATTER_MAX_LENGTH`
 - `LOGCENTER_BALE_MARKDOWN_FORMATTER_TRACE_MAX_LENGTH`
-- `LOGCENTER_BALE_TEXT_FORMATTER_MAX_LENGTH`
-- `LOGCENTER_BALE_TEXT_FORMATTER_TRACE_MAX_LENGTH`
 
 Telegram:
 

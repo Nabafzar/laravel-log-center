@@ -11,6 +11,7 @@ use Nabafzar\LogCenter\Contracts\LogDispatcherInterface;
 use Nabafzar\LogCenter\Factories\FormatterFactory;
 use Nabafzar\LogCenter\Factories\TransportFactory;
 use Nabafzar\LogCenter\Managers\TransportManager;
+use Nabafzar\LogCenter\Processors\PayloadProcessor;
 use Nabafzar\LogCenter\Services\LogDispatcher;
 use Nabafzar\LogCenter\Suppression\SuppressionManager;
 
@@ -42,6 +43,8 @@ final class LogCenterServiceProvider extends ServiceProvider
     private function registerBindings(): void
     {
         $this->app->singleton(AttributeResolver::class);
+
+        $this->app->singleton(PayloadProcessor::class);
 
         $this->app->singleton(FormatterFactory::class);
 

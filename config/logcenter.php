@@ -59,7 +59,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Determines how log messages are formatted before sending.
-    | Supported: plain, json, markdown, telegram_html, bale_markdown, bale_text
+    | Supported: plain, json, markdown, telegram_html, bale_markdown
     |
     */
     'formatter' => env('LOGCENTER_FORMATTER', 'plain'),

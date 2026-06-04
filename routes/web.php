@@ -17,4 +17,6 @@ Route::middleware($middleware)
     ->group(static function (): void {
         Route::get('/', [LogViewerController::class, 'index'])->name('index');
         Route::get('/download', [LogViewerController::class, 'download'])->name('download');
+        Route::get('/tail', [LogViewerController::class, 'tail'])->name('tail');
+        Route::get('/tail/poll', [LogViewerController::class, 'tailPoll'])->name('tail.poll');
     });

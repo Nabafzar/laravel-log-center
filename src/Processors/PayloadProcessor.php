@@ -4,12 +4,46 @@ declare(strict_types=1);
 
 namespace Nabafzar\LogCenter\Processors;
 
+use Nabafzar\LogCenter\Contracts\PayloadEnricherInterface;
 use Nabafzar\LogCenter\DTO\LogPayload;
 
-class PayloadProcessor
+final class PayloadProcessor
 {
+    /** @var list<PayloadEnricherInterface> */
+    private array $enrichers = [];
+
+    /** @var list<string>|null Normalized sensitive key list, built once per instance. */
+    private ?array $cachedKeys = null;
+
+    /** @var string|null Compiled regex pattern, built once per instance. */
+    private ?string $cachedPattern = null;
+
+    /** @var string|null */
+    private ?string $cachedReplacement = null;
+
+    /** @var bool|null */
+    private ?bool $cachedCaseSensitive = null;
+
+    /**
+     * Register a custom enricher that runs before masking on every dispatch.
+     *
+     * Call this from a ServiceProvider::boot() to inject extra context such as
+     * git SHA, server hostname, or deploy version into every log payload:
+     *
+     *   $this->app->make(PayloadProcessor::class)
+     *       ->addEnricher(new ServerContextEnricher());
+     */
+    public function addEnricher(PayloadEnricherInterface $enricher): void
+    {
+        $this->enrichers[] = $enricher;
+    }
+
     public function process(LogPayload $payload): LogPayload
     {
+        foreach ($this->enrichers as $enricher) {
+            $payload = $enricher->enrich($payload);
+        }
+
         return new LogPayload(
             level: $payload->level,
             message: $this->maskText($payload->message),
@@ -38,7 +72,7 @@ class PayloadProcessor
 
     private function maskArray(array $data): array
     {
-        $keys = $this->maskKeys();
+        $keys = $this->keys();
 
         foreach ($data as $key => $value) {
             // Check the key first: a sensitive key must mask its entire value,
@@ -67,17 +101,11 @@ class PayloadProcessor
             return $text;
         }
 
-        $keys = array_map(
-            static fn (string $key) => preg_quote($key, '/'),
-            $this->maskKeys()
-        );
+        $pattern = $this->pattern();
 
-        if ($keys === []) {
+        if ($pattern === null) {
             return $text;
         }
-
-        $flags = $this->caseSensitive() ? '' : 'i';
-        $pattern = '/(' . implode('|', $keys) . ')(["\']?\s*[:=]\s*["\']?)([^&\s,"\']+)/' . $flags;
 
         return preg_replace_callback(
             $pattern,
@@ -93,8 +121,41 @@ class PayloadProcessor
         return in_array($this->caseSensitive() ? $key : strtolower($key), $keys, true);
     }
 
-    private function maskKeys(): array
+    /**
+     * Returns the compiled regex pattern for in-text masking, or null when
+     * there are no keys to mask. Built once and reused across all process() calls.
+     */
+    private function pattern(): ?string
     {
+        if ($this->cachedPattern !== null) {
+            return $this->cachedPattern;
+        }
+
+        $escaped = array_map(
+            static fn (string $key) => preg_quote($key, '/'),
+            $this->keys()
+        );
+
+        if ($escaped === []) {
+            return null;
+        }
+
+        $flags = $this->caseSensitive() ? '' : 'i';
+
+        return $this->cachedPattern = '/(' . implode('|', $escaped) . ')(["\']?\s*[:=]\s*["\']?)([^&\s,"\']+)/' . $flags;
+    }
+
+    /**
+     * Returns normalized sensitive keys, read from config once per instance.
+     *
+     * @return list<string>
+     */
+    private function keys(): array
+    {
+        if ($this->cachedKeys !== null) {
+            return $this->cachedKeys;
+        }
+
         $keys = config('logcenter.mask.keys', [
             'password',
             'password_confirmation',
@@ -107,10 +168,10 @@ class PayloadProcessor
         ]);
 
         if (! is_array($keys)) {
-            return [];
+            return $this->cachedKeys = [];
         }
 
-        return array_values(array_map(
+        return $this->cachedKeys = array_values(array_map(
             fn (mixed $key) => $this->caseSensitive() ? (string) $key : strtolower((string) $key),
             $keys
         ));
@@ -118,11 +179,11 @@ class PayloadProcessor
 
     private function replacement(): string
     {
-        return (string) config('logcenter.mask.replacement', '******');
+        return $this->cachedReplacement ??= (string) config('logcenter.mask.replacement', '******');
     }
 
     private function caseSensitive(): bool
     {
-        return (bool) config('logcenter.mask.case_sensitive', false);
+        return $this->cachedCaseSensitive ??= (bool) config('logcenter.mask.case_sensitive', false);
     }
 }

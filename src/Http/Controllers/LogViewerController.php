@@ -2,11 +2,13 @@
 
 namespace Nabafzar\LogCenter\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\View\View;
 use Nabafzar\LogCenter\Viewer\LogFileRepository;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class LogViewerController extends Controller
 {
@@ -70,6 +72,85 @@ final class LogViewerController extends Controller
                 'average' => $totalGroups > 0 ? round($entries->count() / $totalGroups, 2) : 0,
             ],
         ]);
+    }
+
+    /**
+     * Server-Sent Events stream for real-time log tail.
+     * Streams new entries as they appear in the file, up to 90 seconds per
+     * connection. The client should reconnect using the last received offset.
+     */
+    public function tail(Request $request): StreamedResponse
+    {
+        $file = (string) $request->query('file', '');
+        $offset = (int) $request->query('offset', -1);
+
+        if ($offset < 0) {
+            $path = $this->files->path($file);
+            $offset = $path !== null ? (@filesize($path) ?: 0) : 0;
+        }
+
+        return response()->stream(function () use ($file, $offset): void {
+            @set_time_limit(0);
+            @ignore_user_abort(true);
+
+            while (ob_get_level() > 0) {
+                ob_end_flush();
+            }
+
+            $iterations = 0;
+            $maxIterations = 90;
+
+            while ($iterations < $maxIterations) {
+                $result = $this->files->tailFrom($file, $offset);
+                $offset = $result['offset'];
+
+                if (! empty($result['entries']) || $result['rotated']) {
+                    $payload = json_encode([
+                        'entries' => $result['entries'],
+                        'offset' => $offset,
+                        'rotated' => $result['rotated'],
+                    ]);
+
+                    echo "data: {$payload}\n\n";
+                    flush();
+                }
+
+                $iterations++;
+
+                if ($iterations % 10 === 0) {
+                    echo "data: " . json_encode(['heartbeat' => true, 'offset' => $offset]) . "\n\n";
+                    flush();
+                }
+
+                if (connection_aborted()) {
+                    break;
+                }
+
+                sleep(1);
+            }
+
+            echo "data: " . json_encode(['done' => true, 'offset' => $offset]) . "\n\n";
+            flush();
+        }, 200, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache, no-store',
+            'X-Accel-Buffering' => 'no',
+            'Connection' => 'keep-alive',
+        ]);
+    }
+
+    /**
+     * JSON polling endpoint for external consumers (CLI clients, external apps).
+     * Returns new entries since the given byte offset and the new offset.
+     */
+    public function tailPoll(Request $request): JsonResponse
+    {
+        $file = (string) $request->query('file', '');
+        $offset = max(0, (int) $request->query('offset', 0));
+
+        $result = $this->files->tailFrom($file, $offset);
+
+        return response()->json($result);
     }
 
     public function download(Request $request): BinaryFileResponse

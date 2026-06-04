@@ -7,7 +7,9 @@ namespace Nabafzar\LogCenter\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Validation\Rule;
 use Nabafzar\LogCenter\Contracts\LogDispatcherInterface;
+use Nabafzar\LogCenter\Enums\LogLevelEnum;
 use Nabafzar\LogCenter\Factories\IncomingLogPayloadFactory;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -22,7 +24,7 @@ final class IncomingLogController extends Controller
         }
 
         $validated = $request->validate([
-            'level' => ['required', 'string', 'max:32'],
+            'level' => ['required', 'string', Rule::in(array_column(LogLevelEnum::cases(), 'value'))],
             'message' => ['required', 'string', 'max:10000'],
             'channel' => ['sometimes', 'nullable', 'string', 'max:100'],
             'datetime' => ['sometimes', 'nullable', 'date'],

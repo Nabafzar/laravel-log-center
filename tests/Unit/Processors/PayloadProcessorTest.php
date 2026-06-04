@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Nabafzar\LogCenter\Tests\Unit\Processors;
 
+use Nabafzar\LogCenter\Contracts\PayloadEnricherInterface;
+use Nabafzar\LogCenter\DTO\LogPayload;
 use Nabafzar\LogCenter\Processors\PayloadProcessor;
 use Nabafzar\LogCenter\Tests\TestCase;
 
@@ -68,5 +70,80 @@ final class PayloadProcessorTest extends TestCase
         $this->assertSame('******', $processed->context['token']);
         $this->assertSame('******', $processed->context['headers']['authorization']);
         $this->assertSame(['kept'], $processed->context['visible']);
+    }
+
+    public function test_enrichers_run_before_masking(): void
+    {
+        $enricher = new class implements PayloadEnricherInterface {
+            public function enrich(LogPayload $payload): LogPayload
+            {
+                return new LogPayload(
+                    level: $payload->level,
+                    message: $payload->message,
+                    channel: $payload->channel,
+                    datetime: $payload->datetime,
+                    context: array_merge($payload->context, [
+                        'deploy_sha' => 'abc123',
+                        'token'      => 'should-be-masked',
+                    ]),
+                );
+            }
+        };
+
+        $processor = new PayloadProcessor();
+        $processor->addEnricher($enricher);
+
+        $processed = $processor->process($this->makePayload([]));
+
+        $this->assertSame('abc123', $processed->context['deploy_sha']);
+        $this->assertSame('******', $processed->context['token']);
+    }
+
+    public function test_multiple_enrichers_run_in_order(): void
+    {
+        $log = [];
+
+        $first = new class ($log) implements PayloadEnricherInterface {
+            public function __construct(private array &$log) {}
+
+            public function enrich(LogPayload $payload): LogPayload
+            {
+                $this->log[] = 'first';
+
+                return new LogPayload(
+                    level: $payload->level,
+                    message: $payload->message,
+                    channel: $payload->channel,
+                    datetime: $payload->datetime,
+                    extra: ['step' => 'first'],
+                );
+            }
+        };
+
+        $second = new class ($log) implements PayloadEnricherInterface {
+            public function __construct(private array &$log) {}
+
+            public function enrich(LogPayload $payload): LogPayload
+            {
+                $this->log[] = 'second';
+
+                return new LogPayload(
+                    level: $payload->level,
+                    message: $payload->message,
+                    channel: $payload->channel,
+                    datetime: $payload->datetime,
+                    extra: array_merge($payload->extra, ['step' => 'second']),
+                );
+            }
+        };
+
+        $processor = new PayloadProcessor();
+        $processor->addEnricher($first);
+        $processor->addEnricher($second);
+
+        $processed = $processor->process($this->makePayload([]));
+
+        $this->assertSame(['first', 'second'], $log);
+        $this->assertSame('second', $processed->extra['step']);
     }
 }

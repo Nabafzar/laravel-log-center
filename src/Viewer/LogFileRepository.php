@@ -491,6 +491,129 @@ final class LogFileRepository
         return $size <= $maxFileSize;
     }
 
+    /**
+     * Read new log entries from a byte offset. Safe to call on files larger
+     * than viewer.max_file_size — the size guard is intentionally skipped for
+     * incremental tail reads.
+     *
+     * @return array{entries: list<array<string,mixed>>, offset: int, rotated: bool}
+     */
+    public function tailFrom(string $file, int $offset): array
+    {
+        $path = $this->resolvePathForTail($file);
+
+        if ($path === null) {
+            return ['entries' => [], 'offset' => 0, 'rotated' => false];
+        }
+
+        $size = @filesize($path);
+
+        if ($size === false) {
+            return ['entries' => [], 'offset' => $offset, 'rotated' => false];
+        }
+
+        $rotated = $offset > $size;
+
+        if ($rotated) {
+            $offset = 0;
+        }
+
+        if ($offset === $size) {
+            return ['entries' => [], 'offset' => $offset, 'rotated' => false];
+        }
+
+        $handle = @fopen($path, 'r');
+
+        if ($handle === false) {
+            return ['entries' => [], 'offset' => $offset, 'rotated' => false];
+        }
+
+        fseek($handle, $offset);
+        $chunk = stream_get_contents($handle);
+        fclose($handle);
+
+        if ($chunk === false || $chunk === '') {
+            return ['entries' => [], 'offset' => $size, 'rotated' => $rotated];
+        }
+
+        $lines = explode("\n", rtrim($chunk, "\n"));
+        $entries = [];
+        $current = null;
+
+        foreach ($lines as $line) {
+            $line = rtrim($line, "\r");
+
+            if ($line === '') {
+                if ($current !== null) {
+                    $current['lines'][] = '';
+                }
+
+                continue;
+            }
+
+            if ($this->isHeaderLine($line, $header)) {
+                if ($current !== null) {
+                    $entries[] = $this->buildEntry($current);
+                }
+
+                $current = ['header' => $header, 'lines' => [$line]];
+
+                continue;
+            }
+
+            if ($current !== null) {
+                $current['lines'][] = $line;
+            }
+        }
+
+        if ($current !== null) {
+            $entries[] = $this->buildEntry($current);
+        }
+
+        return ['entries' => $entries, 'offset' => $size, 'rotated' => $rotated];
+    }
+
+    /**
+     * Resolve a file path for tail access. Skips the file-size guard that the
+     * normal viewer imposes so that large files can still be tailed.
+     */
+    private function resolvePathForTail(string $file): ?string
+    {
+        $file = trim($file);
+
+        if ($file === '') {
+            return null;
+        }
+
+        if (is_file($file) && is_readable($file)) {
+            $path = realpath($file);
+
+            if ($path !== false && $this->isAllowedPath($path)) {
+                return $path;
+            }
+        }
+
+        foreach ($this->viewerRoots() as $root) {
+            $candidates = is_dir($root)
+                ? (glob($root . DIRECTORY_SEPARATOR . '*.log') ?: [])
+                : [$root];
+
+            foreach ($candidates as $candidate) {
+                if (! is_file($candidate) || ! is_readable($candidate)) {
+                    continue;
+                }
+
+                $real = realpath($candidate);
+
+                if ($real !== false && ($real === $file || $candidate === $file)) {
+                    return $real;
+                }
+            }
+        }
+
+        return null;
+    }
+
     private function normalizeFingerprintFilter(mixed $fingerprint): string
     {
         $fingerprint = strtolower(trim((string) $fingerprint));
