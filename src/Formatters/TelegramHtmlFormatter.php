@@ -148,8 +148,11 @@ class TelegramHtmlFormatter extends AbstractFormatter implements LogFormatterInt
             return null;
         }
 
+        $status = $this->exceptionHttpStatus($payload->exception);
+
         return implode(PHP_EOL, array_filter([
-            '<b>Exception: </b> <code>' . $this->escapeHtml($this->exceptionClass($payload->exception)) . '</code>',
+            '<b>Exception: </b> <code>' . $this->escapeHtml($this->exceptionClass($payload->exception)) . '</code>'
+                . ($status !== null ? ' <code>[HTTP ' . $status . ']</code>' : ''),
             $this->formatHtmlExceptionFile($payload),
             $this->formatHtmlExceptionLine($payload),
         ]));

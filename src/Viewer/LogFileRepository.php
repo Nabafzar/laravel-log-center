@@ -205,7 +205,16 @@ final class LogFileRepository
             return 0;
         }
 
-        return $this->parseFile($path)->count();
+        $count  = 0;
+        $handle = new SplFileObject($path, 'r');
+
+        while (! $handle->eof()) {
+            if ($this->isHeaderLine(rtrim((string) $handle->fgets(), "\r\n"))) {
+                $count++;
+            }
+        }
+
+        return $count;
     }
 
     private function parseFile(string $path): Collection

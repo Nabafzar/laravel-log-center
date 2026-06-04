@@ -149,8 +149,11 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
             return null;
         }
 
+        $status = $this->exceptionHttpStatus($payload->exception);
+
         return implode(PHP_EOL, array_filter([
-            '*Exception:* `' . $this->escapeMarkdownInline($this->exceptionClass($payload->exception)) . '`',
+            '*Exception:* `' . $this->escapeMarkdownInline($this->exceptionClass($payload->exception)) . '`'
+                . ($status !== null ? ' `[HTTP ' . $status . ']`' : ''),
             $this->formatMarkdownExceptionFile($payload),
             $this->formatMarkdownExceptionLine($payload),
         ]));

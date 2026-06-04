@@ -295,6 +295,13 @@ abstract class AbstractFormatter
         return (string) ($exception['class'] ?? $exception['type'] ?? 'Exception');
     }
 
+    protected function exceptionHttpStatus(array $exception): ?int
+    {
+        $status = $exception['http_status'] ?? null;
+
+        return is_numeric($status) && (int) $status > 0 ? (int) $status : null;
+    }
+
     protected function exceptionFile(array $exception): ?string
     {
         $file = $exception['file'] ?? null;

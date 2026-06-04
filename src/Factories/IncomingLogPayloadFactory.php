@@ -75,11 +75,15 @@ final class IncomingLogPayloadFactory
      * @param array<string, mixed> $data
      * @return array<string, mixed>
      */
-    private static function normalizeArray(array $data): array
+    private static function normalizeArray(array $data, int $depth = 0): array
     {
+        if ($depth >= 10) {
+            return $data;
+        }
+
         foreach ($data as $key => $value) {
             if (is_array($value)) {
-                $data[$key] = self::normalizeArray($value);
+                $data[$key] = self::normalizeArray($value, $depth + 1);
                 continue;
             }
 

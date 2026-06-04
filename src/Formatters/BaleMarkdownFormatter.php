@@ -141,11 +141,14 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
             return null;
         }
 
+        $status = $this->exceptionHttpStatus($payload->exception);
+
         return PHP_EOL . implode(PHP_EOL, array_filter([
-                '*Exception:* ' . $this->escapeInline($this->exceptionClass($payload->exception)),
-                $this->formatBaleExceptionFile($payload),
-                $this->formatBaleExceptionLine($payload),
-            ]));
+            '*Exception:* ' . $this->escapeInline($this->exceptionClass($payload->exception))
+                . ($status !== null ? ' *[HTTP ' . $status . ']*' : ''),
+            $this->formatBaleExceptionFile($payload),
+            $this->formatBaleExceptionLine($payload),
+        ]));
     }
 
     private function trace(LogPayload $payload): ?string

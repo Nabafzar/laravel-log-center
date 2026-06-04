@@ -38,13 +38,38 @@ final class AttributeResolver
     private array $cache = [];
 
     /**
+     * Final resolve results keyed by stack signature.
+     * Avoids rescanning the same call path on repeated log calls.
+     *
+     * @var array<string, LogTopic|null>
+     */
+    private array $resolveCache = [];
+
+    /**
      * Walk the current call stack and return the first #[LogTopic] attribute found,
      * checking the method level first, then the class level. If Laravel logs after
      * the controller frame has already unwound, fall back to the current route action.
      */
     public function resolve(): ?LogTopic
     {
-        $frames = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 50);
+        $frames    = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 25);
+        $signature = $this->stackSignature($frames);
+
+        if (array_key_exists($signature, $this->resolveCache)) {
+            return $this->resolveCache[$signature];
+        }
+
+        return $this->resolveCache[$signature] = $this->doResolve($frames);
+    }
+
+    /**
+     * Build a lightweight string key that identifies this call path.
+     * Only non-skipped frames are included so internal/framework frames
+     * do not affect the signature.
+     */
+    private function stackSignature(array $frames): string
+    {
+        $parts = [];
 
         foreach ($frames as $frame) {
             $class  = $frame['class']    ?? null;
@@ -58,7 +83,28 @@ final class AttributeResolver
                 continue;
             }
 
-            $key = $class . '::' . $method;
+            $parts[] = $class . '::' . $method;
+        }
+
+        return implode('|', $parts);
+    }
+
+    /**
+     * Perform the actual frame-by-frame scan for a #[LogTopic] attribute.
+     */
+    private function doResolve(array $frames): ?LogTopic
+    {
+        foreach ($frames as $frame) {
+            $class  = $frame['class']    ?? null;
+            $method = $frame['function'] ?? null;
+
+            if (! is_string($class) || ! is_string($method) || $method === '') {
+                continue;
+            }
+
+            if ($this->shouldSkip($class)) {
+                continue;
+            }
 
             $topic = $this->readAttributeCached($class, $method);
 

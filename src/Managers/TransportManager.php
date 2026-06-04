@@ -49,7 +49,7 @@ class TransportManager
             return null;
         }
 
-        $value = trim($value);
+        $value = strtolower(trim($value));
 
         return $value !== '' ? $value : null;
     }

@@ -7,6 +7,7 @@ namespace Nabafzar\LogCenter\Factories;
 use Illuminate\Http\Request;
 use Illuminate\Http\Client\RequestException;
 use Monolog\LogRecord;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Nabafzar\LogCenter\Attributes\LogTopic;
 use Nabafzar\LogCenter\DTO\LogPayload;
 use Throwable;
@@ -82,15 +83,22 @@ final class LogPayloadFactory
     private static function exceptionToArray(Throwable $exception): array
     {
         $data = [
-            'class' => $exception::class,
+            'class'   => $exception::class,
             'message' => $exception->getMessage(),
-            'code' => $exception->getCode(),
-            'file' => $exception->getFile(),
-            'line' => $exception->getLine(),
+            'code'    => $exception->getCode(),
+            'file'    => $exception->getFile(),
+            'line'    => $exception->getLine(),
         ];
 
-        if ($exception instanceof RequestException) {
-            $data['status_code'] = $exception->response?->status();
+        if ($exception instanceof HttpExceptionInterface) {
+            // abort(404), abort(500), etc. — use the declared HTTP status.
+            $data['http_status'] = $exception->getStatusCode();
+        } elseif ($exception instanceof RequestException) {
+            // HTTP client error — status comes from the upstream response.
+            $data['http_status'] = $exception->response?->status();
+        } elseif (! app()->runningInConsole()) {
+            // Any unhandled exception during an HTTP request becomes 500.
+            $data['http_status'] = 500;
         }
 
         return $data;

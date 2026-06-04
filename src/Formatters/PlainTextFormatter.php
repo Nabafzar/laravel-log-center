@@ -120,13 +120,18 @@ class PlainTextFormatter extends AbstractFormatter implements LogFormatterInterf
 
     private function exception(LogPayload $payload): ?string
     {
-        return empty($payload->exception)
-            ? null
-            : implode(PHP_EOL, array_filter([
-                'Exception: ' . $this->exceptionClass($payload->exception ?? []),
-                $this->formatPlainExceptionFile($payload),
-                $this->formatPlainExceptionLine($payload),
-            ]));
+        if (empty($payload->exception)) {
+            return null;
+        }
+
+        $status = $this->exceptionHttpStatus($payload->exception);
+
+        return implode(PHP_EOL, array_filter([
+            'Exception: ' . $this->exceptionClass($payload->exception)
+                . ($status !== null ? ' [HTTP ' . $status . ']' : ''),
+            $this->formatPlainExceptionFile($payload),
+            $this->formatPlainExceptionLine($payload),
+        ]));
     }
 
     private function trace(LogPayload $payload): ?string
