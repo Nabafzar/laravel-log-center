@@ -115,4 +115,28 @@ final class BaleMarkdownFormatterTest extends TestCase
         $this->assertStringContainsString('\*bold\*', $formatted->content);
         $this->assertStringContainsString('\_italic\_', $formatted->content);
     }
+
+    public function test_it_renders_http_status_alongside_exception_class(): void
+    {
+        $formatted = (new BaleMarkdownFormatter())->format($this->makePayload([
+            'exception' => [
+                'class' => 'RuntimeException',
+                'message' => 'Boom',
+                'code' => 0,
+                'http_status' => 500,
+            ],
+        ]));
+
+        $this->assertStringContainsString('RuntimeException', $formatted->content);
+        $this->assertStringContainsString('[HTTP 500]', $formatted->content);
+    }
+
+    public function test_it_omits_http_status_when_not_present(): void
+    {
+        $formatted = (new BaleMarkdownFormatter())->format($this->makePayload([
+            'exception' => ['class' => 'RuntimeException', 'message' => 'Boom', 'code' => 0],
+        ]));
+
+        $this->assertStringNotContainsString('[HTTP', $formatted->content);
+    }
 }

@@ -80,4 +80,28 @@ final class PlainTextFormatterTest extends TestCase
         $this->assertStringContainsString('User: 55', $formatted->content);
         $this->assertStringContainsString('Name: Carol', $formatted->content);
     }
+
+    public function test_it_renders_http_status_alongside_exception_class(): void
+    {
+        $formatted = (new PlainTextFormatter())->format($this->makePayload([
+            'exception' => [
+                'class' => 'RuntimeException',
+                'message' => 'Boom',
+                'code' => 0,
+                'http_status' => 500,
+            ],
+        ]));
+
+        $this->assertStringContainsString('RuntimeException', $formatted->content);
+        $this->assertStringContainsString('[HTTP 500]', $formatted->content);
+    }
+
+    public function test_it_omits_http_status_when_not_present(): void
+    {
+        $formatted = (new PlainTextFormatter())->format($this->makePayload([
+            'exception' => ['class' => 'RuntimeException', 'message' => 'Boom', 'code' => 0],
+        ]));
+
+        $this->assertStringNotContainsString('[HTTP', $formatted->content);
+    }
 }

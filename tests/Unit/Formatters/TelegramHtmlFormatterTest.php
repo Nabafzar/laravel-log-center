@@ -92,6 +92,50 @@ final class TelegramHtmlFormatterTest extends TestCase
         $this->assertStringContainsString('#0 /app/Foo.php(10): bar()', $formatted->content);
     }
 
+    public function test_it_renders_http_status_alongside_exception_class(): void
+    {
+        $formatted = (new TelegramHtmlFormatter())->format($this->makePayload([
+            'exception' => [
+                'class' => 'RuntimeException',
+                'message' => 'Boom',
+                'code' => 0,
+                'file' => '/app/Foo.php',
+                'line' => 42,
+                'http_status' => 500,
+            ],
+        ]));
+
+        $this->assertStringContainsString('RuntimeException', $formatted->content);
+        $this->assertStringContainsString('[HTTP 500]', $formatted->content);
+    }
+
+    public function test_it_renders_http_status_404_for_http_exceptions(): void
+    {
+        $formatted = (new TelegramHtmlFormatter())->format($this->makePayload([
+            'exception' => [
+                'class' => 'Symfony\Component\HttpKernel\Exception\NotFoundHttpException',
+                'message' => 'Not Found',
+                'code' => 0,
+                'http_status' => 404,
+            ],
+        ]));
+
+        $this->assertStringContainsString('[HTTP 404]', $formatted->content);
+    }
+
+    public function test_it_omits_http_status_when_not_present(): void
+    {
+        $formatted = (new TelegramHtmlFormatter())->format($this->makePayload([
+            'exception' => [
+                'class' => 'RuntimeException',
+                'message' => 'Boom',
+                'code' => 0,
+            ],
+        ]));
+
+        $this->assertStringNotContainsString('[HTTP', $formatted->content);
+    }
+
     public function test_it_omits_source_when_absent(): void
     {
         $payload = new \Nabafzar\LogCenter\DTO\LogPayload(

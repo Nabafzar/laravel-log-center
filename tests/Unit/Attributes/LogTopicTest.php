@@ -237,6 +237,38 @@ final class LogTopicTest extends TestCase
         });
     }
 
+    public function test_resolve_cache_returns_consistent_result_on_repeated_calls(): void
+    {
+        $resolver = new AttributeResolver();
+
+        // Call resolve() three times from the same stack context.
+        $first  = $resolver->resolve();
+        $second = $resolver->resolve();
+        $third  = $resolver->resolve();
+
+        // All calls must return the same value — the cache must not flip results.
+        $this->assertEquals($first, $second);
+        $this->assertEquals($second, $third);
+    }
+
+    public function test_resolve_cache_is_consistent_for_annotated_and_unannotated_callers(): void
+    {
+        $resolver = new AttributeResolver();
+
+        // Annotated stack should always return a topic.
+        $annotated = AnnotatedFixture::callAndResolve($resolver);
+        $this->assertNotNull($annotated);
+        $this->assertInstanceOf(LogTopic::class, $annotated);
+
+        // Unannotated stack should always return null.
+        $unannotated = AnnotatedFixture::callWithoutAttribute($resolver);
+        $this->assertNull($unannotated);
+
+        // Calling annotated again must still return the topic (cache stable).
+        $annotatedAgain = AnnotatedFixture::callAndResolve($resolver);
+        $this->assertEquals($annotated, $annotatedAgain);
+    }
+
     // -------------------------------------------------------------------------
 
     private function makeDispatcher(): \Nabafzar\LogCenter\Services\LogDispatcher

@@ -37,4 +37,40 @@ final class TransportManagerTest extends TestCase
         $this->assertSame('plain', $manager->formatterName());
         $this->assertSame('plain', $manager->formatterName(null, 'telegram'));
     }
+
+    public function test_it_normalizes_driver_name_to_lowercase(): void
+    {
+        config()->set('logcenter.default', 'Bale');
+
+        $manager = $this->app->make(TransportManager::class);
+
+        $this->assertSame('bale', $manager->defaultDriverName());
+    }
+
+    public function test_it_normalizes_uppercase_driver_name(): void
+    {
+        config()->set('logcenter.default', 'TELEGRAM');
+
+        $manager = $this->app->make(TransportManager::class);
+
+        $this->assertSame('telegram', $manager->defaultDriverName());
+    }
+
+    public function test_it_normalizes_formatter_name_to_lowercase(): void
+    {
+        config()->set('logcenter.formatter', 'Plain');
+
+        $manager = $this->app->make(TransportManager::class);
+
+        $this->assertSame('plain', $manager->formatterName());
+    }
+
+    public function test_it_normalizes_driver_specific_formatter_to_lowercase(): void
+    {
+        config()->set('logcenter.drivers.bale.formatter', 'Bale_Markdown');
+
+        $manager = $this->app->make(TransportManager::class);
+
+        $this->assertSame('bale_markdown', $manager->formatterName(null, 'bale'));
+    }
 }
