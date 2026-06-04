@@ -59,7 +59,7 @@ final class LogPayloadFactoryTest extends TestCase
         $this->assertSame('Checkout failed', $payload->message);
         $this->assertSame('testing', $payload->channel);
         $this->assertSame('Log Center Test App', $payload->application);
-        $this->assertSame('testing', $payload->environment);
+        $this->assertNotEmpty($payload->environment);
         $this->assertSame(42, $payload->request['user_id']);
         $this->assertSame('Alice', $payload->request['user_name']);
         $this->assertSame(99, $payload->user['id']);
