@@ -380,7 +380,7 @@ final class DiscordTransport implements LogTransportInterface
     public function send(LogPayload $payload, FormattedMessage $message): TransportResult
     {
         $response = Http::timeout($this->timeout)
-            ->post($this->webhookUrl, ['content' => $message->body]);
+            ->post($this->webhookUrl, ['content' => $message->content]);
 
         return $response->successful()
             ? TransportResult::success('discord', statusCode: $response->status())
