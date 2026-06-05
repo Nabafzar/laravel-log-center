@@ -141,15 +141,16 @@ final class LogDispatcherFallbackTest extends TestCase
     // -------------------------------------------------------------------------
 
     private function makeDispatcher(
-        TransportResult  $primary,
-        TransportResult  $fallback,
-        ?\Closure        $onFallbackCalled = null,
+        TransportResult $primary,
+        TransportResult $fallback,
+        ?\Closure $onFallbackCalled = null,
     ): LogDispatcher {
         $makeTransport = static function (TransportResult $result, ?\Closure $onCall = null): LogTransportInterface {
-            return new class ($result, $onCall) implements LogTransportInterface {
+            return new class($result, $onCall) implements LogTransportInterface
+            {
                 public function __construct(
                     private readonly TransportResult $result,
-                    private readonly ?\Closure       $onCall,
+                    private readonly ?\Closure $onCall,
                 ) {}
 
                 public function send(LogPayload $payload, FormattedMessage $message): TransportResult
@@ -173,10 +174,11 @@ final class LogDispatcherFallbackTest extends TestCase
             };
         };
 
-        $primaryTransport  = $makeTransport($primary);
+        $primaryTransport = $makeTransport($primary);
         $fallbackTransport = $makeTransport($fallback, $onFallbackCalled);
 
-        $formatter = new class () implements LogFormatterInterface {
+        $formatter = new class implements LogFormatterInterface
+        {
             public function format(LogPayload $payload): FormattedMessage
             {
                 return new FormattedMessage('formatted');
@@ -187,9 +189,9 @@ final class LogDispatcherFallbackTest extends TestCase
         $manager->method('defaultDriverName')->willReturn('telegram');
         $manager->method('formatter')->willReturn($formatter);
         $manager->method('driver')->willReturnCallback(
-            static fn (string $driver) => $driver === 'telegram' ? $primaryTransport : $fallbackTransport
+            static fn (string $driver) => $driver === 'telegram' ? $primaryTransport : $fallbackTransport,
         );
 
-        return new LogDispatcher($manager, new PayloadProcessor(), new SuppressionManager());
+        return new LogDispatcher($manager, new PayloadProcessor, new SuppressionManager);
     }
 }

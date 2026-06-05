@@ -18,8 +18,8 @@ use Nabafzar\LogCenter\Suppression\SuppressionManager;
 final class LogDispatcher implements LogDispatcherInterface
 {
     public function __construct(
-        private readonly TransportManager  $transportManager,
-        private readonly PayloadProcessor  $payloadProcessor,
+        private readonly TransportManager $transportManager,
+        private readonly PayloadProcessor $payloadProcessor,
         private readonly SuppressionManager $suppression,
     ) {}
 
@@ -32,8 +32,7 @@ final class LogDispatcher implements LogDispatcherInterface
         LogPayload $payload,
         ?string $driverName = null,
         ?string $formatterName = null,
-    ): TransportResult
-    {
+    ): TransportResult {
         $driverName ??= $this->transportManager->defaultDriverName();
         $payload = $this->payloadProcessor->process($payload);
 
@@ -43,10 +42,11 @@ final class LogDispatcher implements LogDispatcherInterface
         if ($this->suppression->isEnabled() && $fingerprint !== '' && $this->suppression->isSuppressed($fingerprint)) {
             $occurrences = $this->suppression->incrementAndGetCount($fingerprint);
             $suppressedResult = TransportResult::success($driverName, meta: [
-                'suppressed'  => true,
+                'suppressed' => true,
                 'occurrences' => $occurrences,
             ]);
             event(new LogSuppressed($payload, $suppressedResult, $occurrences));
+
             return $suppressedResult;
         }
 
@@ -55,6 +55,7 @@ final class LogDispatcher implements LogDispatcherInterface
         if ($result->isSuccess()) {
             $this->recordSuppression($fingerprint);
             event(new LogDispatched($payload, $result));
+
             return $result;
         }
 
@@ -135,7 +136,7 @@ final class LogDispatcher implements LogDispatcherInterface
         $job = new DispatchLogJob(
             payload: $payload,
             driver: $driverName,
-            formatter: $formatterName
+            formatter: $formatterName,
         );
 
         $connection = config('logcenter.queue.connection');

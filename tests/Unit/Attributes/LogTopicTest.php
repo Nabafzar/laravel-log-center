@@ -7,7 +7,15 @@ namespace Nabafzar\LogCenter\Tests\Unit\Attributes;
 use Illuminate\Support\Facades\Http;
 use Nabafzar\LogCenter\Attributes\AttributeResolver;
 use Nabafzar\LogCenter\Attributes\LogTopic;
+use Nabafzar\LogCenter\Contracts\LogFormatterInterface;
+use Nabafzar\LogCenter\Contracts\LogTransportInterface;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
+use Nabafzar\LogCenter\DTO\LogPayload;
+use Nabafzar\LogCenter\DTO\TransportResult;
+use Nabafzar\LogCenter\Managers\TransportManager;
+use Nabafzar\LogCenter\Processors\PayloadProcessor;
+use Nabafzar\LogCenter\Services\LogDispatcher;
+use Nabafzar\LogCenter\Suppression\SuppressionManager;
 use Nabafzar\LogCenter\Tests\Fixtures\AnnotatedFixture;
 use Nabafzar\LogCenter\Tests\Fixtures\ClassAnnotatedFixture;
 use Nabafzar\LogCenter\Tests\TestCase;
@@ -66,7 +74,7 @@ final class LogTopicTest extends TestCase
 
     public function test_attribute_can_be_read_via_reflection(): void
     {
-        $ref   = new ReflectionClass(AnnotatedFixture::class);
+        $ref = new ReflectionClass(AnnotatedFixture::class);
         $attrs = $ref->getMethod('callAndResolve')->getAttributes(LogTopic::class);
 
         $this->assertCount(1, $attrs);
@@ -82,8 +90,8 @@ final class LogTopicTest extends TestCase
 
     public function test_resolver_finds_attribute_on_a_decorated_method(): void
     {
-        $resolver = new AttributeResolver();
-        $topic    = AnnotatedFixture::callAndResolve($resolver);
+        $resolver = new AttributeResolver;
+        $topic = AnnotatedFixture::callAndResolve($resolver);
 
         $this->assertNotNull($topic);
         $this->assertSame('orders', $topic->tag);
@@ -93,8 +101,8 @@ final class LogTopicTest extends TestCase
 
     public function test_resolver_finds_attribute_when_topic_id_is_absent(): void
     {
-        $resolver = new AttributeResolver();
-        $topic    = AnnotatedFixture::callAndResolveWithoutTopicId($resolver);
+        $resolver = new AttributeResolver;
+        $topic = AnnotatedFixture::callAndResolveWithoutTopicId($resolver);
 
         $this->assertNotNull($topic);
         $this->assertSame('no-topic-id', $topic->tag);
@@ -104,8 +112,8 @@ final class LogTopicTest extends TestCase
 
     public function test_resolver_preserves_string_topic_id(): void
     {
-        $resolver = new AttributeResolver();
-        $topic    = AnnotatedFixture::callAndResolveStringTopicId($resolver);
+        $resolver = new AttributeResolver;
+        $topic = AnnotatedFixture::callAndResolveStringTopicId($resolver);
 
         $this->assertNotNull($topic);
         $this->assertSame('mattermost', $topic->tag);
@@ -115,17 +123,17 @@ final class LogTopicTest extends TestCase
 
     public function test_resolver_returns_null_when_no_attribute_is_in_the_stack(): void
     {
-        $resolver = new AttributeResolver();
-        $topic    = AnnotatedFixture::callWithoutAttribute($resolver);
+        $resolver = new AttributeResolver;
+        $topic = AnnotatedFixture::callWithoutAttribute($resolver);
 
         $this->assertNull($topic);
     }
 
     public function test_resolver_caches_results_for_the_same_method(): void
     {
-        $resolver = new AttributeResolver();
+        $resolver = new AttributeResolver;
 
-        $first  = AnnotatedFixture::callAndResolve($resolver);
+        $first = AnnotatedFixture::callAndResolve($resolver);
         $second = AnnotatedFixture::callAndResolve($resolver);
 
         $this->assertEquals($first, $second);
@@ -133,8 +141,8 @@ final class LogTopicTest extends TestCase
 
     public function test_resolver_finds_class_level_attribute_when_method_has_none(): void
     {
-        $resolver = new AttributeResolver();
-        $topic    = ClassAnnotatedFixture::callAndResolve($resolver);
+        $resolver = new AttributeResolver;
+        $topic = ClassAnnotatedFixture::callAndResolve($resolver);
 
         $this->assertNotNull($topic);
         $this->assertSame('billing', $topic->tag);
@@ -178,7 +186,7 @@ final class LogTopicTest extends TestCase
             'meta' => ['logcenter_topic_id' => 1234],
         ]);
 
-        (new TelegramTransport())->send($payload, new FormattedMessage('hello'));
+        (new TelegramTransport)->send($payload, new FormattedMessage('hello'));
 
         Http::assertSent(static function ($request): bool {
             return ($request->data()['message_thread_id'] ?? null) === 1234;
@@ -195,7 +203,7 @@ final class LogTopicTest extends TestCase
 
         $payload = $this->makePayload(['tags' => ['payments'], 'meta' => []]);
 
-        (new TelegramTransport())->send($payload, new FormattedMessage('hello'));
+        (new TelegramTransport)->send($payload, new FormattedMessage('hello'));
 
         Http::assertSent(static function ($request): bool {
             return ($request->data()['message_thread_id'] ?? null) === 9999;
@@ -213,7 +221,7 @@ final class LogTopicTest extends TestCase
 
         $payload = $this->makePayload(['tags' => ['payments'], 'meta' => []]);
 
-        (new TelegramTransport())->send($payload, new FormattedMessage('hello'));
+        (new TelegramTransport)->send($payload, new FormattedMessage('hello'));
 
         Http::assertSent(static function ($request): bool {
             return ($request->data()['message_thread_id'] ?? null) === 9999;
@@ -230,7 +238,7 @@ final class LogTopicTest extends TestCase
 
         $payload = $this->makePayload(['tags' => [], 'meta' => []]);
 
-        (new TelegramTransport())->send($payload, new FormattedMessage('hello'));
+        (new TelegramTransport)->send($payload, new FormattedMessage('hello'));
 
         Http::assertSent(static function ($request): bool {
             return ($request->data()['message_thread_id'] ?? null) === 999;
@@ -239,12 +247,12 @@ final class LogTopicTest extends TestCase
 
     public function test_resolve_cache_returns_consistent_result_on_repeated_calls(): void
     {
-        $resolver = new AttributeResolver();
+        $resolver = new AttributeResolver;
 
         // Call resolve() three times from the same stack context.
-        $first  = $resolver->resolve();
+        $first = $resolver->resolve();
         $second = $resolver->resolve();
-        $third  = $resolver->resolve();
+        $third = $resolver->resolve();
 
         // All calls must return the same value — the cache must not flip results.
         $this->assertEquals($first, $second);
@@ -253,7 +261,7 @@ final class LogTopicTest extends TestCase
 
     public function test_resolve_cache_is_consistent_for_annotated_and_unannotated_callers(): void
     {
-        $resolver = new AttributeResolver();
+        $resolver = new AttributeResolver;
 
         // Annotated stack should always return a topic.
         $annotated = AnnotatedFixture::callAndResolve($resolver);
@@ -271,34 +279,43 @@ final class LogTopicTest extends TestCase
 
     // -------------------------------------------------------------------------
 
-    private function makeDispatcher(): \Nabafzar\LogCenter\Services\LogDispatcher
+    private function makeDispatcher(): LogDispatcher
     {
-        $manager = $this->createMock(\Nabafzar\LogCenter\Managers\TransportManager::class);
+        $manager = $this->createMock(TransportManager::class);
         $manager->method('defaultDriverName')->willReturn('null');
         $manager->method('formatter')->willReturn(
-            new class implements \Nabafzar\LogCenter\Contracts\LogFormatterInterface {
-                public function format(\Nabafzar\LogCenter\DTO\LogPayload $p): FormattedMessage
+            new class implements LogFormatterInterface
+            {
+                public function format(LogPayload $p): FormattedMessage
                 {
                     return new FormattedMessage('formatted');
                 }
-            }
+            },
         );
         $manager->method('driver')->willReturn(
-            new class implements \Nabafzar\LogCenter\Contracts\LogTransportInterface {
-                public function send(\Nabafzar\LogCenter\DTO\LogPayload $p, FormattedMessage $m): \Nabafzar\LogCenter\DTO\TransportResult
+            new class implements LogTransportInterface
+            {
+                public function send(LogPayload $p, FormattedMessage $m): TransportResult
                 {
-                    return \Nabafzar\LogCenter\DTO\TransportResult::success('null', 200);
+                    return TransportResult::success('null', 200);
                 }
 
-                public function supportedFormats(): array { return []; }
-                public function supportsTopics(): bool { return false; }
-            }
+                public function supportedFormats(): array
+                {
+                    return [];
+                }
+
+                public function supportsTopics(): bool
+                {
+                    return false;
+                }
+            },
         );
 
-        return new \Nabafzar\LogCenter\Services\LogDispatcher(
+        return new LogDispatcher(
             $manager,
-            new \Nabafzar\LogCenter\Processors\PayloadProcessor(),
-            new \Nabafzar\LogCenter\Suppression\SuppressionManager(),
+            new PayloadProcessor,
+            new SuppressionManager,
         );
     }
 }

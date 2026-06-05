@@ -22,7 +22,8 @@ final class TestLogCommandTest extends TestCase
             'formattedMessage' => null,
         ];
 
-        $formatter = new class ($captures) implements LogFormatterInterface {
+        $formatter = new class($captures) implements LogFormatterInterface
+        {
             public function __construct(
                 private object $captures,
             ) {}
@@ -35,7 +36,8 @@ final class TestLogCommandTest extends TestCase
             }
         };
 
-        $transport = new class ($captures) implements LogTransportInterface {
+        $transport = new class($captures) implements LogTransportInterface
+        {
             public function __construct(
                 private object $captures,
             ) {}

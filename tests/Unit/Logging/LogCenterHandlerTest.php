@@ -41,8 +41,8 @@ final class LogCenterHandlerTest extends TestCase
         $manager->method('formatter')->willReturn($formatter);
         $manager->method('driver')->willReturn($transport);
 
-        $dispatcher = new LogDispatcher($manager, new PayloadProcessor(), new SuppressionManager());
-        $handler = new LogCenterHandler($dispatcher, new AttributeResolver());
+        $dispatcher = new LogDispatcher($manager, new PayloadProcessor, new SuppressionManager);
+        $handler = new LogCenterHandler($dispatcher, new AttributeResolver);
 
         $result = $handler->handle(new LogRecord(
             datetime: now()->toDateTimeImmutable(),
@@ -58,17 +58,18 @@ final class LogCenterHandlerTest extends TestCase
     {
         $request = Request::create('/payments', 'GET');
         $request->setRouteResolver(static fn (): Route => new Route('GET', '/payments', [
-            'uses' => AnnotatedFixture::class . '@routeAction',
-            'controller' => AnnotatedFixture::class . '@routeAction',
+            'uses' => AnnotatedFixture::class.'@routeAction',
+            'controller' => AnnotatedFixture::class.'@routeAction',
         ]));
         $this->app->instance('request', $request);
 
-        $captures = new \stdClass();
+        $captures = new \stdClass;
 
         $formatter = $this->createMock(LogFormatterInterface::class);
         $formatter->method('format')->willReturn(new FormattedMessage('formatted'));
 
-        $transport = new class ($captures) implements LogTransportInterface {
+        $transport = new class($captures) implements LogTransportInterface
+        {
             public function __construct(private readonly \stdClass $captures) {}
 
             public function send(LogPayload $payload, FormattedMessage $message): TransportResult
@@ -94,8 +95,8 @@ final class LogCenterHandlerTest extends TestCase
         $manager->method('formatter')->willReturn($formatter);
         $manager->method('driver')->willReturn($transport);
 
-        $dispatcher = new LogDispatcher($manager, new PayloadProcessor(), new SuppressionManager());
-        $handler = new LogCenterHandler($dispatcher, new AttributeResolver());
+        $dispatcher = new LogDispatcher($manager, new PayloadProcessor, new SuppressionManager);
+        $handler = new LogCenterHandler($dispatcher, new AttributeResolver);
 
         $handler->handle(new LogRecord(
             datetime: now()->toDateTimeImmutable(),

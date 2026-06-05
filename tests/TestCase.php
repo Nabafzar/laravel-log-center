@@ -7,8 +7,8 @@ namespace Nabafzar\LogCenter\Tests;
 use Illuminate\Support\Carbon;
 use Monolog\Level;
 use Monolog\LogRecord;
-use Nabafzar\LogCenter\LogCenterServiceProvider;
 use Nabafzar\LogCenter\DTO\LogPayload;
+use Nabafzar\LogCenter\LogCenterServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 
 abstract class TestCase extends Orchestra
@@ -24,7 +24,7 @@ abstract class TestCase extends Orchestra
     {
         $app['config']->set('app.name', 'Log Center Test App');
         $app['config']->set('app.url', 'http://localhost');
-        $app['config']->set('app.key', 'base64:' . base64_encode(random_bytes(32)));
+        $app['config']->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
 
         $app['config']->set('logcenter.default', 'null');
         $app['config']->set('logcenter.formatter', 'plain');

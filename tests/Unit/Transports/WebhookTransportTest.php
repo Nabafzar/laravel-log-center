@@ -7,14 +7,14 @@ namespace Nabafzar\LogCenter\Tests\Unit\Transports;
 use Illuminate\Support\Facades\Http;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
-use Nabafzar\LogCenter\Transports\Webhook\WebhookTransport;
 use Nabafzar\LogCenter\Tests\TestCase;
+use Nabafzar\LogCenter\Transports\Webhook\WebhookTransport;
 
 final class WebhookTransportTest extends TestCase
 {
     public function test_it_fails_when_url_is_missing(): void
     {
-        $result = (new WebhookTransport())->send($this->makePayload(), new FormattedMessage('hello', MessageFormatEnum::JSON->value));
+        $result = (new WebhookTransport)->send($this->makePayload(), new FormattedMessage('hello', MessageFormatEnum::JSON->value));
 
         $this->assertTrue($result->isFailure());
         $this->assertSame('webhook', $result->driver);
@@ -29,9 +29,9 @@ final class WebhookTransportTest extends TestCase
 
         Http::fake(['https://example.test/webhook' => Http::response([], 200)]);
 
-        $result = (new WebhookTransport())->send(
+        $result = (new WebhookTransport)->send(
             $this->makePayload(),
-            new FormattedMessage('hello webhook', MessageFormatEnum::JSON->value)
+            new FormattedMessage('hello webhook', MessageFormatEnum::JSON->value),
         );
 
         $this->assertTrue($result->isSuccess());
@@ -46,7 +46,7 @@ final class WebhookTransportTest extends TestCase
 
         Http::fake(['*' => Http::response([], 429)]);
 
-        $result = (new WebhookTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new WebhookTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertTrue($result->isFailure());
         $this->assertSame(429, $result->statusCode);
@@ -59,7 +59,7 @@ final class WebhookTransportTest extends TestCase
 
         Http::fake(['*' => Http::response([], 500)]);
 
-        $result = (new WebhookTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new WebhookTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertTrue($result->isFailure());
         $this->assertSame(500, $result->statusCode);
@@ -72,7 +72,7 @@ final class WebhookTransportTest extends TestCase
 
         Http::fake(['*' => Http::response([], 422)]);
 
-        $result = (new WebhookTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new WebhookTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertTrue($result->isFailure());
         $this->assertSame(422, $result->statusCode);
@@ -86,9 +86,9 @@ final class WebhookTransportTest extends TestCase
 
         Http::fake(['*' => Http::response([], 200)]);
 
-        $result = (new WebhookTransport())->send(
+        $result = (new WebhookTransport)->send(
             $this->makePayload(),
-            new FormattedMessage('raw text body', MessageFormatEnum::PLAIN->value)
+            new FormattedMessage('raw text body', MessageFormatEnum::PLAIN->value),
         );
 
         $this->assertTrue($result->isSuccess());
@@ -106,7 +106,7 @@ final class WebhookTransportTest extends TestCase
 
         Http::fake(['*' => Http::response([], 200)]);
 
-        $result = (new WebhookTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new WebhookTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertTrue($result->isSuccess());
         $this->assertSame('PUT', $result->meta['method']);
@@ -121,7 +121,7 @@ final class WebhookTransportTest extends TestCase
 
         Http::fake(['*' => Http::response([], 200)]);
 
-        (new WebhookTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        (new WebhookTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         Http::assertSent(static function ($request): bool {
             return $request->header('X-Api-Key')[0] === 'super-secret';
@@ -130,13 +130,13 @@ final class WebhookTransportTest extends TestCase
 
     public function test_supported_formats(): void
     {
-        $formats = (new WebhookTransport())->supportedFormats();
+        $formats = (new WebhookTransport)->supportedFormats();
 
         $this->assertContains(MessageFormatEnum::JSON, $formats);
     }
 
     public function test_it_does_not_support_topics(): void
     {
-        $this->assertFalse((new WebhookTransport())->supportsTopics());
+        $this->assertFalse((new WebhookTransport)->supportsTopics());
     }
 }

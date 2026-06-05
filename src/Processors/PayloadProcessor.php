@@ -18,10 +18,8 @@ final class PayloadProcessor
     /** @var string|null Compiled regex pattern, built once per instance. */
     private ?string $cachedPattern = null;
 
-    /** @var string|null */
     private ?string $cachedReplacement = null;
 
-    /** @var bool|null */
     private ?bool $cachedCaseSensitive = null;
 
     /**
@@ -79,11 +77,13 @@ final class PayloadProcessor
             // including array values such as ['token' => ['real-secret']].
             if ($this->shouldMaskKey($key, $keys)) {
                 $data[$key] = $this->replacement();
+
                 continue;
             }
 
             if (is_array($value)) {
                 $data[$key] = $this->maskArray($value);
+
                 continue;
             }
 
@@ -109,8 +109,8 @@ final class PayloadProcessor
 
         return preg_replace_callback(
             $pattern,
-            fn (array $matches) => $matches[1] . $matches[2] . $this->replacement(),
-            $text
+            fn (array $matches) => $matches[1].$matches[2].$this->replacement(),
+            $text,
         ) ?? $text;
     }
 
@@ -133,7 +133,7 @@ final class PayloadProcessor
 
         $escaped = array_map(
             static fn (string $key) => preg_quote($key, '/'),
-            $this->keys()
+            $this->keys(),
         );
 
         if ($escaped === []) {
@@ -142,7 +142,7 @@ final class PayloadProcessor
 
         $flags = $this->caseSensitive() ? '' : 'i';
 
-        return $this->cachedPattern = '/(' . implode('|', $escaped) . ')(["\']?\s*[:=]\s*["\']?)([^&\s,"\']+)/' . $flags;
+        return $this->cachedPattern = '/('.implode('|', $escaped).')(["\']?\s*[:=]\s*["\']?)([^&\s,"\']+)/'.$flags;
     }
 
     /**
@@ -173,7 +173,7 @@ final class PayloadProcessor
 
         return $this->cachedKeys = array_values(array_map(
             fn (mixed $key) => $this->caseSensitive() ? (string) $key : strtolower((string) $key),
-            $keys
+            $keys,
         ));
     }
 

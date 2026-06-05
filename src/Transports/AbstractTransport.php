@@ -6,9 +6,9 @@ namespace Nabafzar\LogCenter\Transports;
 
 use BackedEnum;
 use Illuminate\Http\Client\RequestException;
+use LogicException;
 use Nabafzar\LogCenter\Contracts\LogTransportInterface;
 use Nabafzar\LogCenter\DTO\TransportResult;
-use LogicException;
 use Throwable;
 
 abstract class AbstractTransport implements LogTransportInterface
@@ -16,11 +16,10 @@ abstract class AbstractTransport implements LogTransportInterface
     protected const DRIVER_NAME = '';
 
     final protected function success(
-        ?int    $statusCode = null,
+        ?int $statusCode = null,
         ?string $messageId = null,
-        array   $meta = [],
-    ): TransportResult
-    {
+        array $meta = [],
+    ): TransportResult {
         return TransportResult::success(
             driver: $this->driverName(),
             statusCode: $statusCode,
@@ -30,13 +29,12 @@ abstract class AbstractTransport implements LogTransportInterface
     }
 
     final protected function failed(
-        ?string    $errorMessage = null,
+        ?string $errorMessage = null,
         ?Throwable $exception = null,
-        ?int       $statusCode = null,
-        bool       $retryable = false,
-        array      $meta = [],
-    ): TransportResult
-    {
+        ?int $statusCode = null,
+        bool $retryable = false,
+        array $meta = [],
+    ): TransportResult {
         return TransportResult::failed(
             driver: $this->driverName(),
             errorMessage: $errorMessage,
@@ -52,7 +50,7 @@ abstract class AbstractTransport implements LogTransportInterface
         $driverName = trim(static::DRIVER_NAME);
 
         if ($driverName === '') {
-            throw new LogicException(static::class . ' must define DRIVER_NAME.');
+            throw new LogicException(static::class.' must define DRIVER_NAME.');
         }
 
         return $driverName;

@@ -25,8 +25,8 @@ final class DispatchLogJob implements ShouldQueue
 
     public function __construct(
         public readonly LogPayload $payload,
-        public readonly ?string    $driver = null,
-        public readonly ?string    $formatter = null,
+        public readonly ?string $driver = null,
+        public readonly ?string $formatter = null,
     ) {}
 
     public function tries(): int
@@ -52,13 +52,13 @@ final class DispatchLogJob implements ShouldQueue
             if ($result->retryable) {
                 // Throw so Laravel queues the next retry attempt.
                 throw new RuntimeException(
-                    $result->errorMessage ?? 'Transport failed, will retry.'
+                    $result->errorMessage ?? 'Transport failed, will retry.',
                 );
             }
 
             // Non-retryable: move to failed_jobs immediately, no more attempts.
             $this->fail(new RuntimeException(
-                $result->errorMessage ?? 'Transport failed permanently.'
+                $result->errorMessage ?? 'Transport failed permanently.',
             ));
         }
     }

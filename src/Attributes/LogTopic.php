@@ -19,9 +19,8 @@ final class LogTopic
     public readonly string|int|null $topicId;
 
     /**
-     * @param string|array<int, string> $tag
-     * @param string|int|null $topicId
-     * @param array<int, string> $tags
+     * @param  string|array<int, string>  $tag
+     * @param  array<int, string>  $tags
      */
     public function __construct(
         string|array $tag = '',
@@ -36,9 +35,8 @@ final class LogTopic
     }
 
     /**
-     * @param string|array<int, string> $tag
-     * @param array<int, string> $tags
-     *
+     * @param  string|array<int, string>  $tag
+     * @param  array<int, string>  $tags
      * @return list<string>
      */
     private function normalizeTags(string|array $tag, array $tags): array

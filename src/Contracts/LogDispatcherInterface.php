@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Nabafzar\LogCenter\Contracts;
 
 use Nabafzar\LogCenter\DTO\LogPayload;

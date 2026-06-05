@@ -10,9 +10,9 @@ use Nabafzar\LogCenter\DTO\TransportResult;
 final readonly class LogSuppressed
 {
     public function __construct(
-        public LogPayload      $payload,
+        public LogPayload $payload,
         public TransportResult $result,
         /** Number of times this fingerprint has been suppressed in the current window. */
-        public int             $occurrences,
+        public int $occurrences,
     ) {}
 }

@@ -19,14 +19,14 @@ final class LogViewerControllerTest extends TestCase
             mkdir($directory, 0777, true);
         }
 
-        $file = $directory . '/feature.log';
-        file_put_contents($file, <<<LOG
+        $file = $directory.'/feature.log';
+        file_put_contents($file, <<<'LOG'
 [2026-05-08 10:00:00] local.ERROR: Feature test failure
 LOG);
 
         config()->set('logcenter.viewer.paths', [$directory]);
 
-        $response = $this->get('/log-viewer?file=' . urlencode($file));
+        $response = $this->get('/log-viewer?file='.urlencode($file));
 
         $response->assertOk();
         $response->assertSee('Feature test failure');
@@ -41,14 +41,14 @@ LOG);
             mkdir($directory, 0777, true);
         }
 
-        $file = $directory . '/download.log';
-        file_put_contents($file, <<<LOG
+        $file = $directory.'/download.log';
+        file_put_contents($file, <<<'LOG'
 [2026-05-08 10:00:00] local.ERROR: Download test failure
 LOG);
 
         config()->set('logcenter.viewer.paths', [$directory]);
 
-        $response = $this->get('/log-viewer/download?file=' . urlencode($file));
+        $response = $this->get('/log-viewer/download?file='.urlencode($file));
 
         $response->assertOk();
         $response->assertDownload('download.log');
@@ -68,21 +68,21 @@ LOG);
             mkdir($outsideDirectory, 0777, true);
         }
 
-        $allowedFile = $allowedDirectory . '/allowed.log';
-        $outsideFile = $outsideDirectory . '/outside.log';
+        $allowedFile = $allowedDirectory.'/allowed.log';
+        $outsideFile = $outsideDirectory.'/outside.log';
 
-        file_put_contents($allowedFile, <<<LOG
+        file_put_contents($allowedFile, <<<'LOG'
 [2026-05-08 10:00:00] local.ERROR: Allowed file
 LOG);
 
-        file_put_contents($outsideFile, <<<LOG
+        file_put_contents($outsideFile, <<<'LOG'
 [2026-05-08 10:00:00] local.ERROR: Outside file
 LOG);
 
         config()->set('logcenter.viewer.paths', [$allowedDirectory]);
 
-        $this->get('/log-viewer?file=' . urlencode($outsideFile))->assertNotFound();
-        $this->get('/log-viewer/download?file=' . urlencode($outsideFile))->assertNotFound();
+        $this->get('/log-viewer?file='.urlencode($outsideFile))->assertNotFound();
+        $this->get('/log-viewer/download?file='.urlencode($outsideFile))->assertNotFound();
     }
 
     public function test_it_returns_a_404_for_oversized_files(): void
@@ -92,14 +92,14 @@ LOG);
             mkdir($directory, 0777, true);
         }
 
-        $largeFile = $directory . '/large.log';
+        $largeFile = $directory.'/large.log';
         file_put_contents($largeFile, str_repeat("[2026-05-08 10:00:00] local.ERROR: Oversized file\n", 5));
 
         config()->set('logcenter.viewer.paths', [$directory]);
         config()->set('logcenter.viewer.max_file_size', 64);
 
-        $this->get('/log-viewer?file=' . urlencode($largeFile))->assertNotFound();
-        $this->get('/log-viewer/download?file=' . urlencode($largeFile))->assertNotFound();
+        $this->get('/log-viewer?file='.urlencode($largeFile))->assertNotFound();
+        $this->get('/log-viewer/download?file='.urlencode($largeFile))->assertNotFound();
     }
 
     public function test_it_uses_the_fingerprint_to_pick_the_matching_file_when_no_file_is_provided(): void
@@ -119,13 +119,13 @@ LOG);
         );
         $payload = LogPayloadFactory::fromLogRecord($record);
 
-        $matchingFile = $directory . '/older.log';
-        file_put_contents($matchingFile, <<<LOG
+        $matchingFile = $directory.'/older.log';
+        file_put_contents($matchingFile, <<<'LOG'
 [2026-05-08 09:00:00] local.ERROR: Fingerprint target failure
 LOG);
 
-        $otherFile = $directory . '/newer.log';
-        file_put_contents($otherFile, <<<LOG
+        $otherFile = $directory.'/newer.log';
+        file_put_contents($otherFile, <<<'LOG'
 [2026-05-08 10:00:00] local.ERROR: Unrelated failure
 LOG);
 
@@ -134,7 +134,7 @@ LOG);
 
         config()->set('logcenter.viewer.paths', [$directory]);
 
-        $response = $this->get('/log-viewer?fingerprint=' . urlencode($payload->fingerprint));
+        $response = $this->get('/log-viewer?fingerprint='.urlencode($payload->fingerprint));
 
         $response->assertOk();
         $response->assertViewHas('selectedFile', realpath($matchingFile) ?: $matchingFile);

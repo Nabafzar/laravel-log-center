@@ -35,8 +35,8 @@ final class LogCenterServiceProvider extends ServiceProvider
     private function registerConfig(): void
     {
         $this->mergeConfigFrom(
-            __DIR__ . '/../config/logcenter.php',
-            'logcenter'
+            __DIR__.'/../config/logcenter.php',
+            'logcenter',
         );
     }
 
@@ -67,15 +67,15 @@ final class LogCenterServiceProvider extends ServiceProvider
             return;
         }
 
-        if (is_file(__DIR__ . '/../config/logcenter.php')) {
+        if (is_file(__DIR__.'/../config/logcenter.php')) {
             $this->publishes([
-                __DIR__ . '/../config/logcenter.php' => config_path('logcenter.php'),
+                __DIR__.'/../config/logcenter.php' => config_path('logcenter.php'),
             ], 'logcenter-config');
         }
 
-        if (is_dir(__DIR__ . '/../resources/views')) {
+        if (is_dir(__DIR__.'/../resources/views')) {
             $this->publishes([
-                __DIR__ . '/../resources/views' => resource_path('views/vendor/logcenter'),
+                __DIR__.'/../resources/views' => resource_path('views/vendor/logcenter'),
             ], 'logcenter-views');
         }
     }
@@ -99,7 +99,7 @@ final class LogCenterServiceProvider extends ServiceProvider
             return;
         }
 
-        $routesPath = __DIR__ . '/../routes/web.php';
+        $routesPath = __DIR__.'/../routes/web.php';
 
         if (is_file($routesPath)) {
             $this->loadRoutesFrom($routesPath);
@@ -112,7 +112,7 @@ final class LogCenterServiceProvider extends ServiceProvider
             return;
         }
 
-        $routesPath = __DIR__ . '/../routes/api.php';
+        $routesPath = __DIR__.'/../routes/api.php';
 
         if (is_file($routesPath)) {
             $this->loadRoutesFrom($routesPath);
@@ -121,7 +121,7 @@ final class LogCenterServiceProvider extends ServiceProvider
 
     private function bootViews(): void
     {
-        $viewsPath = __DIR__ . '/../resources/views';
+        $viewsPath = __DIR__.'/../resources/views';
 
         if (is_dir($viewsPath)) {
             $this->loadViewsFrom($viewsPath, 'logcenter');

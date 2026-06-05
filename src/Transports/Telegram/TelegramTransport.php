@@ -17,7 +17,7 @@ class TelegramTransport extends AbstractTransport
 {
     private const BASE_URL = 'https://api.telegram.org/bot';
     private const MAX_MESSAGE_LENGTH = 4096;
-    private const TRUNCATED_MARKER = PHP_EOL . '... [truncated]';
+    private const TRUNCATED_MARKER = PHP_EOL.'... [truncated]';
     protected const DRIVER_NAME = 'telegram';
 
     public function send(LogPayload $payload, FormattedMessage $message): TransportResult
@@ -93,14 +93,14 @@ class TelegramTransport extends AbstractTransport
         if ($this->shouldSplitLongMessages()) {
             return array_values(array_filter(
                 mb_str_split($content, $limit),
-                static fn (string $chunk) => trim($chunk) !== ''
+                static fn (string $chunk) => trim($chunk) !== '',
             ));
         }
 
         $messageLimit = max(1, $limit - mb_strlen(self::TRUNCATED_MARKER));
 
         return [
-            mb_substr($content, 0, $messageLimit) . self::TRUNCATED_MARKER,
+            mb_substr($content, 0, $messageLimit).self::TRUNCATED_MARKER,
         ];
     }
 
@@ -132,7 +132,7 @@ class TelegramTransport extends AbstractTransport
 
     private function endpoint(string $token): string
     {
-        return self::BASE_URL . $token . '/sendMessage';
+        return self::BASE_URL.$token.'/sendMessage';
     }
 
     private function token(): ?string

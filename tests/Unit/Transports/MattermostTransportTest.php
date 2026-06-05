@@ -7,14 +7,14 @@ namespace Nabafzar\LogCenter\Tests\Unit\Transports;
 use Illuminate\Support\Facades\Http;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
-use Nabafzar\LogCenter\Transports\Mattermost\MattermostTransport;
 use Nabafzar\LogCenter\Tests\TestCase;
+use Nabafzar\LogCenter\Transports\Mattermost\MattermostTransport;
 
 final class MattermostTransportTest extends TestCase
 {
     public function test_it_fails_when_webhook_configuration_is_missing(): void
     {
-        $result = (new MattermostTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new MattermostTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertTrue($result->isFailure());
         $this->assertSame('mattermost', $result->driver);
@@ -29,7 +29,7 @@ final class MattermostTransportTest extends TestCase
 
         Http::fake(['https://example.test/hooks/abc' => Http::response([], 200)]);
 
-        $result = (new MattermostTransport())->send($this->makePayload(), new FormattedMessage('hello mattermost'));
+        $result = (new MattermostTransport)->send($this->makePayload(), new FormattedMessage('hello mattermost'));
 
         $this->assertTrue($result->isSuccess());
         $this->assertSame(200, $result->statusCode);
@@ -43,7 +43,7 @@ final class MattermostTransportTest extends TestCase
 
         Http::fake(['*' => Http::response([], 429)]);
 
-        $result = (new MattermostTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new MattermostTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertTrue($result->isFailure());
         $this->assertSame(429, $result->statusCode);
@@ -56,7 +56,7 @@ final class MattermostTransportTest extends TestCase
 
         Http::fake(['*' => Http::response([], 502)]);
 
-        $result = (new MattermostTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new MattermostTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertTrue($result->isFailure());
         $this->assertSame(502, $result->statusCode);
@@ -69,7 +69,7 @@ final class MattermostTransportTest extends TestCase
 
         Http::fake(['*' => Http::response([], 400)]);
 
-        $result = (new MattermostTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new MattermostTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertTrue($result->isFailure());
         $this->assertSame(400, $result->statusCode);
@@ -81,7 +81,7 @@ final class MattermostTransportTest extends TestCase
         config()->set('logcenter.drivers.mattermost.webhook_url', 'https://example.test/hooks/abc');
         Http::fake();
 
-        $result = (new MattermostTransport())->send($this->makePayload(), new FormattedMessage('   '));
+        $result = (new MattermostTransport)->send($this->makePayload(), new FormattedMessage('   '));
 
         $this->assertTrue($result->isSuccess());
         $this->assertTrue($result->meta['skipped'] ?? false);
@@ -93,7 +93,7 @@ final class MattermostTransportTest extends TestCase
         config()->set('logcenter.drivers.mattermost.bot_token', 'BOT_TOKEN');
         // base_url intentionally not set
 
-        $result = (new MattermostTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new MattermostTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertTrue($result->isFailure());
         $this->assertStringContainsString('base URL', $result->errorMessage ?? '');
@@ -105,7 +105,7 @@ final class MattermostTransportTest extends TestCase
         config()->set('logcenter.drivers.mattermost.base_url', 'https://mm.example.test');
         // channel_id intentionally not set
 
-        $result = (new MattermostTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new MattermostTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertTrue($result->isFailure());
         $this->assertStringContainsString('channel ID', $result->errorMessage ?? '');
@@ -121,7 +121,7 @@ final class MattermostTransportTest extends TestCase
             'https://mm.example.test/api/v4/posts' => Http::response(['id' => 'post_xyz'], 201),
         ]);
 
-        $result = (new MattermostTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new MattermostTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertTrue($result->isSuccess());
         $this->assertSame('post_xyz', $result->messageId);
@@ -130,7 +130,7 @@ final class MattermostTransportTest extends TestCase
 
     public function test_supported_formats(): void
     {
-        $formats = (new MattermostTransport())->supportedFormats();
+        $formats = (new MattermostTransport)->supportedFormats();
 
         $this->assertContains(MessageFormatEnum::PLAIN, $formats);
         $this->assertContains(MessageFormatEnum::MARKDOWN, $formats);
@@ -138,6 +138,6 @@ final class MattermostTransportTest extends TestCase
 
     public function test_it_does_not_support_topics(): void
     {
-        $this->assertFalse((new MattermostTransport())->supportsTopics());
+        $this->assertFalse((new MattermostTransport)->supportsTopics());
     }
 }

@@ -7,16 +7,16 @@ namespace Nabafzar\LogCenter\Tests\Unit\Transports;
 use Illuminate\Support\Facades\Http;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
-use Nabafzar\LogCenter\Transports\IncomingWebhook\IncomingWebhookTransport;
 use Nabafzar\LogCenter\Tests\TestCase;
+use Nabafzar\LogCenter\Transports\IncomingWebhook\IncomingWebhookTransport;
 
 final class IncomingWebhookTransportTest extends TestCase
 {
     public function test_it_fails_when_url_is_missing(): void
     {
-        $result = (new IncomingWebhookTransport())->send(
+        $result = (new IncomingWebhookTransport)->send(
             $this->makePayload(),
-            new FormattedMessage('hello', MessageFormatEnum::JSON->value)
+            new FormattedMessage('hello', MessageFormatEnum::JSON->value),
         );
 
         $this->assertTrue($result->isFailure());
@@ -33,9 +33,9 @@ final class IncomingWebhookTransportTest extends TestCase
             'https://example.test/incoming-webhook' => Http::response([], 200),
         ]);
 
-        $result = (new IncomingWebhookTransport())->send(
+        $result = (new IncomingWebhookTransport)->send(
             $this->makePayload(),
-            new FormattedMessage('hello webhook', MessageFormatEnum::JSON->value)
+            new FormattedMessage('hello webhook', MessageFormatEnum::JSON->value),
         );
 
         $this->assertTrue($result->isSuccess());

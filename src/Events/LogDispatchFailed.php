@@ -10,8 +10,8 @@ use Nabafzar\LogCenter\DTO\TransportResult;
 final readonly class LogDispatchFailed
 {
     public function __construct(
-        public LogPayload      $payload,
+        public LogPayload $payload,
         public TransportResult $result,
-        public bool            $retryable,
+        public bool $retryable,
     ) {}
 }

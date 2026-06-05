@@ -30,14 +30,16 @@ final class DispatchLogJobTest extends TestCase
             'message' => null,
         ];
 
-        $formatter = new class () implements LogFormatterInterface {
+        $formatter = new class implements LogFormatterInterface
+        {
             public function format(LogPayload $payload): FormattedMessage
             {
                 return new FormattedMessage('job formatted');
             }
         };
 
-        $transport = new class ($captures) implements LogTransportInterface {
+        $transport = new class($captures) implements LogTransportInterface
+        {
             public function __construct(
                 private object $captures,
             ) {}
@@ -75,7 +77,7 @@ final class DispatchLogJobTest extends TestCase
 
         $manager->method('defaultDriverName')->willReturn('telegram');
 
-        $dispatcher = new LogDispatcher($manager, new PayloadProcessor(), new SuppressionManager());
+        $dispatcher = new LogDispatcher($manager, new PayloadProcessor, new SuppressionManager);
 
         $job->handle($dispatcher);
 
@@ -129,7 +131,8 @@ final class DispatchLogJobTest extends TestCase
 
     private function makeTransport(TransportResult $result): LogTransportInterface
     {
-        return new class ($result) implements LogTransportInterface {
+        return new class($result) implements LogTransportInterface
+        {
             public function __construct(private readonly TransportResult $result) {}
 
             public function send(LogPayload $payload, FormattedMessage $message): TransportResult
@@ -151,7 +154,8 @@ final class DispatchLogJobTest extends TestCase
 
     private function makeDispatcher(LogTransportInterface $transport): LogDispatcher
     {
-        $formatter = new class () implements LogFormatterInterface {
+        $formatter = new class implements LogFormatterInterface
+        {
             public function format(LogPayload $payload): FormattedMessage
             {
                 return new FormattedMessage('formatted');
@@ -163,6 +167,6 @@ final class DispatchLogJobTest extends TestCase
         $manager->method('formatter')->willReturn($formatter);
         $manager->method('driver')->willReturn($transport);
 
-        return new LogDispatcher($manager, new PayloadProcessor(), new SuppressionManager());
+        return new LogDispatcher($manager, new PayloadProcessor, new SuppressionManager);
     }
 }

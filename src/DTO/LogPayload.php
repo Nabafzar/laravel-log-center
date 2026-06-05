@@ -30,6 +30,5 @@ final readonly class LogPayload
         public ?array $user = null,
 
         public array $meta = [],
-    ) {
-    }
+    ) {}
 }

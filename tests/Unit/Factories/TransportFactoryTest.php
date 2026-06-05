@@ -7,12 +7,12 @@ namespace Nabafzar\LogCenter\Tests\Unit\Factories;
 use InvalidArgumentException;
 use Nabafzar\LogCenter\Contracts\LogTransportInterface;
 use Nabafzar\LogCenter\Factories\TransportFactory;
+use Nabafzar\LogCenter\Tests\TestCase;
 use Nabafzar\LogCenter\Transports\Bale\BaleTransport;
 use Nabafzar\LogCenter\Transports\Mattermost\MattermostTransport;
 use Nabafzar\LogCenter\Transports\Null\NullTransport;
 use Nabafzar\LogCenter\Transports\Telegram\TelegramTransport;
 use Nabafzar\LogCenter\Transports\Webhook\WebhookTransport;
-use Nabafzar\LogCenter\Tests\TestCase;
 
 final class TransportFactoryTest extends TestCase
 {
@@ -31,7 +31,7 @@ final class TransportFactoryTest extends TestCase
     {
         $factory = $this->app->make(TransportFactory::class);
 
-        $factory->extend('custom', static fn (): LogTransportInterface => new NullTransport());
+        $factory->extend('custom', static fn (): LogTransportInterface => new NullTransport);
 
         $this->assertInstanceOf(NullTransport::class, $factory->make('custom'));
     }
@@ -46,7 +46,7 @@ final class TransportFactoryTest extends TestCase
     public function test_it_rejects_custom_transports_that_return_invalid_instances(): void
     {
         $factory = $this->app->make(TransportFactory::class);
-        $factory->extend('invalid', static fn () => new \stdClass());
+        $factory->extend('invalid', static fn () => new \stdClass);
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Custom transport [invalid] must implement LogTransportInterface.');

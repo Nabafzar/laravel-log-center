@@ -8,8 +8,8 @@ use Illuminate\Support\Carbon;
 use Monolog\Level;
 use Monolog\LogRecord;
 use Nabafzar\LogCenter\Factories\LogPayloadFactory;
-use Nabafzar\LogCenter\Viewer\LogFileRepository;
 use Nabafzar\LogCenter\Tests\TestCase;
+use Nabafzar\LogCenter\Viewer\LogFileRepository;
 
 final class LogFileRepositoryTest extends TestCase
 {
@@ -20,8 +20,8 @@ final class LogFileRepositoryTest extends TestCase
             mkdir($directory, 0777, true);
         }
 
-        $file = $directory . '/laravel.log';
-        file_put_contents($file, <<<LOG
+        $file = $directory.'/laravel.log';
+        file_put_contents($file, <<<'LOG'
 [2026-05-08 10:00:00] local.ERROR: First failure
 Stack trace line 1
 [2026-05-08 10:05:00] local.INFO: Background job finished
@@ -29,7 +29,7 @@ LOG);
 
         config()->set('logcenter.viewer.paths', [$directory]);
 
-        $repository = new LogFileRepository();
+        $repository = new LogFileRepository;
         $files = $repository->all();
         $entries = $repository->entries($file);
 
@@ -59,20 +59,20 @@ LOG);
             mkdir($outsideDirectory, 0777, true);
         }
 
-        $allowedFile = $allowedDirectory . '/allowed.log';
-        $outsideFile = $outsideDirectory . '/outside.log';
+        $allowedFile = $allowedDirectory.'/allowed.log';
+        $outsideFile = $outsideDirectory.'/outside.log';
 
-        file_put_contents($allowedFile, <<<LOG
+        file_put_contents($allowedFile, <<<'LOG'
 [2026-05-08 10:00:00] local.ERROR: Allowed file
 LOG);
 
-        file_put_contents($outsideFile, <<<LOG
+        file_put_contents($outsideFile, <<<'LOG'
 [2026-05-08 10:00:00] local.ERROR: Outside file
 LOG);
 
         config()->set('logcenter.viewer.paths', [$allowedDirectory]);
 
-        $repository = new LogFileRepository();
+        $repository = new LogFileRepository;
 
         $this->assertSame(realpath($allowedFile) ?: $allowedFile, $repository->path($allowedFile));
         $this->assertNull($repository->path($outsideFile));
@@ -87,15 +87,15 @@ LOG);
             mkdir($directory, 0777, true);
         }
 
-        $file = $directory . '/metadata.log';
-        file_put_contents($file, <<<LOG
+        $file = $directory.'/metadata.log';
+        file_put_contents($file, <<<'LOG'
 [2026-05-08 10:00:00] local.ERROR: First
 [2026-05-08 10:05:00] local.INFO: Second
 LOG);
 
         config()->set('logcenter.viewer.paths', [$directory]);
 
-        $repository = new LogFileRepository();
+        $repository = new LogFileRepository;
         $files = $repository->all();
         $path = realpath($file) ?: $file;
 
@@ -120,20 +120,20 @@ LOG);
             mkdir($outsideDirectory, 0777, true);
         }
 
-        $allowedFile = $allowedDirectory . '/laravel.log';
-        $outsideFile = $outsideDirectory . '/laravel.log';
+        $allowedFile = $allowedDirectory.'/laravel.log';
+        $outsideFile = $outsideDirectory.'/laravel.log';
 
-        file_put_contents($allowedFile, <<<LOG
+        file_put_contents($allowedFile, <<<'LOG'
 [2026-05-08 10:00:00] local.ERROR: Allowed collision file
 LOG);
 
-        file_put_contents($outsideFile, <<<LOG
+        file_put_contents($outsideFile, <<<'LOG'
 [2026-05-08 10:00:00] local.ERROR: Outside collision file
 LOG);
 
         config()->set('logcenter.viewer.paths', [$allowedDirectory]);
 
-        $repository = new LogFileRepository();
+        $repository = new LogFileRepository;
 
         $this->assertSame(realpath($allowedFile) ?: $allowedFile, $repository->path($allowedFile));
         $this->assertNull($repository->path($outsideFile));
@@ -153,15 +153,15 @@ LOG);
             mkdir($outsideDirectory, 0777, true);
         }
 
-        $outsideFile = $outsideDirectory . '/traversal.log';
-        file_put_contents($outsideFile, <<<LOG
+        $outsideFile = $outsideDirectory.'/traversal.log';
+        file_put_contents($outsideFile, <<<'LOG'
 [2026-05-08 10:00:00] local.ERROR: Traversal file
 LOG);
 
         config()->set('logcenter.viewer.paths', [$allowedDirectory]);
 
-        $repository = new LogFileRepository();
-        $traversalPath = $allowedDirectory . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . basename($outsideDirectory) . DIRECTORY_SEPARATOR . 'traversal.log';
+        $repository = new LogFileRepository;
+        $traversalPath = $allowedDirectory.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.basename($outsideDirectory).DIRECTORY_SEPARATOR.'traversal.log';
 
         $this->assertNull($repository->path($traversalPath));
         $this->assertCount(0, $repository->entries($traversalPath));
@@ -175,10 +175,10 @@ LOG);
             mkdir($directory, 0777, true);
         }
 
-        $smallFile = $directory . '/small.log';
-        $largeFile = $directory . '/large.log';
+        $smallFile = $directory.'/small.log';
+        $largeFile = $directory.'/large.log';
 
-        file_put_contents($smallFile, <<<LOG
+        file_put_contents($smallFile, <<<'LOG'
 [2026-05-08 10:00:00] local.ERROR: Small file
 LOG);
 
@@ -187,7 +187,7 @@ LOG);
         config()->set('logcenter.viewer.paths', [$directory]);
         config()->set('logcenter.viewer.max_file_size', strlen(file_get_contents($smallFile) ?: '') + 1);
 
-        $repository = new LogFileRepository();
+        $repository = new LogFileRepository;
         $files = $repository->all();
 
         $this->assertArrayHasKey(realpath($smallFile) ?: $smallFile, $files);
@@ -214,16 +214,16 @@ LOG);
 
         $payload = LogPayloadFactory::fromLogRecord($record);
 
-        $file = $directory . '/context.log';
-        file_put_contents($file, <<<LOG
+        $file = $directory.'/context.log';
+        file_put_contents($file, <<<'LOG'
 [2026-05-08 10:00:00] local.ERROR: Context failure {"order_id":123,"token":"secret"}
 LOG);
 
         config()->set('logcenter.viewer.paths', [$directory]);
 
-        $repository = new LogFileRepository();
+        $repository = new LogFileRepository;
         $entries = $repository->entries($file, ['fingerprint' => $payload->fingerprint]);
-        $prefixedEntries = $repository->entries($file, ['fingerprint' => '#' . substr($payload->fingerprint, 0, 10)]);
+        $prefixedEntries = $repository->entries($file, ['fingerprint' => '#'.substr($payload->fingerprint, 0, 10)]);
 
         $this->assertCount(1, $entries);
         $this->assertCount(1, $prefixedEntries);

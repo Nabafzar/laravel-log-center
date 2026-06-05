@@ -31,7 +31,7 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
         return new FormattedMessage(
             content: $this->truncate(
                 implode(PHP_EOL, $sections),
-                $this->maxLength()
+                $this->maxLength(),
             ),
             meta: [
                 'format' => MessageFormatEnum::BALE_MARKDOWN->value,
@@ -49,13 +49,13 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
             $level->icon(),
             $payload->datetime?->format('Y-m-d H:i:s') ?? now()->format('Y-m-d H:i:s'),
             $this->escapeInline($payload->environment ?? 'app'),
-            $level->label()
+            $level->label(),
         );
     }
 
     private function message(LogPayload $payload): string
     {
-        return PHP_EOL . '*Message:* ' . $this->escape($payload->message);
+        return PHP_EOL.'*Message:* '.$this->escape($payload->message);
     }
 
     private function viewerLink(LogPayload $payload): ?string
@@ -66,7 +66,7 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
             return null;
         }
 
-        return '*Log Center:* [' . $this->escapeInline('Open viewer') . '](' . $this->escapeUrl($url) . ')';
+        return '*Log Center:* ['.$this->escapeInline('Open viewer').']('.$this->escapeUrl($url).')';
     }
 
     private function tags(LogPayload $payload): ?string
@@ -76,11 +76,11 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
         }
 
         $hashtags = array_map(
-            static fn(string $tag) => '#' . preg_replace('/[^\w]/u', '_', $tag),
+            static fn (string $tag) => '#'.preg_replace('/[^\w]/u', '_', $tag),
             $payload->tags,
         );
 
-        return PHP_EOL.'*Tags:* ' . implode(' ', $hashtags);
+        return PHP_EOL.'*Tags:* '.implode(' ', $hashtags);
     }
 
     private function context(LogPayload $payload): ?string
@@ -89,10 +89,10 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
             return null;
         }
 
-        return '*Context:*' . PHP_EOL . $this->codeBlock(
-                $this->encodeJson($payload->context),
-                'json'
-            );
+        return '*Context:*'.PHP_EOL.$this->codeBlock(
+            $this->encodeJson($payload->context),
+            'json',
+        );
     }
 
     private function extra(LogPayload $payload): ?string
@@ -101,10 +101,10 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
             return null;
         }
 
-        return '*Extra:*' . PHP_EOL . $this->codeBlock(
-                $this->encodeJson($payload->extra),
-                'json'
-            );
+        return '*Extra:*'.PHP_EOL.$this->codeBlock(
+            $this->encodeJson($payload->extra),
+            'json',
+        );
     }
 
     private function user(LogPayload $payload): ?string
@@ -132,7 +132,7 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
             $this->requestData('Body', $request['body'] ?? null),
         ]);
 
-        return PHP_EOL . implode(PHP_EOL, $sections);
+        return PHP_EOL.implode(PHP_EOL, $sections);
     }
 
     private function exception(LogPayload $payload): ?string
@@ -143,9 +143,9 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
 
         $status = $this->exceptionHttpStatus($payload->exception);
 
-        return PHP_EOL . implode(PHP_EOL, array_filter([
-            '*Exception:* ' . $this->escapeInline($this->exceptionClass($payload->exception))
-                . ($status !== null ? ' *[HTTP ' . $status . ']*' : ''),
+        return PHP_EOL.implode(PHP_EOL, array_filter([
+            '*Exception:* '.$this->escapeInline($this->exceptionClass($payload->exception))
+                .($status !== null ? ' *[HTTP '.$status.']*' : ''),
             $this->formatBaleExceptionFile($payload),
             $this->formatBaleExceptionLine($payload),
         ]));
@@ -157,9 +157,9 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
             return null;
         }
 
-        return PHP_EOL . '*Trace:* ' . $this->codeBlock(
-                $this->truncate($payload->trace, $this->traceMaxLength())
-            );
+        return PHP_EOL.'*Trace:* '.$this->codeBlock(
+            $this->truncate($payload->trace, $this->traceMaxLength()),
+        );
     }
 
     private function requestLine(string $label, mixed $value): ?string
@@ -171,13 +171,13 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
         return sprintf(
             '*%s:* %s',
             $this->escapeInline($label),
-            $this->escapeInline($this->truncate((string)$value, 200))
+            $this->escapeInline($this->truncate((string) $value, 200)),
         );
     }
 
     private function requestLink(string $label, mixed $value): ?string
     {
-        if (!is_string($value) || $value === '') {
+        if (! is_string($value) || $value === '') {
             return null;
         }
 
@@ -187,20 +187,20 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
             '*%s:* [%s](%s)',
             $this->escapeInline($label),
             $this->escapeInline($url),
-            $this->escapeUrl($url)
+            $this->escapeUrl($url),
         );
     }
 
     private function requestData(string $label, mixed $value): ?string
     {
-        if (!is_array($value) || $value === []) {
+        if (! is_array($value) || $value === []) {
             return null;
         }
 
         return sprintf(
-            '*%s:*' . PHP_EOL . '%s',
+            '*%s:*'.PHP_EOL.'%s',
             $this->escapeInline($label),
-            $this->codeBlock($this->encodeJson($value), 'json')
+            $this->codeBlock($this->encodeJson($value), 'json'),
         );
     }
 
@@ -209,7 +209,7 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
         return str_replace(
             ['\\', '*', '_', '`', '[', ']'],
             ['\\\\', '\*', '\_', '\`', '\[', '\]'],
-            $text
+            $text,
         );
     }
 
@@ -217,8 +217,8 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
     {
         return str_replace(
             ['\\', '`', '[', ']'],
-            ['\\\\', "\\`", "\\[", "\\]"],
-            $text
+            ['\\\\', '\\`', '\\[', '\\]'],
+            $text,
         );
     }
 
@@ -227,7 +227,7 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
         return str_replace(
             [')', '('],
             ['%29', '%28'],
-            $url
+            $url,
         );
     }
 
@@ -250,7 +250,7 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
 
         return $parts === []
             ? null
-            : '*' . $this->escapeInline('User') . ':* ' . $this->escapeInline(implode('-', $parts));
+            : '*'.$this->escapeInline('User').':* '.$this->escapeInline(implode('-', $parts));
     }
 
     private function formatBaleExceptionFile(LogPayload $payload): ?string
@@ -259,14 +259,13 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
 
         return $file === null
             ? null
-            : '*File:* ' . $this->escapeInline($this->truncate($file, 250));
+            : '*File:* '.$this->escapeInline($this->truncate($file, 250));
     }
 
     private function formatBaleExceptionLine(LogPayload $payload): ?string
     {
         $line = $this->exceptionLine($payload->exception ?? []);
 
-        return $line === null ? null : '*Line:* ' . $line;
+        return $line === null ? null : '*Line:* '.$line;
     }
-
 }

@@ -17,14 +17,14 @@ final class FormatterFactory
     public function make(string $name): LogFormatterInterface
     {
         return match ($name) {
-            'plain' => new PlainTextFormatter(),
-            'json' => new JsonFormatter(),
-            'markdown' => new MarkdownFormatter(),
-            'telegram_html' => new TelegramHtmlFormatter(),
-            'bale_markdown' => new BaleMarkdownFormatter(),
+            'plain' => new PlainTextFormatter,
+            'json' => new JsonFormatter,
+            'markdown' => new MarkdownFormatter,
+            'telegram_html' => new TelegramHtmlFormatter,
+            'bale_markdown' => new BaleMarkdownFormatter,
 
             default => throw new InvalidArgumentException(
-                "Unsupported log formatter [{$name}]."
+                "Unsupported log formatter [{$name}].",
             ),
         };
     }

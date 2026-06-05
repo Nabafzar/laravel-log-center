@@ -14,7 +14,7 @@ final class JsonFormatterTest extends TestCase
         config()->set('logcenter.viewer.enabled', true);
         config()->set('app.url', 'http://localhost');
 
-        $formatted = (new JsonFormatter())->format($this->makePayload([
+        $formatted = (new JsonFormatter)->format($this->makePayload([
             'context' => ['order_id' => 1001],
             'extra' => ['attempt' => 3],
             'request' => ['method' => 'POST'],
@@ -30,8 +30,8 @@ final class JsonFormatterTest extends TestCase
         $this->assertSame('Something failed', $data['message']);
         $this->assertSame('fingerprint-123', $data['fingerprint']);
         $this->assertSame(
-            'http://localhost/log-viewer?fingerprint=' . substr('fingerprint-123', 0, 14) . '&search=Something%20failed',
-            $data['viewer_url']
+            'http://localhost/log-viewer?fingerprint='.substr('fingerprint-123', 0, 14).'&search=Something%20failed',
+            $data['viewer_url'],
         );
         $this->assertSame('Log Center Test App', $data['application']);
     }
@@ -40,7 +40,7 @@ final class JsonFormatterTest extends TestCase
     {
         config()->set('logcenter.formatters.json.pretty', true);
 
-        $formatted = (new JsonFormatter())->format($this->makePayload());
+        $formatted = (new JsonFormatter)->format($this->makePayload());
 
         $this->assertStringContainsString("\n    \"timestamp\"", $formatted->content);
         $this->assertStringContainsString("\n    \"meta\"", $formatted->content);

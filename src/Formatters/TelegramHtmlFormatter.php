@@ -47,15 +47,15 @@ class TelegramHtmlFormatter extends AbstractFormatter implements LogFormatterInt
             $level->icon(),
             $payload->datetime?->format('Y-m-d H:i:s') ?? now()->format('Y-m-d H:i:s'),
             $this->escapeHtml($payload->environment ?? 'app'),
-            $level->label()
+            $level->label(),
         );
     }
 
     private function message(LogPayload $payload): string
     {
-        return PHP_EOL . '<b>Message: </b> ' . $this->escapeHtml(
-                $this->truncatePlain($payload->message, parent::sectionMaxLength($this->maxLength()))
-            );
+        return PHP_EOL.'<b>Message: </b> '.$this->escapeHtml(
+            $this->truncatePlain($payload->message, parent::sectionMaxLength($this->maxLength())),
+        );
     }
 
     private function viewerLink(LogPayload $payload): ?string
@@ -66,7 +66,7 @@ class TelegramHtmlFormatter extends AbstractFormatter implements LogFormatterInt
             return null;
         }
 
-        return PHP_EOL . '<b>Log Center: </b> <a href="' . $this->escapeHtmlAttribute($url) . '">Open in viewer</a>';
+        return PHP_EOL.'<b>Log Center: </b> <a href="'.$this->escapeHtmlAttribute($url).'">Open in viewer</a>';
     }
 
     private function tags(LogPayload $payload): ?string
@@ -76,26 +76,26 @@ class TelegramHtmlFormatter extends AbstractFormatter implements LogFormatterInt
         }
 
         $hashtags = array_map(
-            static fn(string $tag) => '#' . preg_replace('/[^\w]/u', '_', $tag),
+            static fn (string $tag) => '#'.preg_replace('/[^\w]/u', '_', $tag),
             $payload->tags,
         );
 
-        return PHP_EOL . '<b>Tags: </b> ' . implode(' ', $hashtags);
+        return PHP_EOL.'<b>Tags: </b> '.implode(' ', $hashtags);
     }
 
     private function context(LogPayload $payload): ?string
     {
         return empty($payload->context)
             ? null
-            : '<b>Context: </b>' . PHP_EOL . $this->pre(
+            : '<b>Context: </b>'.PHP_EOL.$this->pre(
                 $this->escapeHtml($this->truncatePlain(
                     $this->encodeJson(
                         $payload->context,
                         JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR,
-                        '[invalid json]'
+                        '[invalid json]',
                     ),
-                    parent::sectionMaxLength($this->maxLength())
-                ))
+                    parent::sectionMaxLength($this->maxLength()),
+                )),
             );
     }
 
@@ -103,15 +103,15 @@ class TelegramHtmlFormatter extends AbstractFormatter implements LogFormatterInt
     {
         return empty($payload->extra)
             ? null
-            : '<b>Extra: </b>' . PHP_EOL . $this->pre(
+            : '<b>Extra: </b>'.PHP_EOL.$this->pre(
                 $this->escapeHtml($this->truncatePlain(
                     $this->encodeJson(
                         $payload->extra,
                         JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR,
-                        '[invalid json]'
+                        '[invalid json]',
                     ),
-                    parent::sectionMaxLength($this->maxLength())
-                ))
+                    parent::sectionMaxLength($this->maxLength()),
+                )),
             );
     }
 
@@ -133,12 +133,12 @@ class TelegramHtmlFormatter extends AbstractFormatter implements LogFormatterInt
 
         return empty($request)
             ? null
-            : PHP_EOL . implode(PHP_EOL, array_values(array_filter([
-            $this->formatHtmlRequestLine('Method', $request['method'] ?? null),
-            $this->formatHtmlRequestLine('URL', $request['url'] ?? null),
-            $this->formatHtmlRequestLine('IP', $request['ip'] ?? null),
-            $this->formatHtmlRequestLine('Referer', $request['referer'] ?? null),
-            $this->formatHtmlRequestData('Body', $request['body'] ?? null),
+            : PHP_EOL.implode(PHP_EOL, array_values(array_filter([
+                $this->formatHtmlRequestLine('Method', $request['method'] ?? null),
+                $this->formatHtmlRequestLine('URL', $request['url'] ?? null),
+                $this->formatHtmlRequestLine('IP', $request['ip'] ?? null),
+                $this->formatHtmlRequestLine('Referer', $request['referer'] ?? null),
+                $this->formatHtmlRequestData('Body', $request['body'] ?? null),
             ])));
     }
 
@@ -151,8 +151,8 @@ class TelegramHtmlFormatter extends AbstractFormatter implements LogFormatterInt
         $status = $this->exceptionHttpStatus($payload->exception);
 
         return implode(PHP_EOL, array_filter([
-            '<b>Exception: </b> <code>' . $this->escapeHtml($this->exceptionClass($payload->exception)) . '</code>'
-                . ($status !== null ? ' <code>[HTTP ' . $status . ']</code>' : ''),
+            '<b>Exception: </b> <code>'.$this->escapeHtml($this->exceptionClass($payload->exception)).'</code>'
+                .($status !== null ? ' <code>[HTTP '.$status.']</code>' : ''),
             $this->formatHtmlExceptionFile($payload),
             $this->formatHtmlExceptionLine($payload),
         ]));
@@ -162,8 +162,8 @@ class TelegramHtmlFormatter extends AbstractFormatter implements LogFormatterInt
     {
         return empty($payload->trace)
             ? null
-            : PHP_EOL . '<b>Trace: </b>' . PHP_EOL . $this->pre(
-                $this->escapeHtml($this->truncatePlain($payload->trace, $this->traceMaxLength()))
+            : PHP_EOL.'<b>Trace: </b>'.PHP_EOL.$this->pre(
+                $this->escapeHtml($this->truncatePlain($payload->trace, $this->traceMaxLength())),
             );
     }
 
@@ -183,12 +183,12 @@ class TelegramHtmlFormatter extends AbstractFormatter implements LogFormatterInt
             return null;
         }
 
-        return '<b>Source: </b> <code>' . $this->escapeHtml($this->truncatePlain((string) $payload->source, 100)) . '</code>';
+        return '<b>Source: </b> <code>'.$this->escapeHtml($this->truncatePlain((string) $payload->source, 100)).'</code>';
     }
 
     private function pre(string $text): string
     {
-        return '<pre>' . $text . '</pre>';
+        return '<pre>'.$text.'</pre>';
     }
 
     private function formatHtmlUserValue(string $label, mixed $value): ?string
@@ -197,7 +197,7 @@ class TelegramHtmlFormatter extends AbstractFormatter implements LogFormatterInt
 
         return $value === null
             ? null
-            : '<b>' . $this->escapeHtml($label) . ':</b> <code>' . $this->escapeHtml($value) . '</code>';
+            : '<b>'.$this->escapeHtml($label).':</b> <code>'.$this->escapeHtml($value).'</code>';
     }
 
     private function formatHtmlRequestLine(string $label, mixed $value): ?string
@@ -209,7 +209,7 @@ class TelegramHtmlFormatter extends AbstractFormatter implements LogFormatterInt
             : sprintf(
                 '<b>%s: </b> <code>%s</code>',
                 $this->escapeHtml($label),
-                $this->escapeHtml($value)
+                $this->escapeHtml($value),
             );
     }
 
@@ -220,16 +220,16 @@ class TelegramHtmlFormatter extends AbstractFormatter implements LogFormatterInt
         }
 
         return sprintf(
-            '<b>%s: </b>' . PHP_EOL . '%s',
+            '<b>%s: </b>'.PHP_EOL.'%s',
             $this->escapeHtml($label),
             $this->pre($this->escapeHtml($this->truncatePlain(
                 $this->encodeJson(
                     $value,
                     JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR,
-                    '[invalid json]'
+                    '[invalid json]',
                 ),
-                parent::sectionMaxLength($this->maxLength())
-            )))
+                parent::sectionMaxLength($this->maxLength()),
+            ))),
         );
     }
 
@@ -239,7 +239,7 @@ class TelegramHtmlFormatter extends AbstractFormatter implements LogFormatterInt
 
         return $file === null
             ? null
-            : '<b>File: </b> <code>' . $this->escapeHtml($this->truncatePlain($file, 250)) . '</code>';
+            : '<b>File: </b> <code>'.$this->escapeHtml($this->truncatePlain($file, 250)).'</code>';
     }
 
     private function formatHtmlExceptionLine(LogPayload $payload): ?string
@@ -248,7 +248,6 @@ class TelegramHtmlFormatter extends AbstractFormatter implements LogFormatterInt
 
         return $line === null
             ? null
-            : '<b>Line: </b> <code>' . $line . '</code>';
+            : '<b>Line: </b> <code>'.$line.'</code>';
     }
-
 }

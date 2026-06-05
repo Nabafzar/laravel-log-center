@@ -31,7 +31,8 @@ final class LogDispatcherTest extends TestCase
             'formattedPayload' => null,
         ];
 
-        $formatter = new class ($captures) implements LogFormatterInterface {
+        $formatter = new class($captures) implements LogFormatterInterface
+        {
             public function __construct(
                 private object $captures,
             ) {}
@@ -44,7 +45,8 @@ final class LogDispatcherTest extends TestCase
             }
         };
 
-        $transport = new class ($captures) implements LogTransportInterface {
+        $transport = new class($captures) implements LogTransportInterface
+        {
             public function __construct(
                 private object $captures,
             ) {}
@@ -82,7 +84,7 @@ final class LogDispatcherTest extends TestCase
 
         $manager->method('defaultDriverName')->willReturn('telegram');
 
-        $dispatcher = new LogDispatcher($manager, new PayloadProcessor(), new SuppressionManager());
+        $dispatcher = new LogDispatcher($manager, new PayloadProcessor, new SuppressionManager);
         $result = $dispatcher->sendNow($payload, 'telegram', 'plain');
 
         $this->assertTrue($result->isSuccess());
@@ -107,7 +109,7 @@ final class LogDispatcherTest extends TestCase
         $manager->method('formatterName')->willReturn('telegram_html');
         $manager->expects($this->never())->method('driver');
 
-        $dispatcher = new LogDispatcher($manager, new PayloadProcessor(), new SuppressionManager());
+        $dispatcher = new LogDispatcher($manager, new PayloadProcessor, new SuppressionManager);
         $result = $dispatcher->dispatch($this->makePayload());
 
         $this->assertTrue($result->isSuccess());
@@ -132,7 +134,7 @@ final class LogDispatcherTest extends TestCase
         $manager->method('defaultDriverName')->willReturn('telegram');
         $manager->method('formatterName')->willReturn('telegram_html');
 
-        $dispatcher = new LogDispatcher($manager, new PayloadProcessor(), new SuppressionManager());
+        $dispatcher = new LogDispatcher($manager, new PayloadProcessor, new SuppressionManager);
         $dispatcher->dispatch($this->makePayload([
             'message' => 'login password=hunter2',
             'context' => ['password' => 'hunter2'],

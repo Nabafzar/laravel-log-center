@@ -42,7 +42,7 @@ final class IncomingLogPayloadFactoryTest extends TestCase
         }
 
         $payload = IncomingLogPayloadFactory::fromArray([
-            'level'   => 'error',
+            'level' => 'error',
             'message' => 'Deep test',
             'context' => $deep,
         ]);
@@ -54,7 +54,7 @@ final class IncomingLogPayloadFactoryTest extends TestCase
     public function test_it_preserves_shallow_context_fully(): void
     {
         $payload = IncomingLogPayloadFactory::fromArray([
-            'level'   => 'error',
+            'level' => 'error',
             'message' => 'Shallow test',
             'context' => [
                 'level1' => [
@@ -77,7 +77,7 @@ final class IncomingLogPayloadFactoryTest extends TestCase
         }
 
         $payload = IncomingLogPayloadFactory::fromArray([
-            'level'   => 'error',
+            'level' => 'error',
             'message' => 'Depth boundary test',
             'context' => $data,
         ]);

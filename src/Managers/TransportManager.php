@@ -19,7 +19,7 @@ class TransportManager
     public function driver(?string $name = null): LogTransportInterface
     {
         return $this->transportFactory->make(
-            $this->configuredName($name) ?? $this->defaultDriverName()
+            $this->configuredName($name) ?? $this->defaultDriverName(),
         );
     }
 

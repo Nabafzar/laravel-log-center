@@ -23,7 +23,7 @@ final class BaleTransport extends AbstractTransport
         $token = $this->token();
         $chatId = $this->chatId();
 
-        if (!$token || !$chatId) {
+        if (! $token || ! $chatId) {
             return $this->failed(
                 errorMessage: 'Bale token or chat ID is not configured.',
             );
@@ -80,20 +80,20 @@ final class BaleTransport extends AbstractTransport
 
         return array_filter(
             $payload,
-            static fn(mixed $value): bool => $value !== null
+            static fn (mixed $value): bool => $value !== null,
         );
     }
 
     private function endpoint(string $token): string
     {
-        return $this->baseUrl() . $token . '/sendMessage';
+        return $this->baseUrl().$token.'/sendMessage';
     }
 
     private function baseUrl(): string
     {
         $baseUrl = config('logcenter.drivers.bale.base_url', self::DEFAULT_BASE_URL);
 
-        if (!is_string($baseUrl) || trim($baseUrl) === '') {
+        if (! is_string($baseUrl) || trim($baseUrl) === '') {
             return self::DEFAULT_BASE_URL;
         }
 
@@ -112,7 +112,7 @@ final class BaleTransport extends AbstractTransport
 
     private function timeout(): int
     {
-        return max(1, (int)config('logcenter.drivers.bale.timeout', 5));
+        return max(1, (int) config('logcenter.drivers.bale.timeout', 5));
     }
 
     private function replyToMessageId(FormattedMessage $message): ?int
@@ -123,11 +123,11 @@ final class BaleTransport extends AbstractTransport
             $replyToMessageId = $replyToMessageId->value;
         }
 
-        if (!is_scalar($replyToMessageId)) {
+        if (! is_scalar($replyToMessageId)) {
             return null;
         }
 
-        $replyToMessageId = (int)$replyToMessageId;
+        $replyToMessageId = (int) $replyToMessageId;
 
         return $replyToMessageId > 0 ? $replyToMessageId : null;
     }
@@ -140,24 +140,24 @@ final class BaleTransport extends AbstractTransport
             $parseMode = $parseMode->value;
         }
 
-        if (!is_scalar($parseMode)) {
+        if (! is_scalar($parseMode)) {
             return null;
         }
 
-        $parseMode = trim((string)$parseMode);
+        $parseMode = trim((string) $parseMode);
 
         return $parseMode !== '' ? $parseMode : null;
     }
 
     private function messageId(mixed $response): ?string
     {
-        if (!is_array($response)) {
+        if (! is_array($response)) {
             return null;
         }
 
         $messageId = $response['result']['message_id'] ?? $response['message_id'] ?? null;
 
-        return $messageId === null ? null : (string)$messageId;
+        return $messageId === null ? null : (string) $messageId;
     }
 
     public function supportedFormats(): array

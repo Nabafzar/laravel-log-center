@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace Nabafzar\LogCenter\Tests\Unit\Transports;
 
 use Nabafzar\LogCenter\DTO\FormattedMessage;
-use Nabafzar\LogCenter\Transports\Null\NullTransport;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
 use Nabafzar\LogCenter\Tests\TestCase;
+use Nabafzar\LogCenter\Transports\Null\NullTransport;
 
 final class NullTransportTest extends TestCase
 {
     public function test_it_discards_messages_successfully(): void
     {
-        $transport = new NullTransport();
+        $transport = new NullTransport;
         $result = $transport->send($this->makePayload(), new FormattedMessage('ignored'));
 
         $this->assertTrue($result->isSuccess());
@@ -24,6 +24,6 @@ final class NullTransportTest extends TestCase
 
     public function test_it_does_not_support_topics(): void
     {
-        $this->assertFalse((new NullTransport())->supportsTopics());
+        $this->assertFalse((new NullTransport)->supportsTopics());
     }
 }

@@ -14,10 +14,10 @@ use Nabafzar\LogCenter\Services\LogDispatcher;
 final class LogCenterHandler extends AbstractProcessingHandler
 {
     public function __construct(
-        private readonly LogDispatcher      $dispatcher,
-        private readonly AttributeResolver  $attributeResolver,
-        int|string|Level                    $level = Level::Error,
-        bool                                $bubble = true,
+        private readonly LogDispatcher $dispatcher,
+        private readonly AttributeResolver $attributeResolver,
+        int|string|Level $level = Level::Error,
+        bool $bubble = true,
     ) {
         parent::__construct($level, $bubble);
     }
@@ -25,13 +25,13 @@ final class LogCenterHandler extends AbstractProcessingHandler
     protected function write(LogRecord $record): void
     {
         try {
-            $topic   = $this->attributeResolver->resolve();
+            $topic = $this->attributeResolver->resolve();
             $payload = LogPayloadFactory::fromLogRecord($record, $topic);
 
             $this->dispatcher->dispatch($payload);
         } catch (\Throwable $e) {
             // Never log via logger() here — it recurses.
-            error_log('[LogCenter] ' . $e->getMessage());
+            error_log('[LogCenter] '.$e->getMessage());
         }
     }
 }

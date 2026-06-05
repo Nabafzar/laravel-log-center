@@ -163,7 +163,7 @@ final class LogFileRepository
                 continue;
             }
 
-            foreach (glob($path . DIRECTORY_SEPARATOR . '*.log') ?: [] as $candidate) {
+            foreach (glob($path.DIRECTORY_SEPARATOR.'*.log') ?: [] as $candidate) {
                 if ($this->isReadableAllowedFile($candidate)) {
                     $files[] = $candidate;
                 }
@@ -205,7 +205,7 @@ final class LogFileRepository
             return 0;
         }
 
-        $count  = 0;
+        $count = 0;
         $handle = new SplFileObject($path, 'r');
 
         while (! $handle->eof()) {
@@ -269,7 +269,7 @@ final class LogFileRepository
         $content = implode(PHP_EOL, $visibleLines);
 
         if ($truncated) {
-            $content .= PHP_EOL . '... [truncated]';
+            $content .= PHP_EOL.'... [truncated]';
         }
 
         $rawMessage = trim((string) ($header['message'] ?? ''));
@@ -313,7 +313,7 @@ final class LogFileRepository
                     'exception_message' => $exception['message'] ?? null,
                     'exception_file' => $exception['file'] ?? null,
                     'exception_line' => $exception['line'] ?? null,
-                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: ''
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '',
             ),
             'searchable' => $searchable !== '' ? $searchable : $content,
         ];
@@ -406,7 +406,7 @@ final class LogFileRepository
 
     private function labelFor(string $path): string
     {
-        $relative = Str::replaceFirst(storage_path() . DIRECTORY_SEPARATOR, '', $path);
+        $relative = Str::replaceFirst(storage_path().DIRECTORY_SEPARATOR, '', $path);
 
         return $relative !== $path ? $relative : basename($path);
     }
@@ -471,7 +471,7 @@ final class LogFileRepository
                 return true;
             }
 
-            if (is_dir($root) && str_starts_with($real, rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR)) {
+            if (is_dir($root) && str_starts_with($real, rtrim($root, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
                 return true;
             }
         }
@@ -604,7 +604,7 @@ final class LogFileRepository
 
         foreach ($this->viewerRoots() as $root) {
             $candidates = is_dir($root)
-                ? (glob($root . DIRECTORY_SEPARATOR . '*.log') ?: [])
+                ? (glob($root.DIRECTORY_SEPARATOR.'*.log') ?: [])
                 : [$root];
 
             foreach ($candidates as $candidate) {

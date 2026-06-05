@@ -37,9 +37,7 @@ final class AnnotatedFixture
     }
 
     #[LogTopic(tags: ['payments', 'bale'])]
-    public function routeAction(): void
-    {
-    }
+    public function routeAction(): void {}
 }
 
 /** Fixture for verifying class-level #[LogTopic] resolution. */

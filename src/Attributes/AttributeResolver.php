@@ -52,7 +52,7 @@ final class AttributeResolver
      */
     public function resolve(): ?LogTopic
     {
-        $frames    = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 25);
+        $frames = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 25);
         $signature = $this->stackSignature($frames);
 
         if (array_key_exists($signature, $this->resolveCache)) {
@@ -72,7 +72,7 @@ final class AttributeResolver
         $parts = [];
 
         foreach ($frames as $frame) {
-            $class  = $frame['class']    ?? null;
+            $class = $frame['class'] ?? null;
             $method = $frame['function'] ?? null;
 
             if (! is_string($class) || ! is_string($method) || $method === '') {
@@ -83,7 +83,7 @@ final class AttributeResolver
                 continue;
             }
 
-            $parts[] = $class . '::' . $method;
+            $parts[] = $class.'::'.$method;
         }
 
         return implode('|', $parts);
@@ -95,7 +95,7 @@ final class AttributeResolver
     private function doResolve(array $frames): ?LogTopic
     {
         foreach ($frames as $frame) {
-            $class  = $frame['class']    ?? null;
+            $class = $frame['class'] ?? null;
             $method = $frame['function'] ?? null;
 
             if (! is_string($class) || ! is_string($method) || $method === '') {
@@ -195,7 +195,7 @@ final class AttributeResolver
             $candidate = $this->parseRouteAction($action);
 
             if ($candidate !== null) {
-                $candidates[$candidate[0] . '::' . $candidate[1]] = $candidate;
+                $candidates[$candidate[0].'::'.$candidate[1]] = $candidate;
             }
         }
 
@@ -243,7 +243,7 @@ final class AttributeResolver
 
     private function readAttributeCached(string $class, string $method): ?LogTopic
     {
-        $key = $class . '::' . $method;
+        $key = $class.'::'.$method;
 
         if (array_key_exists($key, $this->cache)) {
             return $this->cache[$key];

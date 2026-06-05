@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace Nabafzar\LogCenter\Tests\Unit\Viewer;
 
 use Illuminate\Support\Collection;
-use Nabafzar\LogCenter\Viewer\LogFileRepository;
 use Nabafzar\LogCenter\Tests\TestCase;
+use Nabafzar\LogCenter\Viewer\LogFileRepository;
 
 final class LogFileRepositoryEdgeCasesTest extends TestCase
 {
     public function test_it_returns_no_entries_for_missing_files(): void
     {
-        $repository = new LogFileRepository();
+        $repository = new LogFileRepository;
 
         $entries = $repository->entries(storage_path('logs/does-not-exist.log'));
 
@@ -28,11 +28,11 @@ final class LogFileRepositoryEdgeCasesTest extends TestCase
             mkdir($directory, 0777, true);
         }
 
-        $emptyFile = $directory . '/empty.log';
+        $emptyFile = $directory.'/empty.log';
         file_put_contents($emptyFile, '');
 
-        $continuationFile = $directory . '/continuation.log';
-        file_put_contents($continuationFile, <<<LOG
+        $continuationFile = $directory.'/continuation.log';
+        file_put_contents($continuationFile, <<<'LOG'
 [2026-05-08 10:00:00] local.ERROR: First failure
 Continuation line
 Orphan stack line
@@ -41,7 +41,7 @@ LOG);
 
         config()->set('logcenter.viewer.paths', [$directory]);
 
-        $repository = new LogFileRepository();
+        $repository = new LogFileRepository;
 
         $this->assertCount(0, $repository->entries($emptyFile));
 

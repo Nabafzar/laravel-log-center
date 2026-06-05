@@ -14,7 +14,7 @@ final class MarkdownFormatterTest extends TestCase
         config()->set('logcenter.viewer.enabled', true);
         config()->set('app.url', 'http://localhost');
 
-        $formatted = (new MarkdownFormatter())->format($this->makePayload([
+        $formatted = (new MarkdownFormatter)->format($this->makePayload([
             'context' => ['order_id' => 1001],
             'tags' => ['payments', 'checkout'],
             'request' => ['method' => 'POST', 'url' => 'http://localhost/orders'],
@@ -35,7 +35,7 @@ final class MarkdownFormatterTest extends TestCase
     {
         config()->set('logcenter.viewer.enabled', false);
 
-        $formatted = (new MarkdownFormatter())->format($this->makePayload([
+        $formatted = (new MarkdownFormatter)->format($this->makePayload([
             'message' => 'Use *bold* _italics_ `code`',
             'source' => 'queue_worker',
         ]));
@@ -49,7 +49,7 @@ final class MarkdownFormatterTest extends TestCase
     {
         config()->set('logcenter.viewer.enabled', false);
 
-        $formatted = (new MarkdownFormatter())->format($this->makePayload(['tags' => []]));
+        $formatted = (new MarkdownFormatter)->format($this->makePayload(['tags' => []]));
 
         $this->assertStringNotContainsString('#payments', $formatted->content);
     }
@@ -58,7 +58,7 @@ final class MarkdownFormatterTest extends TestCase
     {
         config()->set('logcenter.viewer.enabled', false);
 
-        $formatted = (new MarkdownFormatter())->format($this->makePayload([
+        $formatted = (new MarkdownFormatter)->format($this->makePayload([
             'exception' => ['class' => 'RuntimeException', 'message' => 'Boom', 'code' => 0, 'file' => '/app/Foo.php', 'line' => 42],
         ]));
 
@@ -73,14 +73,14 @@ final class MarkdownFormatterTest extends TestCase
     {
         config()->set('logcenter.viewer.enabled', false);
 
-        $formatted = (new MarkdownFormatter())->format($this->makePayload());
+        $formatted = (new MarkdownFormatter)->format($this->makePayload());
 
         $this->assertStringNotContainsString('Log Center', $formatted->content);
     }
 
     public function test_it_renders_http_status_alongside_exception_class(): void
     {
-        $formatted = (new MarkdownFormatter())->format($this->makePayload([
+        $formatted = (new MarkdownFormatter)->format($this->makePayload([
             'exception' => [
                 'class' => 'RuntimeException',
                 'message' => 'Boom',
@@ -95,7 +95,7 @@ final class MarkdownFormatterTest extends TestCase
 
     public function test_it_omits_http_status_when_not_present(): void
     {
-        $formatted = (new MarkdownFormatter())->format($this->makePayload([
+        $formatted = (new MarkdownFormatter)->format($this->makePayload([
             'exception' => ['class' => 'RuntimeException', 'message' => 'Boom', 'code' => 0],
         ]));
 

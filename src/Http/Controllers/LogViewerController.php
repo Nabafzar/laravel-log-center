@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Nabafzar\LogCenter\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
@@ -118,7 +120,7 @@ final class LogViewerController extends Controller
                 $iterations++;
 
                 if ($iterations % 10 === 0) {
-                    echo "data: " . json_encode(['heartbeat' => true, 'offset' => $offset]) . "\n\n";
+                    echo 'data: '.json_encode(['heartbeat' => true, 'offset' => $offset])."\n\n";
                     flush();
                 }
 
@@ -129,7 +131,7 @@ final class LogViewerController extends Controller
                 sleep(1);
             }
 
-            echo "data: " . json_encode(['done' => true, 'offset' => $offset]) . "\n\n";
+            echo 'data: '.json_encode(['done' => true, 'offset' => $offset])."\n\n";
             flush();
         }, 200, [
             'Content-Type' => 'text/event-stream',
@@ -163,9 +165,9 @@ final class LogViewerController extends Controller
         abort_unless($path !== null, 404);
 
         return response()->download(
-            file:$path,
+            file: $path,
             name: basename($path),
-            headers:['Content-Type' => 'text/plain; charset=UTF-8']
+            headers: ['Content-Type' => 'text/plain; charset=UTF-8'],
         );
     }
 
@@ -173,8 +175,8 @@ final class LogViewerController extends Controller
      * Prefer the explicitly selected file, but fall back to the first file that
      * actually contains a matching fingerprint/search result.
      *
-     * @param array<string, array<string, mixed>> $availableFiles
-     * @param array{level?: string, search?: string, fingerprint?: string} $filters
+     * @param  array<string, array<string, mixed>>  $availableFiles
+     * @param  array{level?: string, search?: string, fingerprint?: string}  $filters
      */
     private function resolveSelectedFile(array $availableFiles, array $filters): ?string
     {
@@ -202,7 +204,7 @@ final class LogViewerController extends Controller
      * If a link carries both fingerprint and search, fall back to search-only
      * when the fingerprint does not line up with the parsed log file.
      *
-     * @param array{level?: string, search?: string, fingerprint?: string} $filters
+     * @param  array{level?: string, search?: string, fingerprint?: string}  $filters
      * @return array{level?: string, search?: string, fingerprint?: string}
      */
     private function effectiveFilters(?string $file, array $filters): array

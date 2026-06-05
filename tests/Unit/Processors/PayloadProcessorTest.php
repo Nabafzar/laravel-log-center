@@ -39,7 +39,7 @@ final class PayloadProcessorTest extends TestCase
             ],
         ]);
 
-        $processed = (new PayloadProcessor())->process($payload);
+        $processed = (new PayloadProcessor)->process($payload);
 
         $this->assertStringContainsString('password=******', $processed->message);
         $this->assertStringContainsString('token: ******', $processed->message);
@@ -65,7 +65,7 @@ final class PayloadProcessorTest extends TestCase
             ],
         ]);
 
-        $processed = (new PayloadProcessor())->process($payload);
+        $processed = (new PayloadProcessor)->process($payload);
 
         $this->assertSame('******', $processed->context['token']);
         $this->assertSame('******', $processed->context['headers']['authorization']);
@@ -74,7 +74,8 @@ final class PayloadProcessorTest extends TestCase
 
     public function test_enrichers_run_before_masking(): void
     {
-        $enricher = new class implements PayloadEnricherInterface {
+        $enricher = new class implements PayloadEnricherInterface
+        {
             public function enrich(LogPayload $payload): LogPayload
             {
                 return new LogPayload(
@@ -84,13 +85,13 @@ final class PayloadProcessorTest extends TestCase
                     datetime: $payload->datetime,
                     context: array_merge($payload->context, [
                         'deploy_sha' => 'abc123',
-                        'token'      => 'should-be-masked',
+                        'token' => 'should-be-masked',
                     ]),
                 );
             }
         };
 
-        $processor = new PayloadProcessor();
+        $processor = new PayloadProcessor;
         $processor->addEnricher($enricher);
 
         $processed = $processor->process($this->makePayload([]));
@@ -103,7 +104,8 @@ final class PayloadProcessorTest extends TestCase
     {
         $log = [];
 
-        $first = new class ($log) implements PayloadEnricherInterface {
+        $first = new class($log) implements PayloadEnricherInterface
+        {
             public function __construct(private array &$log) {}
 
             public function enrich(LogPayload $payload): LogPayload
@@ -120,7 +122,8 @@ final class PayloadProcessorTest extends TestCase
             }
         };
 
-        $second = new class ($log) implements PayloadEnricherInterface {
+        $second = new class($log) implements PayloadEnricherInterface
+        {
             public function __construct(private array &$log) {}
 
             public function enrich(LogPayload $payload): LogPayload
@@ -137,7 +140,7 @@ final class PayloadProcessorTest extends TestCase
             }
         };
 
-        $processor = new PayloadProcessor();
+        $processor = new PayloadProcessor;
         $processor->addEnricher($first);
         $processor->addEnricher($second);
 

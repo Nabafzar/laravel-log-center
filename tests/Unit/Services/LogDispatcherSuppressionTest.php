@@ -82,7 +82,7 @@ final class LogDispatcherSuppressionTest extends TestCase
         Event::fake();
 
         $dispatcher = $this->makeDispatcher(
-            TransportResult::failed('null', 'Connection error.', retryable: true)
+            TransportResult::failed('null', 'Connection error.', retryable: true),
         );
         $payload = $this->makePayload();
 
@@ -139,7 +139,8 @@ final class LogDispatcherSuppressionTest extends TestCase
 
     private function makeDispatcher(TransportResult $result): LogDispatcher
     {
-        $transport = new class ($result) implements LogTransportInterface {
+        $transport = new class($result) implements LogTransportInterface
+        {
             public function __construct(private readonly TransportResult $result) {}
 
             public function send(LogPayload $payload, FormattedMessage $message): TransportResult
@@ -158,7 +159,8 @@ final class LogDispatcherSuppressionTest extends TestCase
             }
         };
 
-        $formatter = new class () implements LogFormatterInterface {
+        $formatter = new class implements LogFormatterInterface
+        {
             public function format(LogPayload $payload): FormattedMessage
             {
                 return new FormattedMessage('formatted');
@@ -170,6 +172,6 @@ final class LogDispatcherSuppressionTest extends TestCase
         $manager->method('formatter')->willReturn($formatter);
         $manager->method('driver')->willReturn($transport);
 
-        return new LogDispatcher($manager, new PayloadProcessor(), new SuppressionManager());
+        return new LogDispatcher($manager, new PayloadProcessor, new SuppressionManager);
     }
 }

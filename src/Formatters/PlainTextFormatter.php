@@ -32,7 +32,7 @@ class PlainTextFormatter extends AbstractFormatter implements LogFormatterInterf
         return new FormattedMessage(
             content: $this->truncate(
                 implode(PHP_EOL, $sections),
-                $this->maxLength()
+                $this->maxLength(),
             ),
             meta: [
                 'format' => MessageFormatEnum::PLAIN->value,
@@ -49,7 +49,7 @@ class PlainTextFormatter extends AbstractFormatter implements LogFormatterInterf
             $this->levelIcon($payload->level),
             $payload->datetime?->format('Y-m-d H:i:s') ?? now()->format('Y-m-d H:i:s'),
             $payload->environment ?? 'app',
-            $level->label()
+            $level->label(),
         );
     }
 
@@ -58,7 +58,7 @@ class PlainTextFormatter extends AbstractFormatter implements LogFormatterInterf
         return implode(PHP_EOL, array_filter([
             'Message:',
             $payload->message,
-            $payload->channel ? 'Channel: ' . $payload->channel : null,
+            $payload->channel ? 'Channel: '.$payload->channel : null,
         ]));
     }
 
@@ -70,7 +70,7 @@ class PlainTextFormatter extends AbstractFormatter implements LogFormatterInterf
             return null;
         }
 
-        return 'Log Center: ' . $url;
+        return 'Log Center: '.$url;
     }
 
     private function tags(LogPayload $payload): ?string
@@ -80,7 +80,7 @@ class PlainTextFormatter extends AbstractFormatter implements LogFormatterInterf
         }
 
         return implode('  ', array_map(
-            static fn(string $tag) => '#' . preg_replace('/[^\w]/u', '_', $tag),
+            static fn (string $tag) => '#'.preg_replace('/[^\w]/u', '_', $tag),
             $payload->tags,
         ));
     }
@@ -89,14 +89,14 @@ class PlainTextFormatter extends AbstractFormatter implements LogFormatterInterf
     {
         return empty($payload->context)
             ? null
-            : 'Context:' . PHP_EOL . $this->encodeJson($payload->context);
+            : 'Context:'.PHP_EOL.$this->encodeJson($payload->context);
     }
 
     private function extra(LogPayload $payload): ?string
     {
         return empty($payload->extra)
             ? null
-            : 'Extra:' . PHP_EOL . $this->encodeJson($payload->extra);
+            : 'Extra:'.PHP_EOL.$this->encodeJson($payload->extra);
     }
 
     private function user(LogPayload $payload): ?string
@@ -115,7 +115,7 @@ class PlainTextFormatter extends AbstractFormatter implements LogFormatterInterf
     {
         return empty($payload->request)
             ? null
-            : 'Request:' . PHP_EOL . $this->encodeJson($payload->request);
+            : 'Request:'.PHP_EOL.$this->encodeJson($payload->request);
     }
 
     private function exception(LogPayload $payload): ?string
@@ -127,8 +127,8 @@ class PlainTextFormatter extends AbstractFormatter implements LogFormatterInterf
         $status = $this->exceptionHttpStatus($payload->exception);
 
         return implode(PHP_EOL, array_filter([
-            'Exception: ' . $this->exceptionClass($payload->exception)
-                . ($status !== null ? ' [HTTP ' . $status . ']' : ''),
+            'Exception: '.$this->exceptionClass($payload->exception)
+                .($status !== null ? ' [HTTP '.$status.']' : ''),
             $this->formatPlainExceptionFile($payload),
             $this->formatPlainExceptionLine($payload),
         ]));
@@ -140,9 +140,9 @@ class PlainTextFormatter extends AbstractFormatter implements LogFormatterInterf
             return null;
         }
 
-        return 'Trace:' . PHP_EOL . $this->truncate(
+        return 'Trace:'.PHP_EOL.$this->truncate(
             $payload->trace,
-            $this->traceMaxLength()
+            $this->traceMaxLength(),
         );
     }
 
@@ -160,7 +160,7 @@ class PlainTextFormatter extends AbstractFormatter implements LogFormatterInterf
     {
         return empty($payload->source)
             ? null
-            : 'Source: ' . $payload->source;
+            : 'Source: '.$payload->source;
     }
 
     private function levelIcon(string $level): string
@@ -183,7 +183,7 @@ class PlainTextFormatter extends AbstractFormatter implements LogFormatterInterf
             return null;
         }
 
-        return 'File: ' . $file;
+        return 'File: '.$file;
     }
 
     private function formatPlainExceptionLine(LogPayload $payload): ?string
@@ -194,14 +194,13 @@ class PlainTextFormatter extends AbstractFormatter implements LogFormatterInterf
             return null;
         }
 
-        return 'Line: ' . $line;
+        return 'Line: '.$line;
     }
 
     private function formatPlainUserValue(string $label, mixed $value): ?string
     {
         $value = $this->stringValue($value);
 
-        return $value === null ? null : $label . ': ' . $value;
+        return $value === null ? null : $label.': '.$value;
     }
-
 }

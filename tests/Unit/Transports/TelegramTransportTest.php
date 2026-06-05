@@ -7,14 +7,14 @@ namespace Nabafzar\LogCenter\Tests\Unit\Transports;
 use Illuminate\Support\Facades\Http;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
-use Nabafzar\LogCenter\Transports\Telegram\TelegramTransport;
 use Nabafzar\LogCenter\Tests\TestCase;
+use Nabafzar\LogCenter\Transports\Telegram\TelegramTransport;
 
 final class TelegramTransportTest extends TestCase
 {
     public function test_it_fails_when_credentials_are_missing(): void
     {
-        $result = (new TelegramTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new TelegramTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertTrue($result->isFailure());
         $this->assertSame('telegram', $result->driver);
@@ -34,9 +34,9 @@ final class TelegramTransportTest extends TestCase
             ], 200),
         ]);
 
-        $result = (new TelegramTransport())->send(
+        $result = (new TelegramTransport)->send(
             $this->makePayload(),
-            new FormattedMessage('hello telegram', 'text', ['parse_mode' => 'HTML'])
+            new FormattedMessage('hello telegram', 'text', ['parse_mode' => 'HTML']),
         );
 
         $this->assertTrue($result->isSuccess());
@@ -52,7 +52,7 @@ final class TelegramTransportTest extends TestCase
 
         Http::fake(['*' => Http::response(['description' => 'Too Many Requests'], 429)]);
 
-        $result = (new TelegramTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new TelegramTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertTrue($result->isFailure());
         $this->assertSame(429, $result->statusCode);
@@ -66,7 +66,7 @@ final class TelegramTransportTest extends TestCase
 
         Http::fake(['*' => Http::response([], 500)]);
 
-        $result = (new TelegramTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new TelegramTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertTrue($result->isFailure());
         $this->assertSame(500, $result->statusCode);
@@ -80,7 +80,7 @@ final class TelegramTransportTest extends TestCase
 
         Http::fake(['*' => Http::response(['description' => 'Unauthorized'], 401)]);
 
-        $result = (new TelegramTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new TelegramTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertTrue($result->isFailure());
         $this->assertSame(401, $result->statusCode);
@@ -93,7 +93,7 @@ final class TelegramTransportTest extends TestCase
         config()->set('logcenter.drivers.telegram.chat_id', '12345');
         Http::fake();
 
-        $result = (new TelegramTransport())->send($this->makePayload(), new FormattedMessage('   '));
+        $result = (new TelegramTransport)->send($this->makePayload(), new FormattedMessage('   '));
 
         $this->assertTrue($result->isSuccess());
         $this->assertTrue($result->meta['skipped'] ?? false);
@@ -108,9 +108,9 @@ final class TelegramTransportTest extends TestCase
 
         Http::fake(['*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]], 200)]);
 
-        $result = (new TelegramTransport())->send(
+        $result = (new TelegramTransport)->send(
             $this->makePayload(),
-            new FormattedMessage(str_repeat('A', 200))
+            new FormattedMessage(str_repeat('A', 200)),
         );
 
         $this->assertTrue($result->isSuccess());
@@ -127,14 +127,14 @@ final class TelegramTransportTest extends TestCase
 
         Http::fake(['*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]], 200)]);
 
-        $result = (new TelegramTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new TelegramTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertSame(1, $result->meta['sent_messages'] ?? null);
     }
 
     public function test_supported_formats(): void
     {
-        $formats = (new TelegramTransport())->supportedFormats();
+        $formats = (new TelegramTransport)->supportedFormats();
 
         $this->assertContains(MessageFormatEnum::PLAIN, $formats);
         $this->assertContains(MessageFormatEnum::MARKDOWN, $formats);
@@ -143,6 +143,6 @@ final class TelegramTransportTest extends TestCase
 
     public function test_it_supports_topics(): void
     {
-        $this->assertTrue((new TelegramTransport())->supportsTopics());
+        $this->assertTrue((new TelegramTransport)->supportsTopics());
     }
 }

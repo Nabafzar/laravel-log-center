@@ -14,7 +14,7 @@ final class SuppressionManagerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->manager = new SuppressionManager();
+        $this->manager = new SuppressionManager;
         config()->set('logcenter.suppression.ttl', 300);
         config()->set('logcenter.suppression.store', 'array');
     }

@@ -50,11 +50,11 @@ final class SuppressionManager
 
     private function suppressionKey(string $fingerprint): string
     {
-        return 'logcenter:suppression:' . $fingerprint;
+        return 'logcenter:suppression:'.$fingerprint;
     }
 
     private function countKey(string $fingerprint): string
     {
-        return 'logcenter:suppression_count:' . $fingerprint;
+        return 'logcenter:suppression_count:'.$fingerprint;
     }
 }

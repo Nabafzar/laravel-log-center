@@ -31,7 +31,7 @@ final class IncomingWebhookTransport extends AbstractTransport
                 ->send(
                     strtoupper($this->method()),
                     $url,
-                    $this->requestOptions($payload, $message)
+                    $this->requestOptions($payload, $message),
                 )
                 ->throw();
 
@@ -120,7 +120,7 @@ final class IncomingWebhookTransport extends AbstractTransport
     {
         return $this->firstConfiguredString(
             config('logcenter.drivers.incoming_webhook.url'),
-            config('logcenter.drivers.webhook.url')
+            config('logcenter.drivers.webhook.url'),
         );
     }
 
@@ -128,7 +128,7 @@ final class IncomingWebhookTransport extends AbstractTransport
     {
         $method = $this->firstConfiguredString(
             config('logcenter.drivers.incoming_webhook.method'),
-            config('logcenter.drivers.webhook.method')
+            config('logcenter.drivers.webhook.method'),
         );
 
         return $method !== null ? $method : 'POST';
@@ -139,7 +139,7 @@ final class IncomingWebhookTransport extends AbstractTransport
         return max(1, (int) (
             $this->firstConfiguredValue(
                 config('logcenter.drivers.incoming_webhook.timeout'),
-                config('logcenter.drivers.webhook.timeout', 5)
+                config('logcenter.drivers.webhook.timeout', 5),
             ) ?? 5
         ));
     }
@@ -151,7 +151,7 @@ final class IncomingWebhookTransport extends AbstractTransport
     {
         $headers = $this->firstConfiguredValue(
             config('logcenter.drivers.incoming_webhook.headers'),
-            config('logcenter.drivers.webhook.headers', [])
+            config('logcenter.drivers.webhook.headers', []),
         );
 
         if (! is_array($headers)) {
@@ -182,7 +182,7 @@ final class IncomingWebhookTransport extends AbstractTransport
     {
         $payloadType = $this->firstConfiguredString(
             config('logcenter.drivers.incoming_webhook.payload_type'),
-            config('logcenter.drivers.webhook.payload_type')
+            config('logcenter.drivers.webhook.payload_type'),
         );
 
         return $payloadType !== null ? strtolower($payloadType) : 'json';
@@ -211,5 +211,4 @@ final class IncomingWebhookTransport extends AbstractTransport
 
         return null;
     }
-
 }

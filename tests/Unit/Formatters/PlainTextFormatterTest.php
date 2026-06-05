@@ -14,7 +14,7 @@ final class PlainTextFormatterTest extends TestCase
         config()->set('logcenter.viewer.enabled', true);
         config()->set('app.url', 'http://localhost');
 
-        $formatted = (new PlainTextFormatter())->format($this->makePayload([
+        $formatted = (new PlainTextFormatter)->format($this->makePayload([
             'context' => ['order_id' => 1001],
             'extra' => ['attempt' => 3],
             'request' => ['method' => 'POST', 'url' => 'http://localhost/orders'],
@@ -28,13 +28,13 @@ final class PlainTextFormatterTest extends TestCase
         $this->assertStringContainsString('Extra:', $formatted->content);
         $this->assertStringContainsString('Request:', $formatted->content);
         $this->assertStringContainsString('Trace:', $formatted->content);
-        $this->assertStringContainsString('Log Center: http://localhost/log-viewer?fingerprint=' . substr('fingerprint-123', 0, 14), $formatted->content);
+        $this->assertStringContainsString('Log Center: http://localhost/log-viewer?fingerprint='.substr('fingerprint-123', 0, 14), $formatted->content);
         $this->assertStringContainsString('search=Something%20failed', $formatted->content);
     }
 
     public function test_it_renders_tags_as_plain_text(): void
     {
-        $formatted = (new PlainTextFormatter())->format($this->makePayload([
+        $formatted = (new PlainTextFormatter)->format($this->makePayload([
             'tags' => ['payments', 'checkout'],
         ]));
 
@@ -44,7 +44,7 @@ final class PlainTextFormatterTest extends TestCase
 
     public function test_it_omits_tags_section_when_tags_are_empty(): void
     {
-        $formatted = (new PlainTextFormatter())->format($this->makePayload(['tags' => []]));
+        $formatted = (new PlainTextFormatter)->format($this->makePayload(['tags' => []]));
 
         $this->assertStringNotContainsString('#', $formatted->content);
     }
@@ -53,7 +53,7 @@ final class PlainTextFormatterTest extends TestCase
     {
         config()->set('logcenter.viewer.enabled', false);
 
-        $formatted = (new PlainTextFormatter())->format($this->makePayload([
+        $formatted = (new PlainTextFormatter)->format($this->makePayload([
             'fingerprint' => null,
         ]));
 
@@ -62,7 +62,7 @@ final class PlainTextFormatterTest extends TestCase
 
     public function test_it_renders_exception_class_file_and_line(): void
     {
-        $formatted = (new PlainTextFormatter())->format($this->makePayload([
+        $formatted = (new PlainTextFormatter)->format($this->makePayload([
             'exception' => ['class' => 'RuntimeException', 'message' => 'Boom', 'code' => 0, 'file' => '/app/Foo.php', 'line' => 42],
         ]));
 
@@ -73,7 +73,7 @@ final class PlainTextFormatterTest extends TestCase
 
     public function test_it_renders_user_id_and_name(): void
     {
-        $formatted = (new PlainTextFormatter())->format($this->makePayload([
+        $formatted = (new PlainTextFormatter)->format($this->makePayload([
             'user' => ['id' => 55, 'name' => 'Carol'],
         ]));
 
@@ -83,7 +83,7 @@ final class PlainTextFormatterTest extends TestCase
 
     public function test_it_renders_http_status_alongside_exception_class(): void
     {
-        $formatted = (new PlainTextFormatter())->format($this->makePayload([
+        $formatted = (new PlainTextFormatter)->format($this->makePayload([
             'exception' => [
                 'class' => 'RuntimeException',
                 'message' => 'Boom',
@@ -98,7 +98,7 @@ final class PlainTextFormatterTest extends TestCase
 
     public function test_it_omits_http_status_when_not_present(): void
     {
-        $formatted = (new PlainTextFormatter())->format($this->makePayload([
+        $formatted = (new PlainTextFormatter)->format($this->makePayload([
             'exception' => ['class' => 'RuntimeException', 'message' => 'Boom', 'code' => 0],
         ]));
 

@@ -48,7 +48,7 @@ class JsonFormatter extends AbstractFormatter implements LogFormatterInterface
                     'format' => MessageFormatEnum::JSON->value,
                     'schema_version' => 1,
                 ],
-                $payload->meta ?? []
+                $payload->meta ?? [],
             ),
         ];
 
@@ -56,7 +56,7 @@ class JsonFormatter extends AbstractFormatter implements LogFormatterInterface
             content: $this->encodeJson(
                 $data,
                 $this->jsonFlags() | JSON_THROW_ON_ERROR,
-                '{"level":"ERROR","message":"Failed to encode log payload as JSON."}'
+                '{"level":"ERROR","message":"Failed to encode log payload as JSON."}',
             ),
             meta: [
                 'format' => 'json',
@@ -80,5 +80,4 @@ class JsonFormatter extends AbstractFormatter implements LogFormatterInterface
     {
         return $this->configInt('logcenter.formatters.json.trace_max_length', 5000);
     }
-
 }

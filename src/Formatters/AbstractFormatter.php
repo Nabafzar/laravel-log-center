@@ -11,12 +11,12 @@ abstract class AbstractFormatter
 {
     protected function viewerUrl(LogPayload $payload): ?string
     {
-        if (empty($payload->fingerprint) || !config('logcenter.viewer.enabled', false)) {
+        if (empty($payload->fingerprint) || ! config('logcenter.viewer.enabled', false)) {
             return null;
         }
 
-        $baseUrl = rtrim((string)config('app.url', ''), '/');
-        $prefix = trim((string)config('logcenter.viewer.route_prefix', 'log-viewer'), '/');
+        $baseUrl = rtrim((string) config('app.url', ''), '/');
+        $prefix = trim((string) config('logcenter.viewer.route_prefix', 'log-viewer'), '/');
 
         if ($baseUrl === '') {
             return null;
@@ -27,12 +27,12 @@ abstract class AbstractFormatter
             'search' => $this->viewerSearchTerm($payload),
         ]);
 
-        return $baseUrl . '/' . $prefix . '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+        return $baseUrl.'/'.$prefix.'?'.http_build_query($query, '', '&', PHP_QUERY_RFC3986);
     }
 
     protected function viewerFingerprintToken(LogPayload $payload): string
     {
-        return substr((string)$payload->fingerprint, 0, 14);
+        return substr((string) $payload->fingerprint, 0, 14);
     }
 
     protected function viewerSearchTerm(LogPayload $payload): ?string
@@ -49,7 +49,7 @@ abstract class AbstractFormatter
     }
 
     /**
-     * @param array<int, string> $candidates
+     * @param  array<int, string>  $candidates
      */
     protected function extractHeaderValue(mixed $headers, array $candidates): ?string
     {
@@ -119,14 +119,14 @@ abstract class AbstractFormatter
         $normalized = '';
 
         if (isset($parts['scheme'])) {
-            $normalized .= $parts['scheme'] . '://';
+            $normalized .= $parts['scheme'].'://';
         }
 
         if (isset($parts['user'])) {
             $normalized .= $parts['user'];
 
             if (isset($parts['pass'])) {
-                $normalized .= ':' . $parts['pass'];
+                $normalized .= ':'.$parts['pass'];
             }
 
             $normalized .= '@';
@@ -137,7 +137,7 @@ abstract class AbstractFormatter
         }
 
         if (isset($parts['port'])) {
-            $normalized .= ':' . $parts['port'];
+            $normalized .= ':'.$parts['port'];
         }
 
         $normalized .= $parts['path'] ?? '';
@@ -149,9 +149,9 @@ abstract class AbstractFormatter
     {
         $language = $language ?: '';
 
-        return '```' . $language . PHP_EOL
-            . $content . PHP_EOL
-            . '```';
+        return '```'.$language.PHP_EOL
+            .$content.PHP_EOL
+            .'```';
     }
 
     protected function encodeJson(
@@ -166,19 +166,19 @@ abstract class AbstractFormatter
         }
     }
 
-    protected function truncate(string $text, int $limit, string $suffix = PHP_EOL . '... [truncated]'): string
+    protected function truncate(string $text, int $limit, string $suffix = PHP_EOL.'... [truncated]'): string
     {
         if (mb_strlen($text) <= $limit) {
             return $text;
         }
 
-        return mb_substr($text, 0, $limit) . $suffix;
+        return mb_substr($text, 0, $limit).$suffix;
     }
 
     protected function truncateNullable(
         ?string $text,
         int $limit,
-        string $suffix = PHP_EOL . '... [truncated]',
+        string $suffix = PHP_EOL.'... [truncated]',
     ): ?string {
         if ($text === null || $text === '') {
             return null;
@@ -193,7 +193,7 @@ abstract class AbstractFormatter
             return $text;
         }
 
-        return mb_substr($text, 0, max(0, $limit - 16)) . PHP_EOL . '... [truncated]';
+        return mb_substr($text, 0, max(0, $limit - 16)).PHP_EOL.'... [truncated]';
     }
 
     protected function fitSections(array $sections, int $maxLength, string $notice = '<i>... [truncated]</i>'): string
@@ -203,14 +203,15 @@ abstract class AbstractFormatter
         foreach ($sections as $section) {
             $candidate = $content === ''
                 ? $section
-                : $content . "\n" . $section;
+                : $content."\n".$section;
 
             if (mb_strlen($candidate) <= $maxLength) {
                 $content = $candidate;
+
                 continue;
             }
 
-            $candidateWithNotice = $content . "\n\n" . $notice;
+            $candidateWithNotice = $content."\n\n".$notice;
 
             return $content !== '' && mb_strlen($candidateWithNotice) <= $maxLength
                 ? $candidateWithNotice

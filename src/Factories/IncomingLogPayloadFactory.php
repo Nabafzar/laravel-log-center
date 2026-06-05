@@ -13,7 +13,7 @@ use Throwable;
 final class IncomingLogPayloadFactory
 {
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public static function fromArray(array $data): LogPayload
     {
@@ -57,7 +57,7 @@ final class IncomingLogPayloadFactory
     }
 
     /**
-     * @param array<string, mixed>|null $value
+     * @param  array<string, mixed>|null  $value
      * @return array<string, mixed>|null
      */
     private static function normalizeNullableArray(mixed $value): ?array
@@ -72,7 +72,7 @@ final class IncomingLogPayloadFactory
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
     private static function normalizeArray(array $data, int $depth = 0): array
@@ -84,16 +84,19 @@ final class IncomingLogPayloadFactory
         foreach ($data as $key => $value) {
             if (is_array($value)) {
                 $data[$key] = self::normalizeArray($value, $depth + 1);
+
                 continue;
             }
 
             if ($value instanceof Throwable) {
                 $data[$key] = self::normalizeException($value);
+
                 continue;
             }
 
             if (is_object($value) && method_exists($value, '__toString')) {
                 $data[$key] = (string) $value;
+
                 continue;
             }
         }
@@ -114,12 +117,12 @@ final class IncomingLogPayloadFactory
             static fn (mixed $item): mixed => is_array($item)
                 ? self::normalizeArray($item)
                 : (is_object($item) && method_exists($item, '__toString') ? (string) $item : $item),
-            $value
+            $value,
         ));
     }
 
     /**
-     * @param array<string, mixed>|Throwable|null $value
+     * @param  array<string, mixed>|Throwable|null  $value
      * @return array<string, mixed>|null
      */
     private static function normalizeException(mixed $value): ?array
@@ -160,7 +163,7 @@ final class IncomingLogPayloadFactory
     }
 
     /**
-     * @param array<string, mixed>|null $exception
+     * @param  array<string, mixed>|null  $exception
      */
     private static function fingerprint(string $level, string $channel, string $message, ?array $exception): string
     {
@@ -175,7 +178,7 @@ final class IncomingLogPayloadFactory
         ];
 
         return sha1(
-            json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: ''
+            json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '',
         );
     }
 }

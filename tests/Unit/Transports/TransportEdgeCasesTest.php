@@ -7,11 +7,11 @@ namespace Nabafzar\LogCenter\Tests\Unit\Transports;
 use Illuminate\Support\Facades\Http;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
+use Nabafzar\LogCenter\Tests\TestCase;
 use Nabafzar\LogCenter\Transports\Bale\BaleTransport;
 use Nabafzar\LogCenter\Transports\Mattermost\MattermostTransport;
 use Nabafzar\LogCenter\Transports\Telegram\TelegramTransport;
 use Nabafzar\LogCenter\Transports\Webhook\WebhookTransport;
-use Nabafzar\LogCenter\Tests\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 final class TransportEdgeCasesTest extends TestCase

@@ -32,7 +32,7 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
         return new FormattedMessage(
             content: $this->truncate(
                 implode(PHP_EOL, $sections),
-                $this->maxLength()
+                $this->maxLength(),
             ),
             meta: [
                 'format' => MessageFormatEnum::MARKDOWN->value,
@@ -50,13 +50,13 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
             $level->icon(),
             $payload->datetime?->format('Y-m-d H:i:s') ?? now()->format('Y-m-d H:i:s'),
             $this->escapeMarkdownInline($payload->environment ?? 'app'),
-            $level->label()
+            $level->label(),
         );
     }
 
     private function message(LogPayload $payload): string
     {
-        return '*Message:*' . $this->escapeMarkdown($payload->message);
+        return '*Message:*'.$this->escapeMarkdown($payload->message);
     }
 
     private function viewerLink(LogPayload $payload): ?string
@@ -67,7 +67,7 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
             return null;
         }
 
-        return '*Log Center:* [' . $this->escapeMarkdownInline('Open in viewer') . '](' . $this->escapeMarkdownUrl($url) . ')';
+        return '*Log Center:* ['.$this->escapeMarkdownInline('Open in viewer').']('.$this->escapeMarkdownUrl($url).')';
     }
 
     private function channel(LogPayload $payload): ?string
@@ -76,7 +76,7 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
             return null;
         }
 
-        return '*Channel:* `' . $this->escapeMarkdownInline($payload->channel) . '`';
+        return '*Channel:* `'.$this->escapeMarkdownInline($payload->channel).'`';
     }
 
     private function tags(LogPayload $payload): ?string
@@ -86,7 +86,7 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
         }
 
         return implode('  ', array_map(
-            static fn(string $tag) => '#' . preg_replace('/[^\w]/u', '_', $tag),
+            static fn (string $tag) => '#'.preg_replace('/[^\w]/u', '_', $tag),
             $payload->tags,
         ));
     }
@@ -97,9 +97,9 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
             return null;
         }
 
-        return '*Context:*' . PHP_EOL . $this->codeBlock(
+        return '*Context:*'.PHP_EOL.$this->codeBlock(
             $this->encodeJson($payload->context),
-            'json'
+            'json',
         );
     }
 
@@ -109,10 +109,10 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
             return null;
         }
 
-        return '*Extra:*' . PHP_EOL . $this->codeBlock(
+        return '*Extra:*'.PHP_EOL.$this->codeBlock(
             $this->encodeJson($payload->extra),
-            'json'
-            );
+            'json',
+        );
     }
 
     private function user(LogPayload $payload): ?string
@@ -135,7 +135,7 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
             return null;
         }
 
-        return '*Request:*' . PHP_EOL . implode(PHP_EOL, array_values(array_filter([
+        return '*Request:*'.PHP_EOL.implode(PHP_EOL, array_values(array_filter([
             $this->requestLine('Method', $request['method'] ?? null),
             $this->requestLine('URL', $request['url'] ?? null),
             $this->requestLine('IP', $request['ip'] ?? null),
@@ -152,8 +152,8 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
         $status = $this->exceptionHttpStatus($payload->exception);
 
         return implode(PHP_EOL, array_filter([
-            '*Exception:* `' . $this->escapeMarkdownInline($this->exceptionClass($payload->exception)) . '`'
-                . ($status !== null ? ' `[HTTP ' . $status . ']`' : ''),
+            '*Exception:* `'.$this->escapeMarkdownInline($this->exceptionClass($payload->exception)).'`'
+                .($status !== null ? ' `[HTTP '.$status.']`' : ''),
             $this->formatMarkdownExceptionFile($payload),
             $this->formatMarkdownExceptionLine($payload),
         ]));
@@ -165,8 +165,8 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
             return null;
         }
 
-        return '*Trace:*' . PHP_EOL . $this->codeBlock(
-            $this->truncate($payload->trace, $this->traceMaxLength())
+        return '*Trace:*'.PHP_EOL.$this->codeBlock(
+            $this->truncate($payload->trace, $this->traceMaxLength()),
         );
     }
 
@@ -179,7 +179,7 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
         return sprintf(
             '*%s:* `%s`',
             $this->escapeMarkdownInline($label),
-            $this->escapeMarkdownInline($this->truncate((string) $value, 200))
+            $this->escapeMarkdownInline($this->truncate((string) $value, 200)),
         );
     }
 
@@ -190,11 +190,11 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
         }
 
         return sprintf(
-            '*%s:*' . PHP_EOL . $this->codeBlock(
+            '*%s:*'.PHP_EOL.$this->codeBlock(
                 $this->encodeJson($value),
-                'json'
+                'json',
             ),
-            $this->escapeMarkdownInline($label)
+            $this->escapeMarkdownInline($label),
         );
     }
 
@@ -214,21 +214,21 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
             return null;
         }
 
-        return '*Source:* `' . $this->escapeMarkdownInline($this->truncate((string) $payload->source, 100)) . '`';
+        return '*Source:* `'.$this->escapeMarkdownInline($this->truncate((string) $payload->source, 100)).'`';
     }
 
     private function formatMarkdownExceptionFile(LogPayload $payload): ?string
     {
         $file = $this->exceptionFile($payload->exception ?? []);
 
-        return $file === null ? null : '*File:* `' . $this->escapeMarkdownInline($this->truncate($file, 250)) . '`';
+        return $file === null ? null : '*File:* `'.$this->escapeMarkdownInline($this->truncate($file, 250)).'`';
     }
 
     private function formatMarkdownExceptionLine(LogPayload $payload): ?string
     {
         $line = $this->exceptionLine($payload->exception ?? []);
 
-        return $line === null ? null : '*Line:* `' . $line . '`';
+        return $line === null ? null : '*Line:* `'.$line.'`';
     }
 
     private function formatMarkdownUserValue(string $label, mixed $value): ?string
@@ -237,6 +237,6 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
 
         return $value === null
             ? null
-            : '*'.$this->escapeMarkdownInline($label).':* `' . $this->escapeMarkdownInline($value) . '`';
+            : '*'.$this->escapeMarkdownInline($label).':* `'.$this->escapeMarkdownInline($value).'`';
     }
 }

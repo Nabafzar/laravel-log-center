@@ -25,7 +25,7 @@ final class LogDispatcherEventsTest extends TestCase
         Event::fake();
 
         $dispatcher = $this->makeDispatcher(
-            TransportResult::success(driver: 'null', statusCode: 200)
+            TransportResult::success(driver: 'null', statusCode: 200),
         );
 
         $payload = $this->makePayload(['message' => 'Something happened.']);
@@ -45,7 +45,7 @@ final class LogDispatcherEventsTest extends TestCase
         Event::fake();
 
         $dispatcher = $this->makeDispatcher(
-            TransportResult::failed(driver: 'telegram', errorMessage: 'Rate limited.', retryable: true)
+            TransportResult::failed(driver: 'telegram', errorMessage: 'Rate limited.', retryable: true),
         );
 
         $dispatcher->sendNow($this->makePayload(), 'telegram', 'plain');
@@ -64,7 +64,7 @@ final class LogDispatcherEventsTest extends TestCase
         Event::fake();
 
         $dispatcher = $this->makeDispatcher(
-            TransportResult::failed(driver: 'webhook', errorMessage: 'Invalid token.', retryable: false)
+            TransportResult::failed(driver: 'webhook', errorMessage: 'Invalid token.', retryable: false),
         );
 
         $dispatcher->sendNow($this->makePayload(), 'webhook', 'plain');
@@ -79,7 +79,8 @@ final class LogDispatcherEventsTest extends TestCase
 
     private function makeDispatcher(TransportResult $result): LogDispatcher
     {
-        $transport = new class ($result) implements LogTransportInterface {
+        $transport = new class($result) implements LogTransportInterface
+        {
             public function __construct(private readonly TransportResult $result) {}
 
             public function send(LogPayload $payload, FormattedMessage $message): TransportResult
@@ -98,7 +99,8 @@ final class LogDispatcherEventsTest extends TestCase
             }
         };
 
-        $formatter = new class () implements LogFormatterInterface {
+        $formatter = new class implements LogFormatterInterface
+        {
             public function format(LogPayload $payload): FormattedMessage
             {
                 return new FormattedMessage('formatted');
@@ -110,6 +112,6 @@ final class LogDispatcherEventsTest extends TestCase
         $manager->method('formatter')->willReturn($formatter);
         $manager->method('driver')->willReturn($transport);
 
-        return new LogDispatcher($manager, new PayloadProcessor(), new SuppressionManager());
+        return new LogDispatcher($manager, new PayloadProcessor, new SuppressionManager);
     }
 }

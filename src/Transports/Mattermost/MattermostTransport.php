@@ -156,8 +156,8 @@ final class MattermostTransport extends AbstractTransport
     private function applyDirection(string $content): string
     {
         return match ($this->direction()) {
-            'rtl' => self::RTL_EMBEDDING . $content . self::POP_DIRECTIONAL_FORMATTING,
-            'ltr' => self::LTR_EMBEDDING . $content . self::POP_DIRECTIONAL_FORMATTING,
+            'rtl' => self::RTL_EMBEDDING.$content.self::POP_DIRECTIONAL_FORMATTING,
+            'ltr' => self::LTR_EMBEDDING.$content.self::POP_DIRECTIONAL_FORMATTING,
             default => $content,
         };
     }
@@ -205,7 +205,7 @@ final class MattermostTransport extends AbstractTransport
             return self::POSTS_ENDPOINT;
         }
 
-        return rtrim($baseUrl, '/') . self::POSTS_ENDPOINT;
+        return rtrim($baseUrl, '/').self::POSTS_ENDPOINT;
     }
 
     private function messageId(mixed $response): ?string
@@ -225,5 +225,4 @@ final class MattermostTransport extends AbstractTransport
 
         return $direction !== null ? strtolower($direction) : 'ltr';
     }
-
 }

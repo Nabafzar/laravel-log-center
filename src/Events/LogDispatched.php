@@ -10,7 +10,7 @@ use Nabafzar\LogCenter\DTO\TransportResult;
 final readonly class LogDispatched
 {
     public function __construct(
-        public LogPayload      $payload,
+        public LogPayload $payload,
         public TransportResult $result,
     ) {}
 }

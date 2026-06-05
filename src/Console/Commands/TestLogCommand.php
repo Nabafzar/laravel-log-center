@@ -55,7 +55,7 @@ final class TestLogCommand extends Command
                 formatterName: $this->resolveOption('formatter'),
             );
         } catch (Throwable $exception) {
-            $this->error('Failed to send test log: ' . $exception->getMessage());
+            $this->error('Failed to send test log: '.$exception->getMessage());
 
             return self::FAILURE;
         }

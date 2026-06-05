@@ -31,7 +31,7 @@ final class WebhookTransport extends AbstractTransport
                 ->send(
                     strtoupper($this->method()),
                     $url,
-                    $this->requestOptions($payload, $message)
+                    $this->requestOptions($payload, $message),
                 )
                 ->throw();
 
@@ -170,5 +170,4 @@ final class WebhookTransport extends AbstractTransport
 
         return $payloadType !== null ? strtolower($payloadType) : 'json';
     }
-
 }

@@ -24,7 +24,8 @@ final class LogPayloadFactoryTest extends TestCase
         $request->headers->set('Cookie', 'laravel_session=session-cookie');
         $request->headers->set('Authorization', 'Bearer bearer-token');
         $request->setUserResolver(static function (): object {
-            return new class () {
+            return new class
+            {
                 public function getAuthIdentifier(): int
                 {
                     return 42;
@@ -102,7 +103,7 @@ final class LogPayloadFactoryTest extends TestCase
     public function test_it_sanitizes_request_referer_without_leaking_query_fragment_or_control_characters(): void
     {
         $request = Request::create('/orders', 'GET');
-        $request->headers->set('Referer', "https://example.test/path%2Fsegment?next=%2Fadmin#frag%0Ament");
+        $request->headers->set('Referer', 'https://example.test/path%2Fsegment?next=%2Fadmin#frag%0Ament');
 
         $record = new LogRecord(
             datetime: now()->toDateTimeImmutable(),

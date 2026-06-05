@@ -7,14 +7,14 @@ namespace Nabafzar\LogCenter\Tests\Unit\Transports;
 use Illuminate\Support\Facades\Http;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
-use Nabafzar\LogCenter\Transports\Bale\BaleTransport;
 use Nabafzar\LogCenter\Tests\TestCase;
+use Nabafzar\LogCenter\Transports\Bale\BaleTransport;
 
 final class BaleTransportTest extends TestCase
 {
     public function test_it_fails_when_credentials_are_missing(): void
     {
-        $result = (new BaleTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new BaleTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertTrue($result->isFailure());
         $this->assertSame('bale', $result->driver);
@@ -33,7 +33,7 @@ final class BaleTransportTest extends TestCase
             ], 200),
         ]);
 
-        $result = (new BaleTransport())->send($this->makePayload(), new FormattedMessage('hello bale'));
+        $result = (new BaleTransport)->send($this->makePayload(), new FormattedMessage('hello bale'));
 
         $this->assertTrue($result->isSuccess());
         $this->assertSame(200, $result->statusCode);
@@ -47,7 +47,7 @@ final class BaleTransportTest extends TestCase
 
         Http::fake(['*' => Http::response([], 429)]);
 
-        $result = (new BaleTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new BaleTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertTrue($result->isFailure());
         $this->assertSame(429, $result->statusCode);
@@ -61,7 +61,7 @@ final class BaleTransportTest extends TestCase
 
         Http::fake(['*' => Http::response([], 503)]);
 
-        $result = (new BaleTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new BaleTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertTrue($result->isFailure());
         $this->assertSame(503, $result->statusCode);
@@ -75,7 +75,7 @@ final class BaleTransportTest extends TestCase
 
         Http::fake(['*' => Http::response([], 403)]);
 
-        $result = (new BaleTransport())->send($this->makePayload(), new FormattedMessage('hello'));
+        $result = (new BaleTransport)->send($this->makePayload(), new FormattedMessage('hello'));
 
         $this->assertTrue($result->isFailure());
         $this->assertSame(403, $result->statusCode);
@@ -88,7 +88,7 @@ final class BaleTransportTest extends TestCase
         config()->set('logcenter.drivers.bale.chat_id', 'CHAT_123');
         Http::fake();
 
-        $result = (new BaleTransport())->send($this->makePayload(), new FormattedMessage('   '));
+        $result = (new BaleTransport)->send($this->makePayload(), new FormattedMessage('   '));
 
         $this->assertTrue($result->isSuccess());
         $this->assertTrue($result->meta['skipped'] ?? false);
@@ -97,7 +97,7 @@ final class BaleTransportTest extends TestCase
 
     public function test_supported_formats(): void
     {
-        $formats = (new BaleTransport())->supportedFormats();
+        $formats = (new BaleTransport)->supportedFormats();
 
         $this->assertContains(MessageFormatEnum::PLAIN, $formats);
         $this->assertContains(MessageFormatEnum::BALE_MARKDOWN, $formats);
@@ -105,6 +105,6 @@ final class BaleTransportTest extends TestCase
 
     public function test_it_does_not_support_topics(): void
     {
-        $this->assertFalse((new BaleTransport())->supportsTopics());
+        $this->assertFalse((new BaleTransport)->supportsTopics());
     }
 }

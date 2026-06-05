@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Nabafzar\LogCenter\Factories;
 
-use Illuminate\Http\Request;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Request;
 use Monolog\LogRecord;
-use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Nabafzar\LogCenter\Attributes\LogTopic;
 use Nabafzar\LogCenter\DTO\LogPayload;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
 
 final class LogPayloadFactory
@@ -27,11 +27,11 @@ final class LogPayloadFactory
             $requestUser = self::requestUser($resolvedRequest);
 
             if ($requestUser !== null) {
-                if (!array_key_exists('id', $user) || $user['id'] === null || $user['id'] === '') {
+                if (! array_key_exists('id', $user) || $user['id'] === null || $user['id'] === '') {
                     $user['id'] = $requestUser['id'];
                 }
 
-                if (!array_key_exists('name', $user) || $user['name'] === null || $user['name'] === '') {
+                if (! array_key_exists('name', $user) || $user['name'] === null || $user['name'] === '') {
                     $user['name'] = $requestUser['name'];
                 }
             }
@@ -40,7 +40,7 @@ final class LogPayloadFactory
         unset(
             $context['exception'],
             $context['request'],
-            $context['userId']
+            $context['userId'],
         );
 
         $tags = $topic?->tags ?? [];
@@ -83,11 +83,11 @@ final class LogPayloadFactory
     private static function exceptionToArray(Throwable $exception): array
     {
         $data = [
-            'class'   => $exception::class,
+            'class' => $exception::class,
             'message' => $exception->getMessage(),
-            'code'    => $exception->getCode(),
-            'file'    => $exception->getFile(),
-            'line'    => $exception->getLine(),
+            'code' => $exception->getCode(),
+            'file' => $exception->getFile(),
+            'line' => $exception->getLine(),
         ];
 
         if ($exception instanceof HttpExceptionInterface) {
@@ -123,7 +123,7 @@ final class LogPayloadFactory
 
     private static function currentRequest(): ?array
     {
-        if (!app()->bound('request')) {
+        if (! app()->bound('request')) {
             return null;
         }
 
@@ -136,7 +136,7 @@ final class LogPayloadFactory
     {
         $body = array_replace_recursive(
             $request->request->all(),
-            $request->json()->all()
+            $request->json()->all(),
         );
 
         return self::normalizeRequestArray(array_filter([
@@ -148,34 +148,34 @@ final class LogPayloadFactory
             'user_id' => self::requestUserId($request),
             'user_name' => self::requestUserName($request),
             'body' => $body,
-        ], static fn(mixed $value): bool => $value !== null && $value !== [] && $value !== ''));
+        ], static fn (mixed $value): bool => $value !== null && $value !== [] && $value !== ''));
     }
 
     private static function requestReferer(Request $request): ?string
     {
         $referer = $request->headers->get('referer') ?? $request->headers->get('referrer');
 
-        if (!is_string($referer) || $referer === '') {
+        if (! is_string($referer) || $referer === '') {
             return null;
         }
 
         $parts = parse_url($referer);
 
-        if (!is_array($parts)) {
+        if (! is_array($parts)) {
             return $referer;
         }
 
         $normalized = '';
 
         if (isset($parts['scheme'])) {
-            $normalized .= $parts['scheme'] . '://';
+            $normalized .= $parts['scheme'].'://';
         }
 
         if (isset($parts['user'])) {
             $normalized .= $parts['user'];
 
             if (isset($parts['pass'])) {
-                $normalized .= ':' . $parts['pass'];
+                $normalized .= ':'.$parts['pass'];
             }
 
             $normalized .= '@';
@@ -186,7 +186,7 @@ final class LogPayloadFactory
         }
 
         if (isset($parts['port'])) {
-            $normalized .= ':' . $parts['port'];
+            $normalized .= ':'.$parts['port'];
         }
 
         $normalized .= $parts['path'] ?? '';
@@ -198,7 +198,7 @@ final class LogPayloadFactory
     {
         $user = $request->user();
 
-        if (!is_object($user) || !method_exists($user, 'getAuthIdentifier')) {
+        if (! is_object($user) || ! method_exists($user, 'getAuthIdentifier')) {
             return null;
         }
 
@@ -211,12 +211,12 @@ final class LogPayloadFactory
     {
         $user = $request->user();
 
-        if (!is_object($user)) {
+        if (! is_object($user)) {
             return null;
         }
 
         foreach (['username', 'name'] as $property) {
-            if (!isset($user->{$property})) {
+            if (! isset($user->{$property})) {
                 continue;
             }
 
@@ -228,7 +228,7 @@ final class LogPayloadFactory
         }
 
         if (method_exists($user, '__toString')) {
-            $value = (string)$user;
+            $value = (string) $user;
 
             return $value !== '' ? $value : null;
         }
@@ -252,7 +252,7 @@ final class LogPayloadFactory
         return array_filter([
             'id' => $userId === '' ? null : $userId,
             'name' => $userName === '' ? null : $userName,
-        ], static fn(mixed $value): bool => $value !== null && $value !== '');
+        ], static fn (mixed $value): bool => $value !== null && $value !== '');
     }
 
     private static function normalizeRequestArray(array $request): array
@@ -281,7 +281,7 @@ final class LogPayloadFactory
 
         if (is_object($value)) {
             return method_exists($value, '__toString')
-                ? (string)$value
+                ? (string) $value
                 : get_debug_type($value);
         }
 
@@ -303,8 +303,7 @@ final class LogPayloadFactory
         string $channel,
         string $message,
         ?array $exception,
-    ): string
-    {
+    ): string {
         $payload = [
             'level' => strtolower($level),
             'channel' => $channel,
@@ -316,7 +315,7 @@ final class LogPayloadFactory
         ];
 
         return sha1(
-            json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: ''
+            json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '',
         );
     }
 }

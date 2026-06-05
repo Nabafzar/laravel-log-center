@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Nabafzar\LogCenter\Tests\Unit\Managers;
 
 use Nabafzar\LogCenter\Managers\TransportManager;
-use Nabafzar\LogCenter\Transports\Null\NullTransport;
 use Nabafzar\LogCenter\Tests\TestCase;
+use Nabafzar\LogCenter\Transports\Null\NullTransport;
 
 final class TransportManagerTest extends TestCase
 {

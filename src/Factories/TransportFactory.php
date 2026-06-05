@@ -11,8 +11,8 @@ use Nabafzar\LogCenter\Contracts\LogTransportInterface;
 use Nabafzar\LogCenter\Transports\Bale\BaleTransport;
 use Nabafzar\LogCenter\Transports\Mattermost\MattermostTransport;
 use Nabafzar\LogCenter\Transports\Null\NullTransport;
-use Nabafzar\LogCenter\Transports\Webhook\WebhookTransport;
 use Nabafzar\LogCenter\Transports\Telegram\TelegramTransport;
+use Nabafzar\LogCenter\Transports\Webhook\WebhookTransport;
 
 final class TransportFactory
 {
@@ -20,9 +20,7 @@ final class TransportFactory
 
     public function __construct(
         private readonly Container $app,
-    )
-    {
-    }
+    ) {}
 
     /**
      * @throws BindingResolutionException
@@ -34,7 +32,7 @@ final class TransportFactory
 
             if (! $transport instanceof LogTransportInterface) {
                 throw new InvalidArgumentException(
-                    "Custom transport [{$name}] must implement LogTransportInterface."
+                    "Custom transport [{$name}] must implement LogTransportInterface.",
                 );
             }
 
@@ -49,7 +47,7 @@ final class TransportFactory
             'null' => $this->app->make(NullTransport::class),
 
             default => throw new InvalidArgumentException(
-                "Unsupported log transport [{$name}]."
+                "Unsupported log transport [{$name}].",
             ),
         };
     }
