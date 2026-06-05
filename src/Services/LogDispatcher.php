@@ -15,12 +15,12 @@ use Nabafzar\LogCenter\Managers\TransportManager;
 use Nabafzar\LogCenter\Processors\PayloadProcessor;
 use Nabafzar\LogCenter\Suppression\SuppressionManager;
 
-final class LogDispatcher implements LogDispatcherInterface
+final readonly class LogDispatcher implements LogDispatcherInterface
 {
     public function __construct(
-        private readonly TransportManager $transportManager,
-        private readonly PayloadProcessor $payloadProcessor,
-        private readonly SuppressionManager $suppression,
+        private TransportManager   $transportManager,
+        private PayloadProcessor   $payloadProcessor,
+        private SuppressionManager $suppression,
     ) {}
 
     public function dispatch(LogPayload $payload): TransportResult
@@ -66,7 +66,7 @@ final class LogDispatcher implements LogDispatcherInterface
             event(new LogDispatchFailed($payload, $result, $result->retryable));
         }
 
-        $fallbackResult = $this->tryFallback($payload, $driverName, $fingerprint);
+        $fallbackResult = $this->tryFallback($payload, $driverName, $fingerprint, $emitFailEvents);
 
         return $fallbackResult ?? $result;
     }
@@ -89,8 +89,12 @@ final class LogDispatcher implements LogDispatcherInterface
      * fallback result, or null when no fallback is configured or the fallback
      * driver is the same as the primary (guard against config mistakes).
      */
-    private function tryFallback(LogPayload $payload, string $primaryDriver, string $fingerprint = ''): ?TransportResult
-    {
+    private function tryFallback(
+        LogPayload $payload,
+        string $primaryDriver,
+        string $fingerprint = '',
+        bool $emitFailEvents = true,
+    ): ?TransportResult {
         $fallbackDriver = $this->fallbackDriverName();
 
         if ($fallbackDriver === null || $fallbackDriver === $primaryDriver) {
@@ -102,7 +106,7 @@ final class LogDispatcher implements LogDispatcherInterface
         if ($result->isSuccess()) {
             $this->recordSuppression($fingerprint);
             event(new LogDispatched($payload, $result));
-        } else {
+        } elseif ($emitFailEvents) {
             event(new LogDispatchFailed($payload, $result, $result->retryable));
         }
 
@@ -111,7 +115,7 @@ final class LogDispatcher implements LogDispatcherInterface
 
     private function recordSuppression(string $fingerprint): void
     {
-        if ($this->suppression->isEnabled() && $fingerprint !== '') {
+        if ($fingerprint !== '' && $this->suppression->isEnabled()) {
             $this->suppression->recordSuccessfulSend($fingerprint);
         }
     }
