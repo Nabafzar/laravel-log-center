@@ -46,7 +46,9 @@ final class DispatchLogJob implements ShouldQueue
 
     public function handle(LogDispatcher $dispatcher): void
     {
-        $result = $dispatcher->sendNow($this->payload, $this->driver, $this->formatter);
+        // Suppress per-attempt fail events — DispatchLogJob::failed() fires the
+        // single definitive LogDispatchFailed event when all retries are exhausted.
+        $result = $dispatcher->sendNow($this->payload, $this->driver, $this->formatter, emitFailEvents: false);
 
         if ($result->isFailure()) {
             if ($result->retryable) {

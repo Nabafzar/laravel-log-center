@@ -32,6 +32,7 @@ final class LogDispatcher implements LogDispatcherInterface
         LogPayload $payload,
         ?string $driverName = null,
         ?string $formatterName = null,
+        bool $emitFailEvents = true,
     ): TransportResult {
         $driverName ??= $this->transportManager->defaultDriverName();
         $payload = $this->payloadProcessor->process($payload);
@@ -59,8 +60,11 @@ final class LogDispatcher implements LogDispatcherInterface
             return $result;
         }
 
-        // Primary failed — notify listeners first, then try the fallback driver.
-        event(new LogDispatchFailed($payload, $result, $result->retryable));
+        // Primary failed — notify listeners (unless suppressed for queue context),
+        // then try the fallback driver.
+        if ($emitFailEvents) {
+            event(new LogDispatchFailed($payload, $result, $result->retryable));
+        }
 
         $fallbackResult = $this->tryFallback($payload, $driverName, $fingerprint);
 
