@@ -236,13 +236,13 @@ $this->app->make(PayloadProcessor::class)
     ->addEnricher(new class implements PayloadEnricherInterface {
         public function enrich(LogPayload $payload): LogPayload
         {
-            return new LogPayload(
-                ...(array) $payload,
-                extra: array_merge($payload->extra, [
-                    'git_sha'     => config('app.git_sha'),
-                    'server_name' => gethostname(),
-                ]),
-            );
+            $data = (array) $payload;
+            $data['extra'] = array_merge($payload->extra, [
+                'git_sha'     => config('app.git_sha'),
+                'server_name' => gethostname(),
+            ]);
+
+            return new LogPayload(...$data);
         }
     });
 ```
@@ -384,7 +384,7 @@ final class DiscordTransport implements LogTransportInterface
 
         return $response->successful()
             ? TransportResult::success('discord', statusCode: $response->status())
-            : TransportResult::failure('discord', errorMessage: $response->body(), statusCode: $response->status());
+            : TransportResult::failed('discord', errorMessage: $response->body(), statusCode: $response->status());
     }
 
     public function supportedFormats(): array
