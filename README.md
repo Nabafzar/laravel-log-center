@@ -356,19 +356,14 @@ Multiple tags, class-level, or tag-only (no topic ID) are all supported. Topic r
 
 ### Custom Transports
 
-Register a custom driver using `TransportFactory::extend()`:
+**1. Create the transport class** — suggested path: `app/Logging/DiscordTransport.php`
 
 ```php
-use Nabafzar\LogCenter\Factories\TransportFactory;
+<?php
 
-$this->app->resolving(TransportFactory::class, function (TransportFactory $factory, $app): void {
-    $factory->extend('discord', fn () => $app->make(DiscordTransport::class));
-});
-```
+namespace App\Logging;
 
-Implement `LogTransportInterface`:
-
-```php
+use Illuminate\Support\Facades\Http;
 use Nabafzar\LogCenter\Contracts\LogTransportInterface;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\DTO\LogPayload;
@@ -377,11 +372,15 @@ use Nabafzar\LogCenter\Enums\MessageFormatEnum;
 
 final class DiscordTransport implements LogTransportInterface
 {
-    public function __construct(private readonly string $webhookUrl) {}
+    public function __construct(
+        private readonly string $webhookUrl,
+        private readonly int $timeout,
+    ) {}
 
     public function send(LogPayload $payload, FormattedMessage $message): TransportResult
     {
-        $response = Http::post($this->webhookUrl, ['content' => $message->body]);
+        $response = Http::timeout($this->timeout)
+            ->post($this->webhookUrl, ['content' => $message->body]);
 
         return $response->successful()
             ? TransportResult::success('discord', statusCode: $response->status())
@@ -392,14 +391,57 @@ final class DiscordTransport implements LogTransportInterface
     {
         return [MessageFormatEnum::PLAIN, MessageFormatEnum::MARKDOWN];
     }
+
+    public function supportsTopics(): bool
+    {
+        // Return true only if your transport can route messages to
+        // sub-channels / threads based on #[LogTopic] tag names.
+        // When false, LogCenter appends the tag as a "#hashtag" in the message body instead.
+        return false;
+    }
 }
 ```
 
-Activate it with:
+**2. Register the driver** in `AppServiceProvider::boot()`:
+
+```php
+use App\Logging\DiscordTransport;
+use Nabafzar\LogCenter\Factories\TransportFactory;
+
+$this->app->resolving(TransportFactory::class, function (TransportFactory $factory, $app): void {
+    $factory->extend('discord', fn () => new DiscordTransport(
+        webhookUrl: config('services.discord.webhook_url'),
+        timeout:    config('services.discord.timeout', 5),
+    ));
+});
+```
+
+**3. Add config** to `config/services.php`:
+
+```php
+'discord' => [
+    'webhook_url' => env('DISCORD_WEBHOOK_URL'),
+    'timeout'     => env('DISCORD_TIMEOUT', 5),
+],
+```
+
+**4. Activate it**:
 
 ```dotenv
 LOGCENTER_DRIVER=discord
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
 ```
+
+---
+
+**`supportsTopics()` reference**
+
+| Return value | Behaviour when `#[LogTopic]` is present |
+|---|---|
+| `false` *(default)* | Tag appended as `#payments` in the message body |
+| `true` | Transport receives `$payload->tags` and is responsible for routing to the correct sub-channel/thread |
+
+Built-in transports: `TelegramTransport` returns `true` (routes to forum topic threads); all others return `false`.
 
 ## Testing
 
