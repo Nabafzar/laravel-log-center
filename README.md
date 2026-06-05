@@ -160,13 +160,13 @@ LOGCENTER_DRIVER=null
 
 ### Formatters
 
-| Name | Best for | Description |
-|---|---|---|
-| `plain` | Webhook, generic | Plain text |
-| `markdown` | Mattermost, generic | GitHub-flavoured Markdown |
-| `json` | Log aggregators | Structured JSON object |
-| `telegram_html` | Telegram | HTML with Telegram entity support |
-| `bale_markdown` | Bale | Markdown formatted for Bale |
+| Name            | Best for            | Description                       |
+|-----------------|---------------------|-----------------------------------|
+| `plain`         | Webhook, generic    | Plain text                        |
+| `markdown`      | Mattermost, generic | GitHub-flavoured Markdown         |
+| `json`          | Log aggregators     | Structured JSON object            |
+| `telegram_html` | Telegram            | HTML with Telegram entity support |
+| `bale_markdown` | Bale                | Markdown formatted for Bale       |
 
 ```dotenv
 LOGCENTER_FORMATTER=telegram_html
@@ -251,11 +251,11 @@ Enrichers run before secret masking, so any sensitive values added here are stil
 
 ### Events
 
-| Event | Fired when |
-|---|---|
-| `LogDispatched` | A log was delivered successfully |
-| `LogDispatchFailed` | A delivery attempt failed (primary or fallback) |
-| `LogSuppressed` | A duplicate log was suppressed within the TTL window |
+| Event               | Fired when                                           |
+|---------------------|------------------------------------------------------|
+| `LogDispatched`     | A log was delivered successfully                     |
+| `LogDispatchFailed` | A delivery attempt failed (primary or fallback)      |
+| `LogSuppressed`     | A duplicate log was suppressed within the TTL window |
 
 ```php
 use Nabafzar\LogCenter\Events\LogDispatched;
@@ -436,10 +436,10 @@ DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
 
 **`supportsTopics()` reference**
 
-| Return value | Behaviour when `#[LogTopic]` is present |
-|---|---|
-| `false` *(default)* | Tag appended as `#payments` in the message body |
-| `true` | Transport receives `$payload->tags` and is responsible for routing to the correct sub-channel/thread |
+| Return value        | Behaviour when `#[LogTopic]` is present                                                              |
+|---------------------|------------------------------------------------------------------------------------------------------|
+| `false` *(default)* | Tag appended as `#payments` in the message body                                                      |
+| `true`              | Transport receives `$payload->tags` and is responsible for routing to the correct sub-channel/thread |
 
 Built-in transports: `TelegramTransport` returns `true` (routes to forum topic threads); all others return `false`.
 
