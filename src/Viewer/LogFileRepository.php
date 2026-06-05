@@ -537,7 +537,14 @@ final class LogFileRepository
             return ['entries' => [], 'offset' => $offset, 'rotated' => false];
         }
 
-        fseek($handle, $offset);
+        // If $offset lands mid-entry (e.g. a previous poll captured only the header
+        // of a long stack trace and the continuation lines were written afterwards),
+        // backtrack to the start of the enclosing entry so those lines are not lost.
+        $safeOffset = $offset > 0
+            ? $this->findLastEntryStart($path, $offset)
+            : 0;
+
+        fseek($handle, $safeOffset);
         $chunk = stream_get_contents($handle);
         fclose($handle);
 
@@ -580,6 +587,43 @@ final class LogFileRepository
         }
 
         return ['entries' => $entries, 'offset' => $size, 'rotated' => $rotated];
+    }
+
+    /**
+     * Scan backwards from $offset (up to 64 KB) to find the byte position of the
+     * last log entry header line before that offset. Returns $offset unchanged when
+     * no earlier header is found (safe fallback: caller reads from the original point).
+     */
+    private function findLastEntryStart(string $path, int $offset): int
+    {
+        $lookback = min($offset, 65536);
+        $handle = @fopen($path, 'r');
+
+        if ($handle === false) {
+            return $offset;
+        }
+
+        fseek($handle, $offset - $lookback);
+        $chunk = fread($handle, $lookback);
+        fclose($handle);
+
+        if ($chunk === false || $chunk === '') {
+            return $offset;
+        }
+
+        $lines = explode("\n", $chunk);
+        $pos = $offset - $lookback;
+        $lastHeaderPos = -1;
+
+        foreach ($lines as $line) {
+            if ($this->isHeaderLine(rtrim($line, "\r"))) {
+                $lastHeaderPos = $pos;
+            }
+
+            $pos += strlen($line) + 1; // +1 for the \n
+        }
+
+        return $lastHeaderPos >= 0 ? $lastHeaderPos : $offset;
     }
 
     /**
