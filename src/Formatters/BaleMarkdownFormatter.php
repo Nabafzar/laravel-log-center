@@ -18,6 +18,7 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
         $sections = array_filter([
             $this->header($payload),
             $this->viewerLink($payload),
+            $this->source($payload),
             $this->message($payload),
             $this->request($payload),
             $this->user($payload),
@@ -51,6 +52,13 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
             $this->escapeInline($payload->environment ?? 'app'),
             $level->label(),
         );
+    }
+
+    private function source(LogPayload $payload): ?string
+    {
+        return empty($payload->source)
+            ? null
+            : '*Source:* '.$this->escapeInline($payload->source);
     }
 
     private function message(LogPayload $payload): string
