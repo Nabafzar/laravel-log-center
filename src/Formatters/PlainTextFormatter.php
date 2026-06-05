@@ -17,6 +17,7 @@ class PlainTextFormatter extends AbstractFormatter implements LogFormatterInterf
         $sections = array_filter([
             $this->header($payload),
             $this->viewerLink($payload),
+            $this->source($payload),
             $this->message($payload),
             $this->tags($payload),
             $this->user($payload),

@@ -37,6 +37,7 @@ final class IncomingLogController extends Controller
             'trace' => ['sometimes', 'nullable', 'string'],
             'fingerprint' => ['sometimes', 'nullable', 'string', 'max:128'],
             'tags' => ['sometimes', 'nullable', 'array'],
+            'tags.*' => ['string', 'max:100'],
             'labels' => ['sometimes', 'nullable', 'array'],
             'request' => ['sometimes', 'nullable', 'array'],
             'user' => ['sometimes', 'nullable', 'array'],
