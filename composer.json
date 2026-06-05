@@ -9,7 +9,6 @@
     "monolog",
     "telegram",
     "bale",
-    "slack",
     "mattermost",
     "webhook",
     "observability",
@@ -48,11 +47,18 @@
   },
   "require-dev": {
     "orchestra/testbench": "^9.0",
-    "phpunit/phpunit": "^11.0"
+    "phpunit/phpunit": "^11.0",
+    "laravel/pint": "^1.0"
   },
   "scripts": {
     "test": [
       "@php -d xdebug.mode=off vendor/bin/phpunit"
+    ],
+    "lint": [
+      "@php vendor/bin/pint --test"
+    ],
+    "lint:fix": [
+      "@php vendor/bin/pint"
     ]
   },
   "minimum-stability": "stable",
