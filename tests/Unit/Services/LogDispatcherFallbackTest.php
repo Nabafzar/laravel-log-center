@@ -138,6 +138,42 @@ final class LogDispatcherFallbackTest extends TestCase
         Event::assertNotDispatched(LogDispatchFailed::class);
     }
 
+    public function test_no_events_fire_when_emit_fail_events_is_false(): void
+    {
+        // When called from DispatchLogJob, emitFailEvents=false so that the job's
+        // failed() hook is the single source of LogDispatchFailed events.
+        Event::fake();
+        config()->set('logcenter.fallback', 'webhook');
+
+        $dispatcher = $this->makeDispatcher(
+            primary: TransportResult::failed('telegram', 'Timeout.', retryable: true),
+            fallback: TransportResult::failed('webhook', 'Also failed.', retryable: true),
+        );
+
+        $dispatcher->sendNow($this->makePayload(), 'telegram', null, emitFailEvents: false);
+
+        Event::assertNotDispatched(LogDispatchFailed::class);
+        Event::assertNotDispatched(LogDispatched::class);
+    }
+
+    public function test_fallback_success_still_fires_log_dispatched_when_emit_fail_events_is_false(): void
+    {
+        Event::fake();
+        config()->set('logcenter.fallback', 'webhook');
+
+        $dispatcher = $this->makeDispatcher(
+            primary: TransportResult::failed('telegram', 'Timeout.', retryable: true),
+            fallback: TransportResult::success('webhook', 200),
+        );
+
+        $result = $dispatcher->sendNow($this->makePayload(), 'telegram', null, emitFailEvents: false);
+
+        $this->assertTrue($result->isSuccess());
+        // Successful fallback fires LogDispatched regardless of emitFailEvents.
+        Event::assertDispatched(LogDispatched::class);
+        Event::assertNotDispatched(LogDispatchFailed::class);
+    }
+
     // -------------------------------------------------------------------------
 
     private function makeDispatcher(

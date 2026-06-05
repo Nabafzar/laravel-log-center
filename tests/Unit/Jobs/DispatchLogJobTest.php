@@ -127,6 +127,70 @@ final class DispatchLogJobTest extends TestCase
         });
     }
 
+    public function test_it_calls_fail_on_non_retryable_transport_result(): void
+    {
+        $transport = $this->makeTransport(TransportResult::failed(
+            driver: 'telegram',
+            errorMessage: 'Invalid token.',
+            retryable: false,
+        ));
+
+        $dispatcher = $this->makeDispatcher($transport);
+        $job = new DispatchLogJob($this->makePayload(), 'telegram', 'plain');
+
+        // Non-retryable failures must NOT throw RuntimeException — that would cause
+        // the queue to schedule another retry. Instead, $this->fail() is called which
+        // moves the job to failed_jobs immediately. In the test environment there is no
+        // bound queue job, so fail() is a no-op and handle() returns cleanly.
+        $threw = false;
+
+        try {
+            $job->handle($dispatcher);
+        } catch (RuntimeException) {
+            $threw = true;
+        }
+
+        $this->assertFalse($threw, 'Non-retryable failure must not throw RuntimeException.');
+    }
+
+    public function test_handle_does_not_fire_log_dispatch_failed_event(): void
+    {
+        // sendNow() is called with emitFailEvents: false inside the job so that
+        // only DispatchLogJob::failed() fires LogDispatchFailed once the queue
+        // exhausts all retries — not once per attempt.
+        Event::fake();
+
+        $transport = $this->makeTransport(TransportResult::failed(
+            driver: 'telegram',
+            errorMessage: 'Rate limited.',
+            retryable: true,
+        ));
+
+        $dispatcher = $this->makeDispatcher($transport);
+        $job = new DispatchLogJob($this->makePayload(), 'telegram', 'plain');
+
+        try {
+            $job->handle($dispatcher);
+        } catch (RuntimeException) {
+            // Expected — retryable failure throws so queue can retry.
+        }
+
+        // No event should fire during handle(); only failed() fires it.
+        Event::assertNotDispatched(LogDispatchFailed::class);
+    }
+
+    public function test_failed_hook_fires_exactly_once_after_all_retries_exhausted(): void
+    {
+        Event::fake();
+
+        $job = new DispatchLogJob($this->makePayload(), 'telegram', 'plain');
+
+        // Simulate queue calling failed() after all retry attempts are exhausted.
+        $job->failed(new RuntimeException('Retries exhausted.'));
+
+        Event::assertDispatchedTimes(LogDispatchFailed::class, 1);
+    }
+
     // -------------------------------------------------------------------------
 
     private function makeTransport(TransportResult $result): LogTransportInterface
