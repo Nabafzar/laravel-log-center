@@ -181,7 +181,10 @@ final class LogPayloadFactory
             $normalized .= $parts['scheme'].'://';
         }
 
-        // Intentionally skip user:pass@ — basic-auth credentials must never appear in logs.
+        if (isset($parts['user'])) {
+            $normalized .= $parts['user'].'@';
+            // Intentionally omit :pass — passwords must never appear in logs.
+        }
 
         if (isset($parts['host'])) {
             $normalized .= $parts['host'];

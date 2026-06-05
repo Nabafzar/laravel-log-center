@@ -123,13 +123,8 @@ abstract class AbstractFormatter
         }
 
         if (isset($parts['user'])) {
-            $normalized .= $parts['user'];
-
-            if (isset($parts['pass'])) {
-                $normalized .= ':'.$parts['pass'];
-            }
-
-            $normalized .= '@';
+            $normalized .= $parts['user'].'@';
+            // Intentionally omit :pass — passwords must never appear in logs.
         }
 
         if (isset($parts['host'])) {
