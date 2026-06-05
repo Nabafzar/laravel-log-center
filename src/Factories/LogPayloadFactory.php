@@ -37,6 +37,16 @@ final class LogPayloadFactory
             }
         }
 
+        // Map context['userId'] into $user before discarding it, so non-HTTP logs
+        // that pass a bare userId scalar don't silently lose user identity.
+        if ($user === null && isset($context['userId'])) {
+            $rawId = $context['userId'];
+
+            if (is_scalar($rawId) && $rawId !== '' && $rawId !== null) {
+                $user = ['id' => $rawId];
+            }
+        }
+
         unset(
             $context['exception'],
             $context['request'],
@@ -171,15 +181,7 @@ final class LogPayloadFactory
             $normalized .= $parts['scheme'].'://';
         }
 
-        if (isset($parts['user'])) {
-            $normalized .= $parts['user'];
-
-            if (isset($parts['pass'])) {
-                $normalized .= ':'.$parts['pass'];
-            }
-
-            $normalized .= '@';
-        }
+        // Intentionally skip user:pass@ — basic-auth credentials must never appear in logs.
 
         if (isset($parts['host'])) {
             $normalized .= $parts['host'];
