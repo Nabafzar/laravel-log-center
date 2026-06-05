@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
 
     /*
@@ -38,8 +40,8 @@ return [
     */
     'suppression' => [
         'enabled' => env('LOGCENTER_SUPPRESSION_ENABLED', false),
-        'ttl'     => env('LOGCENTER_SUPPRESSION_TTL', 300),   // seconds
-        'store'   => env('LOGCENTER_SUPPRESSION_STORE', null), // null = default cache
+        'ttl' => env('LOGCENTER_SUPPRESSION_TTL', 300),   // seconds
+        'store' => env('LOGCENTER_SUPPRESSION_STORE', null), // null = default cache
     ],
 
     /*
@@ -203,7 +205,6 @@ return [
         ],
     ],
 
-
     /*
     |--------------------------------------------------------------------------
     | Transport Drivers
@@ -248,13 +249,6 @@ return [
             // Map tag names (from #[LogTopic(tag: '...')]) to Telegram forum thread IDs.
             // Takes priority over topics_level. Example: 'payments' => 1234
             'tag_topics' => [],
-        ],
-
-        'slack' => [
-            'webhook_url' => env('LOGCENTER_SLACK_WEBHOOK'),
-            'channel' => env('LOGCENTER_SLACK_CHANNEL'),
-            'username' => env('LOGCENTER_SLACK_USERNAME', 'Laravel Logs'),
-            'timeout' => env('LOGCENTER_SLACK_TIMEOUT', 5),
         ],
 
         'mattermost' => [
