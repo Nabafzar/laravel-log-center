@@ -3078,17 +3078,36 @@
             let useSSE    = typeof EventSource !== 'undefined';
 
             function levelBadge(level) {
+                const badge = document.createElement('span');
+                badge.className = 'level-badge';
                 const color = LEVEL_COLORS[level] || '#64748b';
-                return `<span class="level-badge" style="background:${color};color:#fff;padding:1px 6px;border-radius:4px;font-size:.68rem;font-weight:700;letter-spacing:.05em;flex-shrink:0">${level.toUpperCase()}</span>`;
+                badge.style.cssText = `background:${color};color:#fff;padding:1px 6px;border-radius:4px;font-size:.68rem;font-weight:700;letter-spacing:.05em;flex-shrink:0`;
+                badge.textContent = String(level).toUpperCase();
+                return badge;
             }
 
+            // Build the card via DOM nodes + textContent only. Log content is
+            // attacker-influenceable (apps log user input; the ingress endpoint
+            // accepts arbitrary messages), so it must never be written as raw HTML.
             function renderEntry(entry) {
                 const card = document.createElement('div');
                 card.className = 'live-card';
-                const time = entry.timestamp
-                    ? `<span class="live-card-time">${entry.timestamp}</span>`
-                    : '';
-                card.innerHTML = `${time}${levelBadge(entry.level || 'info')}<span class="live-card-msg" title="${(entry.message || '').replace(/"/g, '&quot;')}">${entry.message || ''}</span>`;
+
+                if (entry.timestamp) {
+                    const time = document.createElement('span');
+                    time.className = 'live-card-time';
+                    time.textContent = entry.timestamp;
+                    card.appendChild(time);
+                }
+
+                card.appendChild(levelBadge(entry.level || 'info'));
+
+                const msg = document.createElement('span');
+                msg.className = 'live-card-msg';
+                msg.textContent = entry.message || '';
+                msg.title = entry.message || '';
+                card.appendChild(msg);
+
                 return card;
             }
 

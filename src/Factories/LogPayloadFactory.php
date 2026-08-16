@@ -47,16 +47,30 @@ final class LogPayloadFactory
             }
         }
 
+        // Allow explicit routing from context — used when #[LogTopic] is not on the
+        // call stack (queue workers, Octane, console commands). Attribute takes priority.
+        $rawTopicId = $context['logcenter_topic_id'] ?? null;
+        $contextTopicId = (is_int($rawTopicId) || (is_string($rawTopicId) && $rawTopicId !== ''))
+            ? $rawTopicId
+            : null;
+
+        $rawContextTags = $context['logcenter_tags'] ?? null;
+        $contextTags = is_array($rawContextTags)
+            ? $rawContextTags
+            : (is_string($rawContextTags) && $rawContextTags !== '' ? [$rawContextTags] : []);
+
         unset(
             $context['exception'],
             $context['request'],
             $context['userId'],
+            $context['logcenter_topic_id'],
+            $context['logcenter_tags'],
         );
 
-        $tags = $topic?->tags ?? [];
+        $tags = $topic !== null ? $topic->tags : $contextTags;
         $meta = ($topic !== null && $topic->topicId !== null)
             ? ['logcenter_topic_id' => $topic->topicId]
-            : [];
+            : ($contextTopicId !== null ? ['logcenter_topic_id' => $contextTopicId] : []);
 
         return new LogPayload(
             level: $record->level->getName(),

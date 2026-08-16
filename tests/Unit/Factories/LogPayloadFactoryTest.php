@@ -189,4 +189,102 @@ final class LogPayloadFactoryTest extends TestCase
 
         $this->assertSame('thread-abc', $payload->meta['logcenter_topic_id']);
     }
+
+    public function test_it_reads_topic_id_from_context_when_no_attribute_is_present(): void
+    {
+        $record = new LogRecord(
+            datetime: now()->toDateTimeImmutable(),
+            channel: 'testing',
+            level: Level::Error,
+            message: 'Job failed',
+            context: ['logcenter_topic_id' => 1234],
+            extra: [],
+        );
+
+        $payload = LogPayloadFactory::fromLogRecord($record);
+
+        $this->assertSame(1234, $payload->meta['logcenter_topic_id']);
+        $this->assertArrayNotHasKey('logcenter_topic_id', $payload->context);
+    }
+
+    public function test_it_reads_tags_array_from_context_when_no_attribute_is_present(): void
+    {
+        $record = new LogRecord(
+            datetime: now()->toDateTimeImmutable(),
+            channel: 'testing',
+            level: Level::Error,
+            message: 'Job failed',
+            context: ['logcenter_tags' => ['payments', 'checkout']],
+            extra: [],
+        );
+
+        $payload = LogPayloadFactory::fromLogRecord($record);
+
+        $this->assertSame(['payments', 'checkout'], $payload->tags);
+        $this->assertArrayNotHasKey('logcenter_tags', $payload->context);
+    }
+
+    public function test_it_reads_single_string_tag_from_context(): void
+    {
+        $record = new LogRecord(
+            datetime: now()->toDateTimeImmutable(),
+            channel: 'testing',
+            level: Level::Error,
+            message: 'Job failed',
+            context: ['logcenter_tags' => 'payments'],
+            extra: [],
+        );
+
+        $payload = LogPayloadFactory::fromLogRecord($record);
+
+        $this->assertSame(['payments'], $payload->tags);
+    }
+
+    public function test_attribute_takes_priority_over_context_topic_id(): void
+    {
+        $record = new LogRecord(
+            datetime: now()->toDateTimeImmutable(),
+            channel: 'testing',
+            level: Level::Error,
+            message: 'Job failed',
+            context: ['logcenter_topic_id' => 9999],
+            extra: [],
+        );
+
+        $payload = LogPayloadFactory::fromLogRecord($record, new LogTopic('payments', topicId: 1234));
+
+        $this->assertSame(1234, $payload->meta['logcenter_topic_id']);
+    }
+
+    public function test_attribute_takes_priority_over_context_tags(): void
+    {
+        $record = new LogRecord(
+            datetime: now()->toDateTimeImmutable(),
+            channel: 'testing',
+            level: Level::Error,
+            message: 'Job failed',
+            context: ['logcenter_tags' => ['context-tag']],
+            extra: [],
+        );
+
+        $payload = LogPayloadFactory::fromLogRecord($record, new LogTopic('attr-tag'));
+
+        $this->assertSame(['attr-tag'], $payload->tags);
+    }
+
+    public function test_it_reads_string_topic_id_from_context(): void
+    {
+        $record = new LogRecord(
+            datetime: now()->toDateTimeImmutable(),
+            channel: 'testing',
+            level: Level::Error,
+            message: 'Job failed',
+            context: ['logcenter_topic_id' => 'thread-abc'],
+            extra: [],
+        );
+
+        $payload = LogPayloadFactory::fromLogRecord($record);
+
+        $this->assertSame('thread-abc', $payload->meta['logcenter_topic_id']);
+    }
 }

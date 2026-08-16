@@ -18,8 +18,8 @@ use Nabafzar\LogCenter\Suppression\SuppressionManager;
 final readonly class LogDispatcher implements LogDispatcherInterface
 {
     public function __construct(
-        private TransportManager   $transportManager,
-        private PayloadProcessor   $payloadProcessor,
+        private TransportManager $transportManager,
+        private PayloadProcessor $payloadProcessor,
         private SuppressionManager $suppression,
     ) {}
 

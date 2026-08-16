@@ -58,5 +58,11 @@ Thumbs.db
 # Testing Laravel app (if you attach local test project)
 
 /tests/tmp/
+
+# AI / agent files (kept local, must never reach master)
+
 CLAUDE.md
 /FEATURE_SUGGESTION.md
+AGENTS.md
+AI_MANIFEST.md
+llms.txt
