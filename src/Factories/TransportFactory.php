@@ -27,6 +27,10 @@ final class TransportFactory
      */
     public function make(string $name): LogTransportInterface
     {
+        // TransportManager lowercases configured names, so custom drivers are
+        // stored and looked up in lowercase too.
+        $name = strtolower(trim($name));
+
         if (isset($this->customDrivers[$name])) {
             $transport = ($this->customDrivers[$name])($this->app);
 
@@ -54,6 +58,6 @@ final class TransportFactory
 
     public function extend(string $name, \Closure $resolver): void
     {
-        $this->customDrivers[$name] = $resolver;
+        $this->customDrivers[strtolower(trim($name))] = $resolver;
     }
 }

@@ -170,6 +170,46 @@ abstract class AbstractFormatter
         return mb_substr($text, 0, $limit).$suffix;
     }
 
+    /**
+     * Truncate Markdown without leaving a code block open. An unclosed fence
+     * makes Telegram reject the message and swallows the rest of the text in
+     * other renderers. The result, notice included, never exceeds $limit.
+     */
+    protected function truncateMarkdown(string $text, int $limit, string $suffix = PHP_EOL.'... [truncated]'): string
+    {
+        if (mb_strlen($text) <= $limit) {
+            return $text;
+        }
+
+        $fence = PHP_EOL.'```';
+        $cut = mb_substr($text, 0, max(0, $limit - mb_strlen($suffix) - mb_strlen($fence)));
+
+        if (substr_count($cut, '```') % 2 === 1) {
+            $cut .= $fence;
+        }
+
+        return $cut.$suffix;
+    }
+
+    /**
+     * @param  array<int, mixed>  $tags
+     * @return list<string>
+     */
+    protected function hashtags(array $tags): array
+    {
+        $hashtags = [];
+
+        foreach ($tags as $tag) {
+            if (! is_scalar($tag) || trim((string) $tag) === '') {
+                continue;
+            }
+
+            $hashtags[] = '#'.preg_replace('/[^\w]/u', '_', trim((string) $tag));
+        }
+
+        return $hashtags;
+    }
+
     protected function truncateNullable(
         ?string $text,
         int $limit,

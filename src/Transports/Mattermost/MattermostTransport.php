@@ -61,14 +61,7 @@ final class MattermostTransport extends AbstractTransport
                 ],
             );
         } catch (Throwable $exception) {
-            $statusCode = $this->statusCodeFromException($exception);
-
-            return $this->failed(
-                errorMessage: $exception->getMessage(),
-                exception: $exception,
-                statusCode: $statusCode,
-                retryable: $this->isRetryable($statusCode),
-            );
+            return $this->failedFromException($exception, [$webhookUrl]);
         }
     }
 
@@ -118,14 +111,7 @@ final class MattermostTransport extends AbstractTransport
                 ],
             );
         } catch (Throwable $exception) {
-            $statusCode = $this->statusCodeFromException($exception);
-
-            return $this->failed(
-                errorMessage: $exception->getMessage(),
-                exception: $exception,
-                statusCode: $statusCode,
-                retryable: $this->isRetryable($statusCode),
-            );
+            return $this->failedFromException($exception, [$this->botToken()]);
         }
     }
 

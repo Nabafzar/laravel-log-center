@@ -149,4 +149,16 @@ final class PayloadProcessorTest extends TestCase
         $this->assertSame(['first', 'second'], $log);
         $this->assertSame('second', $processed->extra['step']);
     }
+
+    public function test_it_replaces_invalid_utf8_so_providers_can_encode_the_payload(): void
+    {
+        $payload = (new PayloadProcessor)->process($this->makePayload([
+            'message' => "broken \xB1 bytes",
+            'context' => ['note' => "also \xFF broken"],
+        ]));
+
+        $this->assertTrue(mb_check_encoding($payload->message, 'UTF-8'));
+        $this->assertTrue(mb_check_encoding($payload->context['note'], 'UTF-8'));
+        $this->assertNotFalse(json_encode([$payload->message, $payload->context]));
+    }
 }

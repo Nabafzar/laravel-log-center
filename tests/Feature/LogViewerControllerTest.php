@@ -234,4 +234,32 @@ LOG);
 
         return $directory;
     }
+
+    public function test_it_only_serves_log_files_from_a_directory_root(): void
+    {
+        $directory = $this->logDirectory('logcenter-feature-extension-tests');
+        $secret = $directory.'/session-file';
+        file_put_contents($secret, 'secret session data');
+
+        config()->set('logcenter.viewer.paths', [$directory]);
+
+        $this->get('/log-viewer/download?file='.urlencode($secret))->assertNotFound();
+        $this->get('/log-viewer?file='.urlencode($secret))->assertNotFound();
+        $this->getJson('/log-viewer/tail/poll?file='.urlencode($secret))
+            ->assertOk()
+            ->assertJson(['entries' => [], 'offset' => 0]);
+    }
+
+    public function test_tail_poll_handles_invalid_utf8_in_log_lines(): void
+    {
+        $directory = $this->logDirectory('logcenter-feature-utf8-tests');
+        $file = $directory.'/utf8.log';
+        file_put_contents($file, "[2026-05-08 10:00:00] local.ERROR: Broken \xB1 bytes\n");
+
+        config()->set('logcenter.viewer.paths', [$directory]);
+
+        $this->getJson('/log-viewer/tail/poll?offset=0&file='.urlencode($file))
+            ->assertOk()
+            ->assertJsonCount(1, 'entries');
+    }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Nabafzar\LogCenter\Tests\Unit\Attributes;
 
+use Illuminate\Http\Request;
+use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Http;
 use Nabafzar\LogCenter\Attributes\AttributeResolver;
 use Nabafzar\LogCenter\Attributes\LogTopic;
@@ -317,5 +319,26 @@ final class LogTopicTest extends TestCase
             new PayloadProcessor,
             new SuppressionManager,
         );
+    }
+
+    public function test_route_fallback_is_not_reused_for_a_different_route(): void
+    {
+        $resolver = new AttributeResolver;
+
+        $annotated = Request::create('/payments', 'GET');
+        $annotated->setRouteResolver(static fn (): Route => new Route('GET', '/payments', [
+            'uses' => AnnotatedFixture::class.'@routeAction',
+        ]));
+        $this->app->instance('request', $annotated);
+
+        $this->assertSame(['payments', 'bale'], $resolver->resolve()?->tags);
+
+        $plain = Request::create('/other', 'GET');
+        $plain->setRouteResolver(static fn (): Route => new Route('GET', '/other', [
+            'uses' => static fn (): string => 'ok',
+        ]));
+        $this->app->instance('request', $plain);
+
+        $this->assertNull($resolver->resolve());
     }
 }

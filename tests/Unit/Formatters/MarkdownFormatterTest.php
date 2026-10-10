@@ -101,4 +101,26 @@ final class MarkdownFormatterTest extends TestCase
 
         $this->assertStringNotContainsString('[HTTP', $formatted->content);
     }
+
+    public function test_truncation_closes_open_code_blocks_and_respects_the_limit(): void
+    {
+        config()->set('logcenter.formatters.markdown.max_length', 300);
+
+        $formatted = (new MarkdownFormatter)->format($this->makePayload([
+            'context' => ['payload' => str_repeat('x', 1000)],
+        ]));
+
+        $this->assertLessThanOrEqual(300, mb_strlen($formatted->content));
+        $this->assertSame(0, substr_count($formatted->content, '```') % 2);
+        $this->assertStringEndsWith('[truncated]', $formatted->content);
+    }
+
+    public function test_it_ignores_non_string_tags(): void
+    {
+        $formatted = (new MarkdownFormatter)->format($this->makePayload([
+            'tags' => ['payments', ['nested'], null],
+        ]));
+
+        $this->assertStringContainsString('#payments', $formatted->content);
+    }
 }

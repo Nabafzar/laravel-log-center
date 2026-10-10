@@ -139,7 +139,7 @@ final class LogViewerController extends Controller
                         'entries' => $result['entries'],
                         'offset' => $offset,
                         'rotated' => $result['rotated'],
-                    ]);
+                    ], JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR);
 
                     echo "data: {$payload}\n\n";
                     flush();
@@ -180,7 +180,7 @@ final class LogViewerController extends Controller
 
         $result = $this->files->tailFrom($file, $offset);
 
-        return response()->json($result);
+        return response()->json($result, options: JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR);
     }
 
     public function download(Request $request): BinaryFileResponse

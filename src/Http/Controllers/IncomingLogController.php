@@ -7,6 +7,7 @@ namespace Nabafzar\LogCenter\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Nabafzar\LogCenter\Contracts\LogDispatcherInterface;
 use Nabafzar\LogCenter\Enums\LogLevelEnum;
@@ -23,7 +24,7 @@ final class IncomingLogController extends Controller
             ], Response::HTTP_UNAUTHORIZED);
         }
 
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'level' => ['required', 'string', Rule::in(array_column(LogLevelEnum::cases(), 'value'))],
             'message' => ['required', 'string', 'max:10000'],
             'channel' => ['sometimes', 'nullable', 'string', 'max:100'],
@@ -44,7 +45,16 @@ final class IncomingLogController extends Controller
             'meta' => ['sometimes', 'nullable', 'array'],
         ]);
 
-        $payload = IncomingLogPayloadFactory::fromArray($validated);
+        // Answer with JSON even when the client sends no Accept header; the
+        // default would redirect, which an API client cannot act on.
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors()->toArray(),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $payload = IncomingLogPayloadFactory::fromArray($validator->validated());
         $result = $dispatcher->dispatch($payload);
 
         if ($result->isFailure()) {

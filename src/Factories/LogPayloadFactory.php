@@ -54,10 +54,7 @@ final class LogPayloadFactory
             ? $rawTopicId
             : null;
 
-        $rawContextTags = $context['logcenter_tags'] ?? null;
-        $contextTags = is_array($rawContextTags)
-            ? $rawContextTags
-            : (is_string($rawContextTags) && $rawContextTags !== '' ? [$rawContextTags] : []);
+        $contextTags = self::normalizeTags($context['logcenter_tags'] ?? null);
 
         unset(
             $context['exception'],
@@ -95,6 +92,29 @@ final class LogPayloadFactory
             user: $user,
             meta: $meta,
         );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function normalizeTags(mixed $tags): array
+    {
+        $tags = is_array($tags) ? $tags : [$tags];
+        $normalized = [];
+
+        foreach ($tags as $tag) {
+            if (! is_string($tag) && ! is_int($tag)) {
+                continue;
+            }
+
+            $tag = trim((string) $tag);
+
+            if ($tag !== '') {
+                $normalized[$tag] = $tag;
+            }
+        }
+
+        return array_values($normalized);
     }
 
     private static function extractException(array $context): ?Throwable
@@ -334,7 +354,7 @@ final class LogPayloadFactory
         ];
 
         return sha1(
-            json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '',
+            json_encode($payload, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         );
     }
 }

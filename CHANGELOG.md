@@ -19,6 +19,19 @@ All notable changes to this project are documented in this file. Releases follow
 
 ### Fixed
 
+- **Security:** bot tokens and webhook URLs leaked into failure messages. Guzzle puts the request URL in connection errors, and that text reached `LogDispatchFailed`, the `failed_jobs` table and the incoming API response. Transports now replace configured secrets with `******`
+- **Security:** the viewer served any file under a configured directory, not only log files. With a broad root such as `storage_path()`, session or app files could be downloaded. Inside a directory root only `*.log` files are served now
+- `LOGCENTER_LEVEL` was never applied. With the channel left at Laravel's default `debug` level, every debug and info log was sent to the provider. The handler now requires both the channel level and `LOGCENTER_LEVEL`
+- A log message with invalid UTF-8 threw a `JsonException` while building the fingerprint, so the log was dropped. Invalid bytes are now replaced before formatting, and the viewer uses the same fingerprint recipe
+- Non-string values in `logcenter_tags` context (arrays, `null`) caused a `TypeError` in the formatters and the log was dropped. Tags are now filtered to strings
+- `#[LogTopic]` found through the route fallback was cached by call stack, so in long-running workers (Octane) later requests on other routes reused the first route's topic
+- Logging from inside a dispatch (for example a `LogDispatchFailed` listener that writes to the same channel while the transport is down) recursed until the stack overflowed. The handler now ignores nested records
+- Telegram rejected messages that were cut to the length limit in HTML or Markdown mode, because the cut could split a tag or code block. Such messages are now sent as plain text
+- The Markdown and Bale formatters could leave a code block open when truncating and went over `max_length`; the plain formatter also went over it. Truncated output now stays within the limit and closes open code blocks
+- The plain formatter printed the exception `File:` and `Line:` twice
+- Incoming log validation errors redirected (302) when the client sent no `Accept: application/json` header. They now always return JSON 422
+- Custom transports registered with `extend()` under a mixed-case name could not be resolved, because configured driver names are lowercased
+- Live tail returned broken JSON (SSE) or a 500 error (poll endpoint) when a log line contained invalid UTF-8
 - Notification "open in viewer" links landed on an empty page for Laravel exceptions: the viewer did not parse the multi-line exception JSON Laravel writes, so neither the fingerprint nor the search term matched. The viewer now parses the exception class, message, file, line, stack frames and previous exceptions, and its fingerprint matches the notification's
 - The viewer's level chart left out emergency, alert and critical entries
 - Live tail re-sent the last complete entry whenever new lines were appended
