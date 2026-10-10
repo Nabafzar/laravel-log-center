@@ -244,12 +244,12 @@ class BaleMarkdownFormatter extends AbstractFormatter implements LogFormatterInt
 
     private function maxLength(): int
     {
-        return $this->configInt('logcenter.formatters.bale_markdown.max_length', 3500);
+        return $this->configInt('logcenter.formatters.bale_markdown.max_length', 3500, 'logcenter.truncate.message');
     }
 
     private function traceMaxLength(): int
     {
-        return $this->configInt('logcenter.formatters.bale_markdown.trace_max_length', 1200);
+        return $this->configInt('logcenter.formatters.bale_markdown.trace_max_length', 1200, 'logcenter.truncate.trace');
     }
 
     private function formatBaleUserValue(LogPayload $payload): ?string

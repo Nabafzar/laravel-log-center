@@ -31,7 +31,9 @@ final class DispatchLogJob implements ShouldQueue
 
     public function tries(): int
     {
-        return max(1, (int) config('logcenter.queue.tries', 3));
+        $tries = config('logcenter.queue.tries');
+
+        return is_numeric($tries) && (int) $tries > 0 ? (int) $tries : 3;
     }
 
     /**

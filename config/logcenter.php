@@ -116,7 +116,8 @@ return [
     | Global Truncation Fallback
     |--------------------------------------------------------------------------
     |
-    | Used only if a driver does not define its own limits.
+    | Used when a formatter has no max_length / trace_max_length of its own
+    | (for example in a config published before that key existed).
     |
     */
 
@@ -196,6 +197,7 @@ return [
 
         'plain' => [
             'max_length' => env('LOGCENTER_PLAIN_FORMATTER_MAX_LENGTH', 3500),
+            'trace_max_length' => env('LOGCENTER_PLAIN_FORMATTER_TRACE_MAX_LENGTH', 1200),
         ],
 
         'json' => [
@@ -205,6 +207,7 @@ return [
 
         'markdown' => [
             'max_length' => env('LOGCENTER_MARKDOWN_FORMATTER_MAX_LENGTH', 3500),
+            'trace_max_length' => env('LOGCENTER_MARKDOWN_FORMATTER_TRACE_MAX_LENGTH', 1200),
         ],
 
         'telegram_html' => [

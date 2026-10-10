@@ -114,4 +114,42 @@ final class PlainTextFormatterTest extends TestCase
         $this->assertSame(1, substr_count($formatted->content, 'File: /app/Foo.php'));
         $this->assertSame(1, substr_count($formatted->content, 'Line: 42'));
     }
+
+    public function test_an_empty_max_length_env_value_keeps_the_default_limit(): void
+    {
+        // LOGCENTER_PLAIN_FORMATTER_MAX_LENGTH= in .env reads as an empty string.
+        config()->set('logcenter.formatters.plain.max_length', '');
+
+        $formatted = (new PlainTextFormatter)->format($this->makePayload());
+
+        $this->assertStringContainsString('Something failed', $formatted->content);
+        $this->assertStringNotContainsString('[truncated]', $formatted->content);
+    }
+
+    public function test_the_global_truncate_settings_apply_when_the_formatter_has_none(): void
+    {
+        config()->set('logcenter.formatters.plain', []);
+        config()->set('logcenter.truncate.message', 200);
+        config()->set('logcenter.truncate.trace', 50);
+
+        $formatted = (new PlainTextFormatter)->format($this->makePayload([
+            'trace' => str_repeat('#0 /app/Foo.php(1): bar()'.PHP_EOL, 20),
+            'context' => ['payload' => str_repeat('x', 500)],
+        ]));
+
+        $this->assertLessThanOrEqual(200, mb_strlen($formatted->content));
+    }
+
+    public function test_the_global_trace_setting_limits_the_trace(): void
+    {
+        config()->set('logcenter.formatters.plain', ['max_length' => 3500]);
+        config()->set('logcenter.truncate.trace', 50);
+
+        $formatted = (new PlainTextFormatter)->format($this->makePayload([
+            'trace' => str_repeat('#0 /app/Foo.php(1): bar()'.PHP_EOL, 20),
+        ]));
+
+        $trace = substr($formatted->content, strpos($formatted->content, 'Trace:'));
+        $this->assertLessThan(120, mb_strlen($trace));
+    }
 }

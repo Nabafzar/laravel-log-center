@@ -209,4 +209,19 @@ final class TelegramTransportTest extends TestCase
         $this->assertTrue($result->isSuccess());
         Http::assertSent(static fn ($request): bool => $request->data()['message_thread_id'] === 77);
     }
+
+    public function test_empty_env_values_keep_the_default_limit_and_timeout(): void
+    {
+        config()->set('logcenter.drivers.telegram.token', 'TEST_TOKEN');
+        config()->set('logcenter.drivers.telegram.chat_id', '12345');
+        // LOGCENTER_TELEGRAM_MESSAGE_LIMIT= and LOGCENTER_TELEGRAM_TIMEOUT= read as empty strings.
+        config()->set('logcenter.drivers.telegram.limits.message', '');
+        config()->set('logcenter.drivers.telegram.timeout', '');
+
+        Http::fake(['https://api.telegram.org/*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]])]);
+
+        (new TelegramTransport)->send($this->makePayload(), new FormattedMessage('hello telegram world'));
+
+        Http::assertSent(static fn ($request): bool => $request->data()['text'] === 'hello telegram world');
+    }
 }

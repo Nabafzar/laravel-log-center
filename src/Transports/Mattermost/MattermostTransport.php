@@ -180,7 +180,7 @@ final class MattermostTransport extends AbstractTransport
 
     private function timeout(): int
     {
-        return max(1, (int) config('logcenter.drivers.mattermost.timeout', 5));
+        return $this->positiveInt(config('logcenter.drivers.mattermost.timeout'), 5);
     }
 
     private function postsEndpoint(): string

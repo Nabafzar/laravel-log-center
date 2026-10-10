@@ -201,12 +201,12 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
 
     private function maxLength(): int
     {
-        return $this->configInt('logcenter.formatters.markdown.max_length', 3500);
+        return $this->configInt('logcenter.formatters.markdown.max_length', 3500, 'logcenter.truncate.message');
     }
 
     private function traceMaxLength(): int
     {
-        return $this->configInt('logcenter.formatters.markdown.trace_max_length', 1200);
+        return $this->configInt('logcenter.formatters.markdown.trace_max_length', 1200, 'logcenter.truncate.trace');
     }
 
     private function source(LogPayload $payload): ?string

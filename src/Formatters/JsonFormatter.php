@@ -78,6 +78,6 @@ class JsonFormatter extends AbstractFormatter implements LogFormatterInterface
 
     private function traceMaxLength(): int
     {
-        return $this->configInt('logcenter.formatters.json.trace_max_length', 5000);
+        return $this->configInt('logcenter.formatters.json.trace_max_length', 5000, 'logcenter.truncate.trace');
     }
 }

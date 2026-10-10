@@ -54,7 +54,7 @@ final class LogViewerController extends Controller
             : collect();
 
         $allGroups = $this->files->groupedEntries($entries);
-        $perPage = max(1, (int) config('logcenter.viewer.per_page', 50));
+        $perPage = is_numeric($perPage = config('logcenter.viewer.per_page')) && (int) $perPage > 0 ? (int) $perPage : 50;
         $totalGroups = $allGroups->count();
         $pageCount = max(1, (int) ceil($totalGroups / $perPage));
         // Past the last page stays empty, but a huge number must not overflow the offset.

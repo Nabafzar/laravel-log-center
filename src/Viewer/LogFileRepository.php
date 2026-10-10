@@ -41,7 +41,7 @@ final class LogFileRepository
             return ($right['modified_at'] ?? 0) <=> ($left['modified_at'] ?? 0);
         });
 
-        $maxFiles = max(1, (int) config('logcenter.viewer.max_files', 20));
+        $maxFiles = is_numeric($maxFiles = config('logcenter.viewer.max_files')) && (int) $maxFiles > 0 ? (int) $maxFiles : 20;
         $files = array_slice($files, 0, $maxFiles, true);
 
         foreach ($files as $path => $file) {
@@ -696,7 +696,9 @@ final class LogFileRepository
             return false;
         }
 
-        $maxFileSize = max(0, (int) config('logcenter.viewer.max_file_size', 10 * 1024 * 1024));
+        // 0 means no limit; an empty or invalid value keeps the default.
+        $maxFileSize = config('logcenter.viewer.max_file_size');
+        $maxFileSize = is_numeric($maxFileSize) ? max(0, (int) $maxFileSize) : 10 * 1024 * 1024;
 
         if ($maxFileSize === 0) {
             return true;

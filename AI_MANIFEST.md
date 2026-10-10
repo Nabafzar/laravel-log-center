@@ -192,8 +192,9 @@ Global keys:
 - `mask.replacement`: replacement string for sensitive data.
 - `mask.case_sensitive`: controls key/text masking case sensitivity.
 - `mask.keys`: sensitive keys. A key matches when its name contains one of them.
-- `truncate.message`: global fallback message limit.
-- `truncate.trace`: global fallback trace limit.
+- `truncate.message`: fallback message limit, used when a formatter has no valid `max_length`.
+- `truncate.trace`: fallback trace limit, used when a formatter has no valid `trace_max_length`.
+- Integer settings treat empty, zero or non-numeric values (`LOGCENTER_X=` in `.env`) as unset and use the default.
 - `viewer.enabled`: toggles the built-in local file viewer.
 - `viewer.route_prefix`: route prefix for the viewer.
 - `viewer.middleware`: middleware stack for viewer routes.
@@ -271,6 +272,8 @@ Formatter:
 - `LOGCENTER_JSON_FORMATTER_PRETTY`
 - `LOGCENTER_JSON_TRACE_MAX_LENGTH`
 - `LOGCENTER_MARKDOWN_FORMATTER_MAX_LENGTH`
+- `LOGCENTER_MARKDOWN_FORMATTER_TRACE_MAX_LENGTH`
+- `LOGCENTER_PLAIN_FORMATTER_TRACE_MAX_LENGTH`
 - `LOGCENTER_TELEGRAM_HTML_FORMATTER_MAX_LENGTH`
 - `LOGCENTER_TELEGRAM_HTML_FORMATTER_TRACE_MAX_LENGTH`
 - `LOGCENTER_BALE_MARKDOWN_FORMATTER_MAX_LENGTH`
@@ -310,7 +313,7 @@ Bale:
 - `LOGCENTER_BALE_CHAT_ID`
 - `LOGCENTER_BALE_TIMEOUT`
 
-Slack:
+Slack (planned — not in `config/logcenter.php` yet):
 
 - `LOGCENTER_SLACK_WEBHOOK`
 - `LOGCENTER_SLACK_CHANNEL`
@@ -417,7 +420,7 @@ Before tagging a release:
 
 - `composer validate` passes.
 - PHP syntax checks pass for all `src` and `config` PHP files.
-- Unit and integration tests pass (currently 275 tests / 757 assertions).
+- Unit and integration tests pass (currently 279 tests / 763 assertions).
 - README documents installation, Laravel channel setup, environment variables,
   supported drivers, extension examples, and security notes. ✓
 - CHANGELOG.md exists and is up to date. ✓
