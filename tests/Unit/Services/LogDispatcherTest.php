@@ -130,7 +130,7 @@ final class LogDispatcherTest extends TestCase
         config()->set('logcenter.queue.enabled', true);
         config()->set('logcenter.default', 'telegram');
 
-        $manager = $this->createMock(TransportManager::class);
+        $manager = $this->createStub(TransportManager::class);
         $manager->method('defaultDriverName')->willReturn('telegram');
         $manager->method('formatterName')->willReturn('telegram_html');
 

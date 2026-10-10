@@ -2,7 +2,7 @@
 
 > Package: `nabafzar/laravel-log-center`  
 > Namespace: `Nabafzar\LogCenter`  
-> PHP `^8.2` · Laravel 10/11/12 · Monolog `^3.0`
+> PHP `^8.2` · Laravel 10/11/12/13 · Monolog `^3.0`
 
 ---
 

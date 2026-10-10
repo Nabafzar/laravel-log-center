@@ -11,7 +11,8 @@ drivers, configuration, or public contracts change.
 - Type: Laravel library package
 - License: MIT
 - PHP: `^8.2`
-- Laravel components: `illuminate/support`, `illuminate/log` `^10.0|^11.0|^12.0`
+- Laravel: `laravel/framework` `^10.0|^11.0|^12.0|^13.0` (CI tests each major)
+- HTTP client: `guzzlehttp/guzzle` `^7.5` (Laravel 10 does not install it by itself)
 - Monolog: `^3.0`
 - Goal: centralize Laravel log delivery, driver switching, message formatting,
   masking, optional async dispatch, and later a built-in log viewer.

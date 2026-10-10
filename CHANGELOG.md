@@ -24,6 +24,9 @@ All notable changes to this project are documented in this file. Releases follow
 
 ### Changed
 
+- Composer now requires `laravel/framework` (`^10.0|^11.0|^12.0|^13.0`) and `guzzlehttp/guzzle` instead of only `illuminate/support` and `illuminate/log`; the package already used framework classes and the HTTP client, so the old constraints under-declared its real dependencies
+- Laravel 13 support added; CI now runs the test suite on Laravel 10, 11, 12 and 13
+
 - Driver and formatter names in `TransportManager` are now normalised to lowercase — `LOGCENTER_DRIVER=Bale` works the same as `bale`
 - `debug_backtrace` depth reduced from 50 to 25; `resolve()` result is now cached per call-stack hash
 - `PayloadProcessor` caches config values once on construction instead of rebuilding the regex on every log event

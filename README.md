@@ -97,11 +97,11 @@ providers**, that is what this package adds on top of Monolog.
 
 ## Requirements
 
-| Requirement | Supported  |
-|-------------|------------|
-| PHP         | 8.2, 8.3   |
-| Laravel     | 10, 11, 12 |
-| Monolog     | 3.x        |
+| Requirement | Supported                              |
+|-------------|----------------------------------------|
+| PHP         | 8.2, 8.3, 8.4 (Laravel 13 needs 8.3+)  |
+| Laravel     | 10, 11, 12, 13                         |
+| Monolog     | 3.x                                    |
 
 ## Installation
 

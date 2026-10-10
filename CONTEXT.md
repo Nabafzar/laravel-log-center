@@ -10,7 +10,7 @@
 - **نام:** `nabafzar/laravel-log-center`
 - **Namespace:** `Nabafzar\LogCenter`
 - **نوع:** Laravel library package
-- **PHP:** `^8.2` | **Laravel:** 10/11/12 | **Monolog:** `^3.0`
+- **PHP:** `^8.2` | **Laravel:** 10/11/12/13 | **Monolog:** `^3.0`
 - **هدف:** ارسال متمرکز لاگ‌های Laravel به transport های قابل تنظیم (Telegram، Bale، Mattermost، Webhook و...)
 
 ---
