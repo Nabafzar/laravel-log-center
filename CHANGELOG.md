@@ -17,6 +17,10 @@ All notable changes to this project are documented in this file. Releases follow
 - **`PayloadEnricherInterface`** — inject custom context (git SHA, hostname, deploy version) into every log payload before masking via `PayloadProcessor::addEnricher()`
 - **HTTP status in formatters** — when an exception is logged its HTTP status code (e.g. 500, 404) is included alongside the exception class name
 
+### Security
+
+- **Breaking:** the log viewer now requires the `viewLogCenter` gate. Before, the `auth` middleware was the only check, so in an app with public sign-up every logged-in user could read the logs. Without the gate the viewer only opens in the `local` environment; define `Gate::define('viewLogCenter', fn ($user) => ...)` to allow access elsewhere
+
 ### Fixed
 
 - Bale rejected messages over its 4096-character limit (for example with `LOGCENTER_BALE_FORMATTER=json` or a raised `max_length`), so the log was lost. Long messages are now shortened and sent without a parse mode, as Telegram already did
