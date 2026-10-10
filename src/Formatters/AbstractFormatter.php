@@ -9,6 +9,8 @@ use Throwable;
 
 abstract class AbstractFormatter
 {
+    private const VIEWER_SEARCH_MAX_LENGTH = 100;
+
     protected function viewerUrl(LogPayload $payload): ?string
     {
         if (empty($payload->fingerprint) || ! config('logcenter.viewer.enabled', false)) {
@@ -35,15 +37,20 @@ abstract class AbstractFormatter
         return substr((string) $payload->fingerprint, 0, 14);
     }
 
+    /**
+     * The viewer matches the search term as a substring, so a prefix finds the
+     * same entries. Capping it keeps a long message (a QueryException with its
+     * full SQL) from turning the link into the whole notification.
+     */
     protected function viewerSearchTerm(LogPayload $payload): ?string
     {
         $parts = array_filter([
             $payload->message,
             $payload->exception['class'] ?? null,
             $payload->exception['message'] ?? null,
-        ]);
+        ], static fn (mixed $part): bool => is_string($part) && $part !== '');
 
-        $term = trim(implode(' ', $parts));
+        $term = trim(mb_substr(trim(implode(' ', $parts)), 0, self::VIEWER_SEARCH_MAX_LENGTH));
 
         return $term !== '' ? $term : null;
     }
@@ -313,7 +320,9 @@ abstract class AbstractFormatter
 
     protected function stringValue(mixed $value, int $limit = 0): ?string
     {
-        if ($value === null || $value === '') {
+        // Incoming and context payloads are free-form; skip arrays and objects
+        // instead of failing on "Array to string conversion".
+        if ($value === null || $value === '' || ! is_scalar($value)) {
             return null;
         }
 
@@ -328,7 +337,9 @@ abstract class AbstractFormatter
 
     protected function exceptionClass(array $exception): string
     {
-        return (string) ($exception['class'] ?? $exception['type'] ?? 'Exception');
+        $class = $exception['class'] ?? $exception['type'] ?? null;
+
+        return is_string($class) && $class !== '' ? $class : 'Exception';
     }
 
     protected function exceptionHttpStatus(array $exception): ?int

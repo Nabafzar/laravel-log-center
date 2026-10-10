@@ -171,14 +171,16 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
 
     private function requestLine(string $label, mixed $value): ?string
     {
-        if ($value === null || $value === '' || $value === []) {
+        $value = $this->stringValue($value);
+
+        if ($value === null) {
             return null;
         }
 
         return sprintf(
             '*%s:* `%s`',
             $this->escapeMarkdownInline($label),
-            $this->escapeMarkdownInline($this->truncate((string) $value, 200)),
+            $this->escapeMarkdownInline($this->truncate($value, 200)),
         );
     }
 

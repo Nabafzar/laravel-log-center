@@ -357,6 +357,10 @@ arrays and message string patterns.
 **Default masked keys:** `password`, `password_confirmation`, `token`, `access_token`,
 `refresh_token`, `authorization`, `api_key`, `secret`
 
+A key is masked when its name *contains* one of these (case-insensitive by default), so `password`
+also covers `current_password` and `new_password`, and `token` covers `api_token` and Laravel's
+CSRF `_token`.
+
 ```php
 'mask' => [
     'keys'           => ['password', 'token', 'stripe_key'],

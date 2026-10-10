@@ -161,4 +161,27 @@ final class PayloadProcessorTest extends TestCase
         $this->assertTrue(mb_check_encoding($payload->context['note'], 'UTF-8'));
         $this->assertNotFalse(json_encode([$payload->message, $payload->context]));
     }
+
+    public function test_it_masks_keys_that_contain_a_sensitive_key(): void
+    {
+        $payload = (new PayloadProcessor)->process($this->makePayload([
+            'request' => ['body' => [
+                'current_password' => 'old-secret',
+                'new_password' => 'new-secret',
+                '_token' => 'csrf-token',
+                'client_secret' => 'client-secret',
+                'X-Api-Token' => 'api-token',
+                'email' => 'user@example.com',
+            ]],
+        ]));
+
+        $this->assertSame([
+            'current_password' => '******',
+            'new_password' => '******',
+            '_token' => '******',
+            'client_secret' => '******',
+            'X-Api-Token' => '******',
+            'email' => 'user@example.com',
+        ], $payload->request['body']);
+    }
 }
