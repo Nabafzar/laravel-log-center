@@ -188,6 +188,10 @@ class TelegramTransport extends AbstractTransport
             $tagTopics = config('logcenter.drivers.telegram.tag_topics', []);
             if (is_array($tagTopics)) {
                 foreach ($payload->tags as $tag) {
+                    if (! is_string($tag) && ! is_int($tag)) {
+                        continue;
+                    }
+
                     $topicId = $this->configuredInt($tagTopics[$tag] ?? null);
                     if ($topicId !== null) {
                         return $topicId;

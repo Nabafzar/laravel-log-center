@@ -132,6 +132,9 @@ return [
     |
     | A lightweight built-in viewer for local log files.
     |
+    | Access is decided by the `viewLogCenter` gate. Until you define it, the
+    | viewer only opens in the `local` environment (403 everywhere else).
+    |
     */
     'viewer' => [
         'enabled' => env('LOGCENTER_VIEWER_ENABLED', false),

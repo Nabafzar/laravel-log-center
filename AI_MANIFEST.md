@@ -89,6 +89,7 @@ Implemented code:
   - `src/Http/Controllers/LogViewerController.php`
   - `src/Viewer/LogFileRepository.php`
   - `routes/web.php`
+  - `src/Http/Middleware/AuthorizeLogViewer.php` (`viewLogCenter` gate)
   - `resources/views/index.blade.php`
   - log download action for the selected file
   - viewer links now use a short fingerprint token plus a message search fallback
@@ -198,6 +199,10 @@ Global keys:
 - `viewer.middleware`: middleware stack for viewer routes.
 - `viewer.auth.enabled`: adds auth middleware to viewer routes.
 - `viewer.auth.middleware`: middleware applied when auth is enabled.
+- Viewer authorization: `src/Http/Middleware/AuthorizeLogViewer.php` runs last on
+  every viewer route and checks the `viewLogCenter` gate; without the gate only
+  the `local` environment is allowed. Tests define an allow-all gate in
+  `TestCase::setUp()` (`$allowLogViewer`); `LogViewerAuthTest` turns it off.
 - `viewer.paths`: directories or files scanned for logs. Inside a directory root only `*.log`
   files are served (index, download, tail).
 - `viewer.per_page`: number of entries displayed per page.
@@ -412,7 +417,7 @@ Before tagging a release:
 
 - `composer validate` passes.
 - PHP syntax checks pass for all `src` and `config` PHP files.
-- Unit and integration tests pass (currently 267 tests / 738 assertions).
+- Unit and integration tests pass (currently 275 tests / 757 assertions).
 - README documents installation, Laravel channel setup, environment variables,
   supported drivers, extension examples, and security notes. ✓
 - CHANGELOG.md exists and is up to date. ✓

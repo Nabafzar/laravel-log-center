@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Nabafzar\LogCenter\Http\Controllers\LogViewerController;
+use Nabafzar\LogCenter\Http\Middleware\AuthorizeLogViewer;
 
 $middleware = array_values(array_filter((array) config('logcenter.viewer.middleware', ['web'])));
 $authEnabled = (bool) config('logcenter.viewer.auth.enabled', false);
 $authMiddleware = array_values(array_filter((array) config('logcenter.viewer.auth.middleware', ['auth'])));
 $middleware = $authEnabled ? array_values(array_unique(array_merge($middleware, $authMiddleware))) : $middleware;
+// Always last, so the authenticated user is resolved before the gate runs.
+$middleware[] = AuthorizeLogViewer::class;
 $prefix = trim((string) config('logcenter.viewer.route_prefix', 'log-viewer'), '/');
 
 Route::middleware($middleware)

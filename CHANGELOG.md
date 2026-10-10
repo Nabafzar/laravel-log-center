@@ -17,8 +17,14 @@ All notable changes to this project are documented in this file. Releases follow
 - **`PayloadEnricherInterface`** — inject custom context (git SHA, hostname, deploy version) into every log payload before masking via `PayloadProcessor::addEnricher()`
 - **HTTP status in formatters** — when an exception is logged its HTTP status code (e.g. 500, 404) is included alongside the exception class name
 
+### Security
+
+- **Breaking:** the log viewer now requires the `viewLogCenter` gate. Before, the `auth` middleware was the only check, so in an app with public sign-up every logged-in user could read the logs. Without the gate the viewer only opens in the `local` environment; define `Gate::define('viewLogCenter', fn ($user) => ...)` to allow access elsewhere
+
 ### Fixed
 
+- Bale rejected messages over its 4096-character limit (for example with `LOGCENTER_BALE_FORMATTER=json` or a raised `max_length`), so the log was lost. Long messages are now shortened and sent without a parse mode, as Telegram already did
+- Tags were passed to providers unprocessed: nested arrays or invalid UTF-8 in `tags` made webhook requests fail, and a non-string tag crashed Telegram's tag-to-topic lookup. Tags are now normalized to a list of valid strings
 - The fallback driver was skipped when the primary driver could not send at all: an unknown driver name (for example `LOGCENTER_DRIVER=slack`), a formatter error, or a custom transport that throws instead of returning a failed result. These now count as a failed send, so `LogDispatchFailed` fires and the fallback runs
 - Driver names given to `sendNow()` (including `logcenter:test-log --driver=`) and `LOGCENTER_FALLBACK_DRIVER` were case-sensitive: `Telegram` used the plain formatter instead of Telegram's, and a fallback of `Telegram` with a primary of `telegram` sent the same failing request twice
 - Viewer routes returned 500 for array query values (`?file[]=x`, `?search[]=x`, ...) or a very large `page` number

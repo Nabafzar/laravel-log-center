@@ -107,4 +107,22 @@ final class BaleTransportTest extends TestCase
     {
         $this->assertFalse((new BaleTransport)->supportsTopics());
     }
+
+    public function test_it_shortens_messages_over_the_bale_limit_and_drops_the_parse_mode(): void
+    {
+        config()->set('logcenter.drivers.bale.token', 'TEST_TOKEN');
+        config()->set('logcenter.drivers.bale.chat_id', '12345');
+
+        Http::fake(['https://tapi.bale.ai/*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]])]);
+
+        $result = (new BaleTransport)->send(
+            $this->makePayload(),
+            new FormattedMessage('*Message:* '.str_repeat('x', 6000), 'bale_markdown', ['parse_mode' => 'Markdown']),
+        );
+
+        $this->assertTrue($result->isSuccess());
+        Http::assertSent(static fn ($request): bool => mb_strlen($request->data()['text']) <= 4096
+            && str_ends_with($request->data()['text'], '[truncated]')
+            && ! array_key_exists('parse_mode', $request->data()));
+    }
 }

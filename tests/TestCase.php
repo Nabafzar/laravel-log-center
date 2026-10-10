@@ -5,14 +5,31 @@ declare(strict_types=1);
 namespace Nabafzar\LogCenter\Tests;
 
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Gate;
 use Monolog\Level;
 use Monolog\LogRecord;
 use Nabafzar\LogCenter\DTO\LogPayload;
+use Nabafzar\LogCenter\Http\Middleware\AuthorizeLogViewer;
 use Nabafzar\LogCenter\LogCenterServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 
 abstract class TestCase extends Orchestra
 {
+    /**
+     * Viewer behavior tests open the viewer as a guest; the gate itself is
+     * covered in LogViewerAuthTest, which turns this off.
+     */
+    protected bool $allowLogViewer = true;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        if ($this->allowLogViewer) {
+            Gate::define(AuthorizeLogViewer::GATE, static fn (?object $user = null): bool => true);
+        }
+    }
+
     protected function getPackageProviders($app): array
     {
         return [

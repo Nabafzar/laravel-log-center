@@ -506,9 +506,27 @@ What you get:
 `LOGCENTER_VIEWER_EDITOR` turns file paths into "open in editor" links. A custom template can use
 `{file}` and `{line}`, for example `idea://open?file={file}&line={line}`.
 
-> **Note:** The viewer exposes raw log contents including stack traces. Authentication is enabled
-> by default — only disable it in trusted, non-public environments. Inside a directory listed in
-> `viewer.paths`, only `*.log` files can be opened, downloaded or tailed.
+### Who can open the viewer
+
+The viewer exposes raw log contents, including stack traces and request data, so being logged in is
+not enough. Access is decided by the `viewLogCenter` gate. Until you define it, the viewer is only
+available in the `local` environment and returns 403 everywhere else.
+
+Define the gate in a service provider's `boot()` method, for example `AppServiceProvider`:
+
+```php
+use Illuminate\Support\Facades\Gate;
+
+Gate::define('viewLogCenter', function ($user) {
+    return in_array($user->email, [
+        'admin@example.com',
+    ]);
+});
+```
+
+The gate runs after the `auth` middleware (enabled by default with `LOGCENTER_VIEWER_AUTH_ENABLED`),
+so guests are redirected to log in first. Inside a directory listed in `viewer.paths`, only `*.log`
+files can be opened, downloaded or tailed.
 
 **Live Tail** — click the **Live** button to stream new entries in real time via SSE (falls back
 to polling automatically).
