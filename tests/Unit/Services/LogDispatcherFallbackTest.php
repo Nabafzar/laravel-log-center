@@ -230,4 +230,26 @@ final class LogDispatcherFallbackTest extends TestCase
 
         return new LogDispatcher($manager, new PayloadProcessor, new SuppressionManager);
     }
+
+    public function test_a_throwing_failure_listener_does_not_skip_the_fallback(): void
+    {
+        config()->set('logcenter.default', 'telegram');
+        config()->set('logcenter.fallback', 'null');
+
+        Event::listen(LogDispatchFailed::class, static fn () => throw new \RuntimeException('listener down'));
+
+        $result = $this->app->make(LogDispatcher::class)->sendNow($this->makePayload());
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertSame('null', $result->driver);
+    }
+
+    public function test_a_throwing_success_listener_does_not_fail_a_delivered_log(): void
+    {
+        Event::listen(LogDispatched::class, static fn () => throw new \RuntimeException('listener down'));
+
+        $result = $this->app->make(LogDispatcher::class)->sendNow($this->makePayload());
+
+        $this->assertTrue($result->isSuccess());
+    }
 }

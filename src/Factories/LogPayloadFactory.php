@@ -167,7 +167,9 @@ final class LogPayloadFactory
 
     private static function currentRequest(): ?array
     {
-        if (! app()->bound('request')) {
+        // Artisan binds a placeholder request built from app.url, so queue
+        // workers and commands would report a fake "GET http://app-url".
+        if (! app()->bound('request') || (app()->runningInConsole() && ! app()->runningUnitTests())) {
             return null;
         }
 
@@ -182,6 +184,7 @@ final class LogPayloadFactory
             $request->request->all(),
             $request->json()->all(),
         );
+        $user = self::resolveUser($request);
 
         return self::normalizeRequestArray(array_filter([
             'ip' => $request->ip(),
@@ -189,8 +192,8 @@ final class LogPayloadFactory
             'method' => $request->method(),
             'query' => $request->query(),
             'referer' => self::requestReferer($request),
-            'user_id' => self::requestUserId($request),
-            'user_name' => self::requestUserName($request),
+            'user_id' => self::userId($user),
+            'user_name' => self::userName($user),
             'body' => $body,
         ], static fn (mixed $value): bool => $value !== null && $value !== [] && $value !== ''));
     }
@@ -233,10 +236,22 @@ final class LogPayloadFactory
         return $normalized !== '' ? $normalized : $referer;
     }
 
-    private static function requestUserId(Request $request): mixed
+    /**
+     * Resolving the user can hit the database (session guard). When the error
+     * being logged is the database going down, that query throws too, and the
+     * alert would be lost, so a failed lookup just means "no user".
+     */
+    private static function resolveUser(Request $request): mixed
     {
-        $user = $request->user();
+        try {
+            return $request->user();
+        } catch (Throwable) {
+            return null;
+        }
+    }
 
+    private static function userId(mixed $user): mixed
+    {
         if (! is_object($user) || ! method_exists($user, 'getAuthIdentifier')) {
             return null;
         }
@@ -246,10 +261,8 @@ final class LogPayloadFactory
         return $identifier === '' ? null : $identifier;
     }
 
-    private static function requestUserName(Request $request): ?string
+    private static function userName(mixed $user): ?string
     {
-        $user = $request->user();
-
         if (! is_object($user)) {
             return null;
         }

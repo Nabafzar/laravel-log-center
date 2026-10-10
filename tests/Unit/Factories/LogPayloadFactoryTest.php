@@ -303,4 +303,39 @@ final class LogPayloadFactoryTest extends TestCase
 
         $this->assertSame(['payments', '42'], $payload->tags);
     }
+
+    public function test_it_still_builds_the_payload_when_resolving_the_user_fails(): void
+    {
+        $request = Request::create('/checkout', 'POST');
+        $this->app->instance('request', $request);
+        // Set after binding: rebinding the request resets the user resolver.
+        $request->setUserResolver(static fn () => throw new RuntimeException('SQLSTATE[HY000] [2002] Connection refused'));
+
+        $payload = LogPayloadFactory::fromLogRecord($this->makeRecord());
+
+        $this->assertSame('http://localhost/checkout', $payload->request['url'] ?? null);
+        $this->assertNull($payload->user);
+    }
+
+    public function test_console_logs_do_not_report_the_placeholder_request(): void
+    {
+        // Outside the test environment, Artisan's placeholder request is ignored.
+        $this->app['env'] = 'production';
+
+        $payload = LogPayloadFactory::fromLogRecord($this->makeRecord());
+
+        $this->assertSame('console', $payload->source);
+        $this->assertNull($payload->request);
+    }
+
+    public function test_console_logs_keep_an_explicit_request_from_context(): void
+    {
+        $this->app['env'] = 'production';
+
+        $payload = LogPayloadFactory::fromLogRecord($this->makeRecord(context: [
+            'request' => ['url' => 'https://example.com/webhook', 'method' => 'POST'],
+        ]));
+
+        $this->assertSame('https://example.com/webhook', $payload->request['url'] ?? null);
+    }
 }

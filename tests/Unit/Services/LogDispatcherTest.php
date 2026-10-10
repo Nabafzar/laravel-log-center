@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nabafzar\LogCenter\Tests\Unit\Services;
 
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Http;
 use Nabafzar\LogCenter\Contracts\LogFormatterInterface;
 use Nabafzar\LogCenter\Contracts\LogTransportInterface;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
@@ -16,6 +17,7 @@ use Nabafzar\LogCenter\Processors\PayloadProcessor;
 use Nabafzar\LogCenter\Services\LogDispatcher;
 use Nabafzar\LogCenter\Suppression\SuppressionManager;
 use Nabafzar\LogCenter\Tests\TestCase;
+use RuntimeException;
 
 final class LogDispatcherTest extends TestCase
 {
@@ -145,5 +147,40 @@ final class LogDispatcherTest extends TestCase
                 && ! str_contains($job->payload->message, 'hunter2')
                 && $job->payload->context['password'] === '******';
         });
+    }
+
+    public function test_it_sends_synchronously_when_the_queue_backend_is_unavailable(): void
+    {
+        config()->set('queue.connections.unavailable', ['driver' => 'redis', 'connection' => 'missing', 'queue' => 'logs']);
+        config()->set('logcenter.queue.enabled', true);
+        config()->set('logcenter.queue.connection', 'unavailable');
+
+        $result = $this->app->make(LogDispatcher::class)->dispatch($this->makePayload());
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertSame('null', $result->driver);
+        $this->assertArrayNotHasKey('queued', $result->meta);
+        $this->assertTrue($result->meta['discarded'] ?? false);
+    }
+
+    public function test_a_failing_sync_queue_job_is_not_sent_a_second_time(): void
+    {
+        config()->set('queue.connections.inline', ['driver' => 'sync']);
+        config()->set('logcenter.queue.enabled', true);
+        config()->set('logcenter.queue.connection', 'inline');
+        config()->set('logcenter.default', 'telegram');
+        config()->set('logcenter.drivers.telegram.token', 'TEST_TOKEN');
+        config()->set('logcenter.drivers.telegram.chat_id', '12345');
+
+        Http::fake(['https://api.telegram.org/*' => Http::response(['ok' => false], 500)]);
+
+        try {
+            $this->app->make(LogDispatcher::class)->dispatch($this->makePayload());
+            $this->fail('The failed sync job should surface its exception.');
+        } catch (RuntimeException) {
+            // Expected: the inline job failed and the queue rethrew.
+        }
+
+        Http::assertSentCount(1);
     }
 }
