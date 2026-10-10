@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Nabafzar\LogCenter;
 
+use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Support\ServiceProvider;
 use Nabafzar\LogCenter\Attributes\AttributeResolver;
 use Nabafzar\LogCenter\Console\Commands\TestLogCommand;
 use Nabafzar\LogCenter\Contracts\LogDispatcherInterface;
 use Nabafzar\LogCenter\Factories\FormatterFactory;
 use Nabafzar\LogCenter\Factories\TransportFactory;
+use Nabafzar\LogCenter\Http\Middleware\HandleLogViewerGuests;
 use Nabafzar\LogCenter\Managers\TransportManager;
 use Nabafzar\LogCenter\Processors\PayloadProcessor;
 use Nabafzar\LogCenter\Services\LogDispatcher;
@@ -103,6 +105,15 @@ final class LogCenterServiceProvider extends ServiceProvider
 
         if (is_file($routesPath)) {
             $this->loadRoutesFrom($routesPath);
+        }
+
+        // Laravel sorts route middleware by priority and moves `auth` ahead of
+        // unknown middleware, so the guest handler must be in the priority list
+        // to run before it.
+        $kernel = $this->app->make(HttpKernel::class);
+
+        if (method_exists($kernel, 'prependToMiddlewarePriority')) {
+            $kernel->prependToMiddlewarePriority(HandleLogViewerGuests::class);
         }
     }
 

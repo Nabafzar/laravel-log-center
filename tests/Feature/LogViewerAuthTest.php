@@ -70,6 +70,22 @@ final class LogViewerAuthTest extends TestCase
         $this->actingAs(new GenericUser(['id' => 2]))->get('/log-viewer')->assertForbidden();
     }
 
+    public function test_a_guest_gets_401_when_the_app_has_no_login_route(): void
+    {
+        $this->assertFalse(Route::has('login'));
+
+        $this->get('/log-viewer')->assertUnauthorized();
+        $this->get('/log-viewer/download')->assertUnauthorized();
+    }
+
+    public function test_a_guest_is_redirected_when_the_app_has_a_login_route(): void
+    {
+        Route::get('/login', static fn (): string => 'login')->name('login');
+        Route::getRoutes()->refreshNameLookups();
+
+        $this->get('/log-viewer')->assertRedirect('/login');
+    }
+
     public function test_a_gate_that_needs_a_user_denies_guests(): void
     {
         $this->app['env'] = 'production';
