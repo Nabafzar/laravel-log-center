@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nabafzar\LogCenter\Tests\Unit\Services;
 
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Http;
 use Nabafzar\LogCenter\Contracts\LogFormatterInterface;
 use Nabafzar\LogCenter\Contracts\LogTransportInterface;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
@@ -12,6 +13,7 @@ use Nabafzar\LogCenter\DTO\LogPayload;
 use Nabafzar\LogCenter\DTO\TransportResult;
 use Nabafzar\LogCenter\Events\LogDispatched;
 use Nabafzar\LogCenter\Events\LogDispatchFailed;
+use Nabafzar\LogCenter\Factories\TransportFactory;
 use Nabafzar\LogCenter\Managers\TransportManager;
 use Nabafzar\LogCenter\Processors\PayloadProcessor;
 use Nabafzar\LogCenter\Services\LogDispatcher;
@@ -251,5 +253,75 @@ final class LogDispatcherFallbackTest extends TestCase
         $result = $this->app->make(LogDispatcher::class)->sendNow($this->makePayload());
 
         $this->assertTrue($result->isSuccess());
+    }
+
+    public function test_an_unknown_primary_driver_still_uses_the_fallback(): void
+    {
+        config()->set('logcenter.default', 'slack');
+        config()->set('logcenter.fallback', 'null');
+
+        $result = $this->app->make(LogDispatcher::class)->sendNow($this->makePayload());
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertSame('null', $result->driver);
+    }
+
+    public function test_a_transport_that_throws_still_uses_the_fallback(): void
+    {
+        $this->app->make(TransportFactory::class)->extend('flaky', static fn () => new class implements LogTransportInterface
+        {
+            public function send(LogPayload $payload, FormattedMessage $message): TransportResult
+            {
+                throw new \RuntimeException('SDK exploded');
+            }
+
+            public function supportedFormats(): array
+            {
+                return [];
+            }
+
+            public function supportsTopics(): bool
+            {
+                return false;
+            }
+        });
+        config()->set('logcenter.default', 'flaky');
+        config()->set('logcenter.fallback', 'null');
+
+        Event::fake([LogDispatchFailed::class]);
+
+        $result = $this->app->make(LogDispatcher::class)->sendNow($this->makePayload());
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertSame('null', $result->driver);
+        Event::assertDispatched(LogDispatchFailed::class, static fn (LogDispatchFailed $event): bool => $event->result->driver === 'flaky'
+            && $event->result->errorMessage === 'SDK exploded');
+    }
+
+    public function test_a_fallback_that_differs_only_in_case_is_not_tried_twice(): void
+    {
+        config()->set('logcenter.default', 'telegram');
+        config()->set('logcenter.fallback', 'Telegram');
+        config()->set('logcenter.drivers.telegram.token', 'TEST_TOKEN');
+        config()->set('logcenter.drivers.telegram.chat_id', '12345');
+
+        Http::fake(['https://api.telegram.org/*' => Http::response(['ok' => false], 500)]);
+
+        $this->app->make(LogDispatcher::class)->sendNow($this->makePayload());
+
+        Http::assertSentCount(1);
+    }
+
+    public function test_an_explicit_driver_name_uses_that_drivers_formatter_regardless_of_case(): void
+    {
+        config()->set('logcenter.drivers.telegram.token', 'TEST_TOKEN');
+        config()->set('logcenter.drivers.telegram.chat_id', '12345');
+
+        Http::fake(['https://api.telegram.org/*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]])]);
+
+        $result = $this->app->make(LogDispatcher::class)->sendNow($this->makePayload(), 'Telegram');
+
+        $this->assertSame('telegram', $result->driver);
+        Http::assertSent(static fn ($request): bool => ($request->data()['parse_mode'] ?? null) === 'HTML');
     }
 }

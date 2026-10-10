@@ -35,7 +35,9 @@ final readonly class LogDispatcher implements LogDispatcherInterface
         ?string $formatterName = null,
         bool $emitFailEvents = true,
     ): TransportResult {
-        $driverName ??= $this->transportManager->defaultDriverName();
+        // Configured names are case-insensitive; normalize so the driver's own
+        // formatter is found and the fallback is not the primary in disguise.
+        $driverName = $this->normalizeDriverName($driverName) ?? $this->transportManager->defaultDriverName();
         $payload = $this->payloadProcessor->process($payload);
 
         // Suppress if this fingerprint was recently delivered successfully.
@@ -78,11 +80,22 @@ final readonly class LogDispatcher implements LogDispatcherInterface
      */
     private function attemptSend(LogPayload $payload, string $driverName, ?string $formatterName): TransportResult
     {
-        $message = $this->transportManager
-            ->formatter(name: $formatterName, driver: $driverName)
-            ->format($payload);
+        // An unknown driver, a broken formatter or a custom transport that
+        // throws is still a failed send: report it so the fallback runs.
+        try {
+            $message = $this->transportManager
+                ->formatter(name: $formatterName, driver: $driverName)
+                ->format($payload);
 
-        return $this->transportManager->driver($driverName)->send($payload, $message);
+            return $this->transportManager->driver($driverName)->send($payload, $message);
+        } catch (Throwable $e) {
+            return TransportResult::failed(
+                driver: $driverName,
+                errorMessage: $e->getMessage(),
+                exception: $e,
+                retryable: true,
+            );
+        }
     }
 
     /**
@@ -123,13 +136,16 @@ final readonly class LogDispatcher implements LogDispatcherInterface
 
     private function fallbackDriverName(): ?string
     {
-        $driver = config('logcenter.fallback');
+        return $this->normalizeDriverName(config('logcenter.fallback'));
+    }
 
+    private function normalizeDriverName(mixed $driver): ?string
+    {
         if (! is_string($driver) || trim($driver) === '') {
             return null;
         }
 
-        return trim($driver);
+        return strtolower(trim($driver));
     }
 
     private function queue(LogPayload $payload): TransportResult
