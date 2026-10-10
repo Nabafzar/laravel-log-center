@@ -287,4 +287,20 @@ final class LogPayloadFactoryTest extends TestCase
 
         $this->assertSame('thread-abc', $payload->meta['logcenter_topic_id']);
     }
+
+    public function test_it_builds_a_payload_for_messages_with_invalid_utf8(): void
+    {
+        $payload = LogPayloadFactory::fromLogRecord($this->makeRecord(message: "broken \xB1 bytes"));
+
+        $this->assertNotEmpty($payload->fingerprint);
+    }
+
+    public function test_it_keeps_only_scalar_context_tags(): void
+    {
+        $payload = LogPayloadFactory::fromLogRecord($this->makeRecord(context: [
+            'logcenter_tags' => ['payments', ['nested'], null, 42, ' payments ', ''],
+        ]));
+
+        $this->assertSame(['payments', '42'], $payload->tags);
+    }
 }

@@ -75,10 +75,11 @@ class TelegramHtmlFormatter extends AbstractFormatter implements LogFormatterInt
             return null;
         }
 
-        $hashtags = array_map(
-            static fn (string $tag) => '#'.preg_replace('/[^\w]/u', '_', $tag),
-            $payload->tags,
-        );
+        $hashtags = $this->hashtags($payload->tags);
+
+        if ($hashtags === []) {
+            return null;
+        }
 
         return PHP_EOL.'<b>Tags: </b> '.implode(' ', $hashtags);
     }

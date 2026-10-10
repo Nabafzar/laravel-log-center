@@ -145,4 +145,51 @@ final class TelegramTransportTest extends TestCase
     {
         $this->assertTrue((new TelegramTransport)->supportsTopics());
     }
+
+    public function test_it_sends_overlong_html_as_plain_text_so_tags_are_not_split(): void
+    {
+        config()->set('logcenter.drivers.telegram.token', 'TEST_TOKEN');
+        config()->set('logcenter.drivers.telegram.chat_id', '12345');
+        config()->set('logcenter.drivers.telegram.limits.message', 100);
+
+        Http::fake([
+            'https://api.telegram.org/*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]]),
+        ]);
+
+        $content = '<b>Message:</b> <pre>'.str_repeat('a &amp; b ', 30).'</pre>';
+
+        $result = (new TelegramTransport)->send(
+            $this->makePayload(),
+            new FormattedMessage($content, 'telegram_html', ['parse_mode' => 'HTML']),
+        );
+
+        $this->assertTrue($result->isSuccess());
+
+        Http::assertSent(static function ($request): bool {
+            $data = $request->data();
+
+            return ! array_key_exists('parse_mode', $data)
+                && ! str_contains($data['text'], '<pre>')
+                && str_contains($data['text'], 'a & b')
+                && mb_strlen($data['text']) <= 100;
+        });
+    }
+
+    public function test_it_keeps_the_parse_mode_when_the_message_fits(): void
+    {
+        config()->set('logcenter.drivers.telegram.token', 'TEST_TOKEN');
+        config()->set('logcenter.drivers.telegram.chat_id', '12345');
+
+        Http::fake([
+            'https://api.telegram.org/*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]]),
+        ]);
+
+        (new TelegramTransport)->send(
+            $this->makePayload(),
+            new FormattedMessage('<b>short</b>', 'telegram_html', ['parse_mode' => 'HTML']),
+        );
+
+        Http::assertSent(static fn ($request): bool => $request->data()['parse_mode'] === 'HTML'
+            && $request->data()['text'] === '<b>short</b>');
+    }
 }

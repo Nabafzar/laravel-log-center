@@ -7,6 +7,7 @@ namespace Nabafzar\LogCenter\Tests\Unit\Factories;
 use InvalidArgumentException;
 use Nabafzar\LogCenter\Contracts\LogTransportInterface;
 use Nabafzar\LogCenter\Factories\TransportFactory;
+use Nabafzar\LogCenter\Managers\TransportManager;
 use Nabafzar\LogCenter\Tests\TestCase;
 use Nabafzar\LogCenter\Transports\Bale\BaleTransport;
 use Nabafzar\LogCenter\Transports\Mattermost\MattermostTransport;
@@ -52,5 +53,13 @@ final class TransportFactoryTest extends TestCase
         $this->expectExceptionMessage('Custom transport [invalid] must implement LogTransportInterface.');
 
         $factory->make('invalid');
+    }
+
+    public function test_custom_driver_names_are_case_insensitive(): void
+    {
+        $this->app->make(TransportFactory::class)->extend('MyDriver', static fn () => new NullTransport);
+        config()->set('logcenter.default', 'MyDriver');
+
+        $this->assertInstanceOf(NullTransport::class, $this->app->make(TransportManager::class)->driver());
     }
 }

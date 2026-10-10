@@ -129,6 +129,10 @@ Add a channel to `config/logging.php`:
 ],
 ```
 
+A record is sent only when it meets both the channel level and `LOGCENTER_LEVEL` (default `error`),
+so a channel left at Laravel's default `debug` level still sends errors and above only. Set
+`LOGCENTER_LEVEL=debug` to let the channel level decide on its own.
+
 Set it as your log channel and configure a transport driver:
 
 ```dotenv
@@ -499,7 +503,8 @@ What you get:
 `{file}` and `{line}`, for example `idea://open?file={file}&line={line}`.
 
 > **Note:** The viewer exposes raw log contents including stack traces. Authentication is enabled
-> by default — only disable it in trusted, non-public environments.
+> by default — only disable it in trusted, non-public environments. Inside a directory listed in
+> `viewer.paths`, only `*.log` files can be opened, downloaded or tailed.
 
 **Live Tail** — click the **Live** button to stream new entries in real time via SSE (falls back
 to polling automatically).
@@ -584,7 +589,7 @@ final class DiscordTransport implements LogTransportInterface
     {
         // Return true only if your transport can route messages to
         // sub-channels / threads based on #[LogTopic] tag names.
-        // When false, LogCenter appends the tag as a "#hashtag" in the message body instead.
+        // Either way, the built-in formatters render tags as "#hashtags" in the message body.
         return false;
     }
 }

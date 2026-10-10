@@ -101,6 +101,12 @@ final class PayloadProcessor
             return $text;
         }
 
+        // Invalid UTF-8 makes every JSON-based provider request fail, so the
+        // log would never be delivered. Replace the broken bytes instead.
+        if (! mb_check_encoding($text, 'UTF-8')) {
+            $text = mb_scrub($text, 'UTF-8');
+        }
+
         $pattern = $this->pattern();
 
         if ($pattern === null) {

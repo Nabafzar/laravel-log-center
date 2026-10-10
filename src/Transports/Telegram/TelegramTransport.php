@@ -31,7 +31,17 @@ class TelegramTransport extends AbstractTransport
             );
         }
 
-        $messages = $this->enforceMessageLimit($message->content);
+        $content = trim($message->content);
+        $parseMode = $this->parseModeFromMessage($message) ?? $this->parseMode();
+
+        if ($parseMode !== null && mb_strlen($content) > $this->effectiveMessageLimit()) {
+            // Cutting marked-up text can split a tag or code block, and Telegram
+            // then rejects the whole message. Send the overflow as plain text.
+            $content = $this->toPlainText($content, $parseMode);
+            $parseMode = null;
+        }
+
+        $messages = $this->enforceMessageLimit($content);
 
         if ($messages === []) {
             return $this->success(
@@ -45,7 +55,7 @@ class TelegramTransport extends AbstractTransport
 
             foreach ($messages as $index => $content) {
                 $response = $this->http()
-                    ->post($this->endpoint($token), $this->telegramPayload($payload, $message, $content))
+                    ->post($this->endpoint($token), $this->telegramPayload($payload, $content, $parseMode))
                     ->throw();
 
                 $lastStatusCode = $response->status();
@@ -62,14 +72,7 @@ class TelegramTransport extends AbstractTransport
                 meta: ['sent_messages' => count($messages)],
             );
         } catch (Throwable $e) {
-            $statusCode = $this->statusCodeFromException($e);
-
-            return $this->failed(
-                errorMessage: $e->getMessage(),
-                exception: $e,
-                statusCode: $statusCode,
-                retryable: $this->isRetryable($statusCode),
-            );
+            return $this->failedFromException($e, [$token, $this->proxy()]);
         }
     }
 
@@ -84,7 +87,7 @@ class TelegramTransport extends AbstractTransport
             return [];
         }
 
-        $limit = min($this->messageLimit(), self::MAX_MESSAGE_LENGTH);
+        $limit = $this->effectiveMessageLimit();
 
         if (mb_strlen($content) <= $limit) {
             return [$content];
@@ -104,6 +107,20 @@ class TelegramTransport extends AbstractTransport
         ];
     }
 
+    private function effectiveMessageLimit(): int
+    {
+        return min($this->messageLimit(), self::MAX_MESSAGE_LENGTH);
+    }
+
+    private function toPlainText(string $content, string $parseMode): string
+    {
+        if (strtoupper($parseMode) !== 'HTML') {
+            return $content;
+        }
+
+        return trim(html_entity_decode(strip_tags($content), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    }
+
     private function http()
     {
         $request = Http::timeout($this->timeout());
@@ -117,14 +134,14 @@ class TelegramTransport extends AbstractTransport
 
     private function telegramPayload(
         LogPayload $payload,
-        FormattedMessage $message,
         string $content,
+        ?string $parseMode,
     ): array {
         return array_filter([
             'chat_id' => $this->chatId(),
             'message_thread_id' => $this->topicIdForPayload($payload),
             'text' => $content,
-            'parse_mode' => $this->parseModeFromMessage($message) ?? $this->parseMode(),
+            'parse_mode' => $parseMode,
             'disable_web_page_preview' => $this->disableWebPagePreview(),
             'disable_notification' => $this->disableNotification(),
         ], static fn (mixed $value) => $value !== null);

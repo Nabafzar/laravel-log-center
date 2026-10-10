@@ -30,7 +30,7 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
         ]);
 
         return new FormattedMessage(
-            content: $this->truncate(
+            content: $this->truncateMarkdown(
                 implode(PHP_EOL, $sections),
                 $this->maxLength(),
             ),
@@ -56,7 +56,7 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
 
     private function message(LogPayload $payload): string
     {
-        return '*Message:*'.$this->escapeMarkdown($payload->message);
+        return '*Message:* '.$this->escapeMarkdown($payload->message);
     }
 
     private function viewerLink(LogPayload $payload): ?string
@@ -85,10 +85,9 @@ class MarkdownFormatter extends AbstractFormatter implements LogFormatterInterfa
             return null;
         }
 
-        return implode('  ', array_map(
-            static fn (string $tag) => '#'.preg_replace('/[^\w]/u', '_', $tag),
-            $payload->tags,
-        ));
+        $hashtags = $this->hashtags($payload->tags);
+
+        return $hashtags === [] ? null : implode('  ', $hashtags);
     }
 
     private function context(LogPayload $payload): ?string

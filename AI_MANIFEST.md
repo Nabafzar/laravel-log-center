@@ -142,7 +142,7 @@ Primary dispatch flow:
 3. `LogDispatcher::dispatch()` calls `sendNow()`.
 4. `TransportManager` resolves the active formatter and transport.
 5. The formatter converts `LogPayload` to `FormattedMessage`.
-6. `LogDispatcher::attemptSend()` checks `transport->supportsTopics()`. If false, `withHashtags()` appends `#tag` lines for any non-empty `tags`. If true (Telegram), hashtag injection is skipped — the transport handles tag routing internally.
+6. The built-in formatters render non-empty `tags` as `#tag` hashtags (non-scalar tags are skipped). `supportsTopics()` tells callers whether the transport also routes by tag (Telegram does); there is no separate hashtag-injection step in `LogDispatcher`.
 7. The transport sends or discards the formatted message. `TelegramTransport` reads `meta.logcenter_topic_id` (explicit attribute topicId), then `drivers.telegram.tag_topics` (tag→topicId map), then `topics_level` (per-level map), then `topic_id` (default) to resolve the forum thread.
 
 Formatter sections are assembled with `implode(PHP_EOL, $sections)`.
@@ -161,7 +161,13 @@ Main extension points:
 
 Important rule: `LogCenterHandler` must not call Laravel's logger inside error
 handling, or it can recursively log its own failures. Use `error_log()` or a
-separate non-LogCenter fallback when needed.
+separate non-LogCenter fallback when needed. The handler also ignores records
+written while it is already dispatching (re-entrancy guard).
+
+Transports build failures from exceptions through
+`AbstractTransport::failedFromException()`, which strips configured secrets
+(bot tokens, webhook URLs) from the error message, because Guzzle puts the
+request URL in connection errors.
 
 ## Configuration Contract
 
@@ -170,7 +176,8 @@ Main config file: `config/logcenter.php`
 Global keys:
 
 - `default`: active transport driver, defaults to `LOGCENTER_DRIVER` or `null`.
-- `level`: minimum log level, defaults to `LOGCENTER_LEVEL` or `error`.
+- `level`: minimum log level, defaults to `LOGCENTER_LEVEL` or `error`. Enforced by
+  `LogCenterHandler::isHandling()` on top of the channel level; the stricter one wins.
 - `formatter`: global formatter, defaults to `LOGCENTER_FORMATTER` or `plain`.
 - `queue.enabled`: async dispatch toggle.
 - `queue.connection`: queue connection.
@@ -185,7 +192,8 @@ Global keys:
 - `viewer.middleware`: middleware stack for viewer routes.
 - `viewer.auth.enabled`: adds auth middleware to viewer routes.
 - `viewer.auth.middleware`: middleware applied when auth is enabled.
-- `viewer.paths`: directories or files scanned for logs.
+- `viewer.paths`: directories or files scanned for logs. Inside a directory root only `*.log`
+  files are served (index, download, tail).
 - `viewer.per_page`: number of entries displayed per page.
 - `viewer.max_files`: maximum number of files shown in the sidebar.
 - `viewer.max_file_size`: maximum file size in bytes accepted by the viewer.
@@ -398,7 +406,7 @@ Before tagging a release:
 
 - `composer validate` passes.
 - PHP syntax checks pass for all `src` and `config` PHP files.
-- Unit and integration tests pass (currently 173 tests / 531 assertions).
+- Unit and integration tests pass (currently 236 tests / 686 assertions).
 - README documents installation, Laravel channel setup, environment variables,
   supported drivers, extension examples, and security notes. ✓
 - CHANGELOG.md exists and is up to date. ✓

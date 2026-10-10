@@ -89,4 +89,14 @@ final class IncomingLogControllerTest extends TestCase
         ])->assertUnprocessable()
             ->assertJsonValidationErrors(['level']);
     }
+
+    public function test_validation_errors_are_json_even_without_an_accept_header(): void
+    {
+        $response = $this->call('POST', '/incoming-logs', ['message' => 'Missing level'], server: [
+            'HTTP_X_LOGCENTER_TOKEN' => 'test-incoming-token',
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['level']);
+    }
 }

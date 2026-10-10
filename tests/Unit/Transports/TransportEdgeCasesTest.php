@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nabafzar\LogCenter\Tests\Unit\Transports;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Nabafzar\LogCenter\DTO\FormattedMessage;
 use Nabafzar\LogCenter\Enums\MessageFormatEnum;
@@ -184,6 +185,66 @@ final class TransportEdgeCasesTest extends TestCase
                     'logcenter.drivers.mattermost.webhook_url' => 'https://example.test/hooks/abc',
                 ],
                 'mattermost',
+            ],
+        ];
+    }
+
+    #[DataProvider('connectionFailureProvider')]
+    public function test_it_redacts_secrets_from_connection_errors(
+        string $transportClass,
+        array $config,
+        string $secret,
+    ): void {
+        foreach ($config as $key => $value) {
+            config()->set($key, $value);
+        }
+
+        Http::fake(static fn ($request) => throw new ConnectionException(
+            'cURL error 28: Operation timed out for '.$request->url(),
+        ));
+
+        $message = $transportClass === WebhookTransport::class
+            ? new FormattedMessage('hello', MessageFormatEnum::JSON->value)
+            : new FormattedMessage('hello');
+
+        $result = $this->app->make($transportClass)->send($this->makePayload(), $message);
+
+        $this->assertTrue($result->isFailure());
+        $this->assertTrue($result->retryable);
+        $this->assertStringContainsString('******', (string) $result->errorMessage);
+        $this->assertStringNotContainsString($secret, (string) $result->errorMessage);
+        $this->assertStringNotContainsString($secret, $result->exception?->getMessage() ?? '');
+        $this->assertNull($result->exception?->getPrevious());
+    }
+
+    public static function connectionFailureProvider(): array
+    {
+        return [
+            'telegram token' => [
+                TelegramTransport::class,
+                [
+                    'logcenter.drivers.telegram.token' => 'TELEGRAM_SECRET',
+                    'logcenter.drivers.telegram.chat_id' => '12345',
+                ],
+                'TELEGRAM_SECRET',
+            ],
+            'bale token' => [
+                BaleTransport::class,
+                [
+                    'logcenter.drivers.bale.token' => 'BALE_SECRET',
+                    'logcenter.drivers.bale.chat_id' => '12345',
+                ],
+                'BALE_SECRET',
+            ],
+            'mattermost webhook' => [
+                MattermostTransport::class,
+                ['logcenter.drivers.mattermost.webhook_url' => 'https://mattermost.example.com/hooks/MM_SECRET'],
+                'MM_SECRET',
+            ],
+            'webhook url' => [
+                WebhookTransport::class,
+                ['logcenter.drivers.webhook.url' => 'https://hooks.example.com/ingest?key=WEBHOOK_SECRET'],
+                'WEBHOOK_SECRET',
             ],
         ];
     }

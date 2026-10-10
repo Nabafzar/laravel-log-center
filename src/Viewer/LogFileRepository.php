@@ -421,7 +421,7 @@ final class LogFileRepository
                     'exception_message' => $exception['message'] ?? null,
                     'exception_file' => $exception['file'] ?? null,
                     'exception_line' => $exception['line'] ?? null,
-                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '',
+                ], JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '',
             ),
             'searchable' => $searchable !== '' ? $searchable : $content,
         ];
@@ -678,7 +678,11 @@ final class LogFileRepository
                 return true;
             }
 
-            if (is_dir($root) && str_starts_with($real, rtrim($root, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
+            // Inside a directory root only *.log files are served, so a broad
+            // root such as storage_path() cannot expose sessions or app files.
+            if (is_dir($root)
+                && str_ends_with(strtolower($real), '.log')
+                && str_starts_with($real, rtrim($root, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR)) {
                 return true;
             }
         }

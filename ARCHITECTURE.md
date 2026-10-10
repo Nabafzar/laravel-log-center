@@ -76,8 +76,7 @@ sequenceDiagram
     TrFactory-->>Manager: Transport instance
 
     Dispatcher->>Formatter: format(LogPayload) → FormattedMessage
-    Dispatcher->>Dispatcher: supportsTopics() check
-    Note over Dispatcher: if !supportsTopics → withHashtags() appends #tag lines
+    Note over Formatter: tags rendered as #hashtags by the formatter
     Dispatcher->>Transport: send(FormattedMessage) → TransportResult
     Transport->>Provider: HTTP request (Laravel HTTP client)
     Provider-->>Transport: response
@@ -179,7 +178,6 @@ classDiagram
         +string $content
         +MessageFormatEnum $format
         +array $meta
-        +withHashtags(tags): self
     }
 
     class TransportResult {

@@ -38,8 +38,10 @@ final class AttributeResolver
     private array $cache = [];
 
     /**
-     * Final resolve results keyed by stack signature.
-     * Avoids rescanning the same call path on repeated log calls.
+     * Call-stack scan results keyed by stack signature.
+     * Avoids rescanning the same call path on repeated log calls. The route
+     * fallback is not cached here: the same stack can serve different routes
+     * in a long-running worker (Octane, queue), so it is resolved every time.
      *
      * @var array<string, LogTopic|null>
      */
@@ -55,11 +57,11 @@ final class AttributeResolver
         $frames = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 25);
         $signature = $this->stackSignature($frames);
 
-        if (array_key_exists($signature, $this->resolveCache)) {
-            return $this->resolveCache[$signature];
+        if (! array_key_exists($signature, $this->resolveCache)) {
+            $this->resolveCache[$signature] = $this->resolveFromFrames($frames);
         }
 
-        return $this->resolveCache[$signature] = $this->doResolve($frames);
+        return $this->resolveCache[$signature] ?? $this->resolveFromCurrentRoute();
     }
 
     /**
@@ -92,7 +94,7 @@ final class AttributeResolver
     /**
      * Perform the actual frame-by-frame scan for a #[LogTopic] attribute.
      */
-    private function doResolve(array $frames): ?LogTopic
+    private function resolveFromFrames(array $frames): ?LogTopic
     {
         foreach ($frames as $frame) {
             $class = $frame['class'] ?? null;
@@ -113,7 +115,7 @@ final class AttributeResolver
             }
         }
 
-        return $this->resolveFromCurrentRoute();
+        return null;
     }
 
     private function shouldSkip(string $class): bool

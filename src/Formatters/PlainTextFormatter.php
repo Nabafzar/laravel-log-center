@@ -25,13 +25,11 @@ class PlainTextFormatter extends AbstractFormatter implements LogFormatterInterf
             $this->extra($payload),
             $this->request($payload),
             $this->exception($payload),
-            $this->formatPlainExceptionFile($payload),
-            $this->formatPlainExceptionLine($payload),
             $this->trace($payload),
         ]);
 
         return new FormattedMessage(
-            content: $this->truncate(
+            content: $this->truncatePlain(
                 implode(PHP_EOL, $sections),
                 $this->maxLength(),
             ),
@@ -80,10 +78,9 @@ class PlainTextFormatter extends AbstractFormatter implements LogFormatterInterf
             return null;
         }
 
-        return implode('  ', array_map(
-            static fn (string $tag) => '#'.preg_replace('/[^\w]/u', '_', $tag),
-            $payload->tags,
-        ));
+        $hashtags = $this->hashtags($payload->tags);
+
+        return $hashtags === [] ? null : implode('  ', $hashtags);
     }
 
     private function context(LogPayload $payload): ?string

@@ -104,4 +104,14 @@ final class PlainTextFormatterTest extends TestCase
 
         $this->assertStringNotContainsString('[HTTP', $formatted->content);
     }
+
+    public function test_it_renders_exception_file_and_line_once(): void
+    {
+        $formatted = (new PlainTextFormatter)->format($this->makePayload([
+            'exception' => ['class' => 'RuntimeException', 'file' => '/app/Foo.php', 'line' => 42],
+        ]));
+
+        $this->assertSame(1, substr_count($formatted->content, 'File: /app/Foo.php'));
+        $this->assertSame(1, substr_count($formatted->content, 'Line: 42'));
+    }
 }

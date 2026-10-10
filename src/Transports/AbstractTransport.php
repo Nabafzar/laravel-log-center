@@ -9,6 +9,7 @@ use Illuminate\Http\Client\RequestException;
 use LogicException;
 use Nabafzar\LogCenter\Contracts\LogTransportInterface;
 use Nabafzar\LogCenter\DTO\TransportResult;
+use RuntimeException;
 use Throwable;
 
 abstract class AbstractTransport implements LogTransportInterface
@@ -43,6 +44,49 @@ abstract class AbstractTransport implements LogTransportInterface
             retryable: $retryable,
             meta: $meta,
         );
+    }
+
+    /**
+     * Build a failed result from a thrown exception without leaking secrets.
+     *
+     * Guzzle puts the request URL in connection error messages, and provider
+     * URLs carry bot tokens or webhook keys. Those messages reach events, the
+     * failed_jobs table and the incoming API response, so every configured
+     * secret is replaced before the result leaves the transport.
+     *
+     * @param  array<int, string|null>  $secrets
+     */
+    final protected function failedFromException(Throwable $exception, array $secrets = []): TransportResult
+    {
+        $statusCode = $this->statusCodeFromException($exception);
+        $message = $exception->getMessage();
+        $redacted = $this->redact($message, $secrets);
+
+        return $this->failed(
+            errorMessage: $redacted,
+            exception: $redacted === $message
+                ? $exception
+                : new RuntimeException($redacted, (int) $exception->getCode()),
+            statusCode: $statusCode,
+            retryable: $this->isRetryable($statusCode),
+        );
+    }
+
+    /**
+     * @param  array<int, string|null>  $secrets
+     */
+    final protected function redact(string $text, array $secrets): string
+    {
+        $secrets = array_filter($secrets, static fn (?string $secret): bool => $secret !== null && $secret !== '');
+
+        if ($secrets === []) {
+            return $text;
+        }
+
+        // Longest first, so a token inside a URL does not leave the URL half-masked.
+        usort($secrets, static fn (string $left, string $right): int => strlen($right) <=> strlen($left));
+
+        return str_replace($secrets, '******', $text);
     }
 
     final protected function driverName(): string
