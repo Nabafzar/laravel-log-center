@@ -32,7 +32,8 @@ final class LogViewerController extends Controller
         $availableFiles = $this->files->all();
         $file = (string) $request->query('file', '');
         $level = (string) $request->query('level', '');
-        $search = (string) $request->query('search', '');
+        // An invalid UTF-8 search term breaks the page script's JSON literal.
+        $search = mb_scrub((string) $request->query('search', ''), 'UTF-8');
         $fingerprint = $this->normalizeFingerprint((string) $request->query('fingerprint', ''));
         $filters = [
             'level' => $level,

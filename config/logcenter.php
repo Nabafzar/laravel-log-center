@@ -90,6 +90,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | Sensitive values will be masked before formatting or sending logs.
+    | A key matches when its name contains one of these, so 'password' also
+    | masks 'current_password' and 'token' also masks 'api_token'.
     |
     */
 

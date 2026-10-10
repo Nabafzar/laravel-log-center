@@ -120,11 +120,26 @@ final class PayloadProcessor
         ) ?? $text;
     }
 
+    /**
+     * A key is sensitive when it contains a configured key, so `password` also
+     * covers `current_password` and `new_password`, and `token` covers
+     * `api_token` and Laravel's `_token`. Over-masking is the safe failure.
+     */
     private function shouldMaskKey(string|int $key, array $keys): bool
     {
-        $key = (string) $key;
+        if (is_int($key)) {
+            return false;
+        }
 
-        return in_array($this->caseSensitive() ? $key : strtolower($key), $keys, true);
+        $key = $this->caseSensitive() ? $key : strtolower($key);
+
+        foreach ($keys as $sensitive) {
+            if ($sensitive !== '' && str_contains($key, $sensitive)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

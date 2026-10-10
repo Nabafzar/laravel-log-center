@@ -8,6 +8,7 @@ use Illuminate\Support\Carbon;
 use Monolog\Level;
 use Monolog\LogRecord;
 use Nabafzar\LogCenter\Factories\LogPayloadFactory;
+use Nabafzar\LogCenter\Formatters\PlainTextFormatter;
 use Nabafzar\LogCenter\Tests\TestCase;
 
 final class LogViewerControllerTest extends TestCase
@@ -261,5 +262,38 @@ LOG);
         $this->getJson('/log-viewer/tail/poll?offset=0&file='.urlencode($file))
             ->assertOk()
             ->assertJsonCount(1, 'entries');
+    }
+
+    public function test_a_shortened_search_term_from_a_long_message_still_finds_the_entry(): void
+    {
+        $directory = $this->logDirectory('logcenter-feature-long-link-tests');
+        $message = 'SQLSTATE[42S22]: select * from orders where '.str_repeat('id = 1 and ', 50).'id = 2';
+
+        file_put_contents($directory.'/laravel.log', "[2026-05-08 09:00:00] local.ERROR: {$message}\n[2026-05-08 09:05:00] local.ERROR: Another failure\n");
+        config()->set('logcenter.viewer.paths', [$directory]);
+
+        $formatted = (new PlainTextFormatter)->format($this->makePayload(['message' => $message]));
+        preg_match('/search=([^&\s]+)/', $formatted->content, $matches);
+        $search = rawurldecode($matches[1] ?? '');
+
+        $this->assertLessThanOrEqual(100, mb_strlen($search));
+
+        $response = $this->get('/log-viewer?fingerprint=0000000000dead&search='.rawurlencode($search));
+
+        $response->assertOk();
+        $response->assertSee('SQLSTATE[42S22]');
+        $response->assertDontSee('Another failure');
+    }
+
+    public function test_an_invalid_utf8_search_term_does_not_break_the_page(): void
+    {
+        $directory = $this->logDirectory('logcenter-feature-utf8-search-tests');
+        file_put_contents($directory.'/laravel.log', "[2026-05-08 09:00:00] local.ERROR: Something\n");
+        config()->set('logcenter.viewer.paths', [$directory]);
+
+        $response = $this->get('/log-viewer?search=%FF%FE');
+
+        $response->assertOk();
+        $this->assertMatchesRegularExpression('/var term = \("[^"]*"\)\.trim\(\);/', $response->getContent());
     }
 }

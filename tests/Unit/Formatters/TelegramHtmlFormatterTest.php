@@ -152,4 +152,32 @@ final class TelegramHtmlFormatterTest extends TestCase
 
         $this->assertStringNotContainsString('<b>Source: </b>', $formatted->content);
     }
+
+    public function test_a_long_message_does_not_push_everything_out_through_the_viewer_link(): void
+    {
+        $message = 'SQLSTATE[42S22]: select * from orders where '.str_repeat('id = 1 and ', 250);
+
+        $formatted = (new TelegramHtmlFormatter)->format($this->makePayload([
+            'message' => $message,
+            'exception' => ['class' => 'Illuminate\Database\QueryException', 'file' => '/app/Foo.php', 'line' => 7],
+        ]));
+
+        $this->assertStringContainsString('Message:', $formatted->content);
+        $this->assertStringContainsString('QueryException', $formatted->content);
+        $this->assertStringContainsString('Open in viewer', $formatted->content);
+        $this->assertMatchesRegularExpression('/search=[^"&]{1,400}"/', $formatted->content);
+    }
+
+    public function test_it_ignores_non_scalar_values_from_free_form_payloads(): void
+    {
+        $formatted = (new TelegramHtmlFormatter)->format($this->makePayload([
+            'exception' => ['class' => ['nested'], 'message' => ['nested']],
+            'user' => ['id' => ['nested'], 'name' => 'Sara'],
+            'request' => ['method' => ['GET'], 'url' => 'https://example.com'],
+        ]));
+
+        $this->assertStringContainsString('<code>Exception</code>', $formatted->content);
+        $this->assertStringContainsString('Sara', $formatted->content);
+        $this->assertStringContainsString('https://example.com', $formatted->content);
+    }
 }

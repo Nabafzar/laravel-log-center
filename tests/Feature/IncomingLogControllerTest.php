@@ -8,6 +8,7 @@ use Nabafzar\LogCenter\Contracts\LogDispatcherInterface;
 use Nabafzar\LogCenter\DTO\LogPayload;
 use Nabafzar\LogCenter\DTO\TransportResult;
 use Nabafzar\LogCenter\Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 final class IncomingLogControllerTest extends TestCase
 {
@@ -98,5 +99,41 @@ final class IncomingLogControllerTest extends TestCase
 
         $response->assertUnprocessable();
         $response->assertJsonValidationErrors(['level']);
+    }
+
+    public function test_nested_values_in_free_form_fields_do_not_cause_a_server_error(): void
+    {
+        $this->postJson('/incoming-logs', [
+            'level' => 'error',
+            'message' => 'Nested values',
+            'exception' => ['class' => ['nested'], 'message' => ['nested']],
+            'user' => ['id' => ['nested']],
+            'request' => ['method' => ['GET']],
+        ], ['X-LogCenter-Token' => 'test-incoming-token'])->assertAccepted();
+    }
+
+    #[DataProvider('formatterProvider')]
+    public function test_every_formatter_accepts_nested_values(string $formatter): void
+    {
+        config()->set('logcenter.formatter', $formatter);
+
+        $this->postJson('/incoming-logs', [
+            'level' => 'error',
+            'message' => 'Nested values',
+            'exception' => ['class' => ['nested'], 'message' => ['nested'], 'file' => ['x'], 'line' => ['y']],
+            'user' => ['id' => ['nested'], 'name' => ['nested']],
+            'request' => ['method' => ['GET'], 'url' => ['x'], 'ip' => ['x'], 'referer' => ['x']],
+        ], ['X-LogCenter-Token' => 'test-incoming-token'])->assertAccepted();
+    }
+
+    public static function formatterProvider(): array
+    {
+        return [
+            'plain' => ['plain'],
+            'json' => ['json'],
+            'markdown' => ['markdown'],
+            'telegram_html' => ['telegram_html'],
+            'bale_markdown' => ['bale_markdown'],
+        ];
     }
 }

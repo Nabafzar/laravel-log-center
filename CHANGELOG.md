@@ -19,6 +19,10 @@ All notable changes to this project are documented in this file. Releases follow
 
 ### Fixed
 
+- **Security:** masking only matched exact key names, so `current_password`, `new_password`, `client_secret`, `api_token` and Laravel's CSRF `_token` were sent in clear text. A key is now masked when its name contains a configured key
+- With the viewer enabled, a long message (such as a `QueryException` with its full SQL) put the whole message into the "open in viewer" link. In Telegram the link alone went over the length limit, so the notification showed only its header; in the other formatters the link used up the message budget. The link's search term is now capped at 100 characters, which still finds the entry
+- Incoming logs with nested values in free-form fields (`exception.class`, `user.id`, `request.method`, ...) caused a 500 error ("Array to string conversion"). Formatters now skip non-scalar values
+- A viewer URL with an invalid UTF-8 search term broke the page's JavaScript (live tail, shortcuts)
 - **Alerts were lost when the database went down** — exactly when they matter most (Laravel 11+ uses the database for cache, queue and sessions by default):
   - with suppression enabled, an unavailable cache store threw and the log was dropped. A store failure now counts as "not suppressed"
   - with queueing enabled, a failed queue push threw and the log was dropped. The log is now sent synchronously instead

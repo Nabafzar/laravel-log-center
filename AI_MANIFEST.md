@@ -190,7 +190,7 @@ Global keys:
 - `queue.queue`: queue name.
 - `mask.replacement`: replacement string for sensitive data.
 - `mask.case_sensitive`: controls key/text masking case sensitivity.
-- `mask.keys`: sensitive keys.
+- `mask.keys`: sensitive keys. A key matches when its name contains one of them.
 - `truncate.message`: global fallback message limit.
 - `truncate.trace`: global fallback trace limit.
 - `viewer.enabled`: toggles the built-in local file viewer.
@@ -412,7 +412,7 @@ Before tagging a release:
 
 - `composer validate` passes.
 - PHP syntax checks pass for all `src` and `config` PHP files.
-- Unit and integration tests pass (currently 244 tests / 701 assertions).
+- Unit and integration tests pass (currently 255 tests / 722 assertions).
 - README documents installation, Laravel channel setup, environment variables,
   supported drivers, extension examples, and security notes. ✓
 - CHANGELOG.md exists and is up to date. ✓
