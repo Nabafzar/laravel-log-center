@@ -55,7 +55,7 @@ final class PayloadProcessor
             source: $payload->source,
             trace: $this->maskText($payload->trace),
             fingerprint: $payload->fingerprint,
-            tags: $payload->tags,
+            tags: $this->normalizeTags($payload->tags),
             labels: $this->maskArray($payload->labels),
             request: $this->maskNullableArray($payload->request),
             user: $this->maskNullableArray($payload->user),
@@ -101,12 +101,7 @@ final class PayloadProcessor
             return $text;
         }
 
-        // Invalid UTF-8 makes every JSON-based provider request fail, so the
-        // log would never be delivered. Replace the broken bytes instead.
-        if (! mb_check_encoding($text, 'UTF-8')) {
-            $text = mb_scrub($text, 'UTF-8');
-        }
-
+        $text = $this->scrub($text);
         $pattern = $this->pattern();
 
         if ($pattern === null) {
@@ -125,6 +120,38 @@ final class PayloadProcessor
      * covers `current_password` and `new_password`, and `token` covers
      * `api_token` and Laravel's `_token`. Over-masking is the safe failure.
      */
+    /**
+     * Tags are labels, so keep them a clean list of strings: providers that
+     * send the raw list (webhook) fail on nested arrays or invalid UTF-8.
+     *
+     * @return list<string>
+     */
+    private function normalizeTags(array $tags): array
+    {
+        $normalized = [];
+
+        foreach ($tags as $tag) {
+            if (is_string($tag) || is_int($tag)) {
+                $tag = trim($this->scrub((string) $tag));
+
+                if ($tag !== '') {
+                    $normalized[$tag] = $tag;
+                }
+            }
+        }
+
+        return array_values($normalized);
+    }
+
+    /**
+     * Invalid UTF-8 makes every JSON-based provider request fail, so the log
+     * would never be delivered. Replace the broken bytes instead.
+     */
+    private function scrub(string $text): string
+    {
+        return mb_check_encoding($text, 'UTF-8') ? $text : mb_scrub($text, 'UTF-8');
+    }
+
     private function shouldMaskKey(string|int $key, array $keys): bool
     {
         if (is_int($key)) {

@@ -184,4 +184,13 @@ final class PayloadProcessorTest extends TestCase
             'email' => 'user@example.com',
         ], $payload->request['body']);
     }
+
+    public function test_it_normalizes_tags_to_a_list_of_valid_strings(): void
+    {
+        $payload = (new PayloadProcessor)->process($this->makePayload([
+            'tags' => ['payments', ['nested'], null, 42, " broken \xB1 ", 'payments', ''],
+        ]));
+
+        $this->assertSame(['payments', '42', 'broken ?'], $payload->tags);
+    }
 }

@@ -16,6 +16,8 @@ use Throwable;
 final class BaleTransport extends AbstractTransport
 {
     private const DEFAULT_BASE_URL = 'https://tapi.bale.ai/bot';
+    private const MAX_MESSAGE_LENGTH = 4096;
+    private const TRUNCATED_MARKER = PHP_EOL.'... [truncated]';
     protected const DRIVER_NAME = 'bale';
 
     public function send(LogPayload $payload, FormattedMessage $message): TransportResult
@@ -37,9 +39,18 @@ final class BaleTransport extends AbstractTransport
             );
         }
 
+        $parseMode = $this->parseModeFromMessage($message);
+
+        if (mb_strlen($content) > self::MAX_MESSAGE_LENGTH) {
+            // Bale rejects longer messages, and a cut can split Markdown, so
+            // send the shortened text without a parse mode.
+            $content = mb_substr($content, 0, self::MAX_MESSAGE_LENGTH - mb_strlen(self::TRUNCATED_MARKER)).self::TRUNCATED_MARKER;
+            $parseMode = null;
+        }
+
         try {
             $response = Http::timeout($this->timeout())
-                ->post($this->endpoint($token), $this->payload($chatId, $content, $message))
+                ->post($this->endpoint($token), $this->payload($chatId, $content, $parseMode, $message))
                 ->throw();
 
             return $this->success(
@@ -57,12 +68,12 @@ final class BaleTransport extends AbstractTransport
      *
      * @return array<string, int|string>
      */
-    private function payload(string $chatId, string $content, FormattedMessage $message): array
+    private function payload(string $chatId, string $content, ?string $parseMode, FormattedMessage $message): array
     {
         $payload = [
             'chat_id' => $chatId,
             'text' => $content,
-            'parse_mode' => $this->parseModeFromMessage($message),
+            'parse_mode' => $parseMode,
         ];
 
         $replyToMessageId = $this->replyToMessageId($message);

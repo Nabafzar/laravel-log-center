@@ -192,4 +192,21 @@ final class TelegramTransportTest extends TestCase
         Http::assertSent(static fn ($request): bool => $request->data()['parse_mode'] === 'HTML'
             && $request->data()['text'] === '<b>short</b>');
     }
+
+    public function test_tag_topic_routing_ignores_non_string_tags(): void
+    {
+        config()->set('logcenter.drivers.telegram.token', 'TEST_TOKEN');
+        config()->set('logcenter.drivers.telegram.chat_id', '12345');
+        config()->set('logcenter.drivers.telegram.tag_topics', ['payments' => 77]);
+
+        Http::fake(['https://api.telegram.org/*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]])]);
+
+        $result = (new TelegramTransport)->send(
+            $this->makePayload(['tags' => [['nested'], 'payments']]),
+            new FormattedMessage('hello'),
+        );
+
+        $this->assertTrue($result->isSuccess());
+        Http::assertSent(static fn ($request): bool => $request->data()['message_thread_id'] === 77);
+    }
 }
