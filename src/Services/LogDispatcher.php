@@ -14,6 +14,7 @@ use Nabafzar\LogCenter\Jobs\DispatchLogJob;
 use Nabafzar\LogCenter\Managers\TransportManager;
 use Nabafzar\LogCenter\Processors\PayloadProcessor;
 use Nabafzar\LogCenter\Suppression\SuppressionManager;
+use Throwable;
 
 final readonly class LogDispatcher implements LogDispatcherInterface
 {
@@ -46,7 +47,7 @@ final readonly class LogDispatcher implements LogDispatcherInterface
                 'suppressed' => true,
                 'occurrences' => $occurrences,
             ]);
-            event(new LogSuppressed($payload, $suppressedResult, $occurrences));
+            $this->fire(new LogSuppressed($payload, $suppressedResult, $occurrences));
 
             return $suppressedResult;
         }
@@ -55,7 +56,7 @@ final readonly class LogDispatcher implements LogDispatcherInterface
 
         if ($result->isSuccess()) {
             $this->recordSuppression($fingerprint);
-            event(new LogDispatched($payload, $result));
+            $this->fire(new LogDispatched($payload, $result));
 
             return $result;
         }
@@ -63,7 +64,7 @@ final readonly class LogDispatcher implements LogDispatcherInterface
         // Primary failed — notify listeners (unless suppressed for queue context),
         // then try the fallback driver.
         if ($emitFailEvents) {
-            event(new LogDispatchFailed($payload, $result, $result->retryable));
+            $this->fire(new LogDispatchFailed($payload, $result, $result->retryable));
         }
 
         $fallbackResult = $this->tryFallback($payload, $driverName, $fingerprint, $emitFailEvents);
@@ -105,9 +106,9 @@ final readonly class LogDispatcher implements LogDispatcherInterface
 
         if ($result->isSuccess()) {
             $this->recordSuppression($fingerprint);
-            event(new LogDispatched($payload, $result));
+            $this->fire(new LogDispatched($payload, $result));
         } elseif ($emitFailEvents) {
-            event(new LogDispatchFailed($payload, $result, $result->retryable));
+            $this->fire(new LogDispatchFailed($payload, $result, $result->retryable));
         }
 
         return $result;
@@ -158,7 +159,21 @@ final readonly class LogDispatcher implements LogDispatcherInterface
             $job->onQueue($queue);
         }
 
-        dispatch($job);
+        try {
+            dispatch($job);
+        } catch (Throwable $e) {
+            // A sync queue runs the job inline, so the exception is the send
+            // itself failing, not the queue; sending again would duplicate it.
+            if ($this->isSyncConnection($connection)) {
+                throw $e;
+            }
+
+            // The queue backend is often the database, which may be the very
+            // thing that failed. Deliver now instead of losing the log.
+            error_log('[LogCenter] queue unavailable, sending synchronously: '.$e->getMessage());
+
+            return $this->sendNow($payload, $driverName, $formatterName);
+        }
 
         return TransportResult::success(
             driver: $driverName,
@@ -169,6 +184,28 @@ final readonly class LogDispatcher implements LogDispatcherInterface
                 'queue' => is_string($queue) ? trim($queue) : null,
             ],
         );
+    }
+
+    /**
+     * A throwing listener (or a queued listener whose queue is down) must not
+     * skip the fallback driver or turn a delivered log into an error.
+     */
+    private function fire(object $event): void
+    {
+        try {
+            event($event);
+        } catch (Throwable $e) {
+            error_log('[LogCenter] event listener failed: '.$e->getMessage());
+        }
+    }
+
+    private function isSyncConnection(mixed $connection): bool
+    {
+        $name = is_string($connection) && trim($connection) !== ''
+            ? trim($connection)
+            : config('queue.default');
+
+        return config("queue.connections.{$name}.driver") === 'sync';
     }
 
     private function shouldQueue(): bool

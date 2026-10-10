@@ -66,4 +66,16 @@ final class SuppressionManagerTest extends TestCase
 
         $this->assertTrue($this->manager->isEnabled());
     }
+
+    public function test_an_unavailable_cache_store_never_suppresses_or_throws(): void
+    {
+        config()->set('cache.stores.unavailable', ['driver' => 'redis', 'connection' => 'missing']);
+        config()->set('logcenter.suppression.store', 'unavailable');
+
+        $manager = new SuppressionManager;
+
+        $this->assertFalse($manager->isSuppressed('fingerprint-123'));
+        $manager->recordSuccessfulSend('fingerprint-123');
+        $this->assertSame(0, $manager->incrementAndGetCount('fingerprint-123'));
+    }
 }

@@ -164,6 +164,12 @@ handling, or it can recursively log its own failures. Use `error_log()` or a
 separate non-LogCenter fallback when needed. The handler also ignores records
 written while it is already dispatching (re-entrancy guard).
 
+Delivery must survive the database being down: suppression store errors
+mean "not suppressed", a failed queue push falls back to a synchronous send
+(except on a `sync` connection), user resolution failures leave the user empty,
+and event listener exceptions are reported with `error_log()` without
+affecting the fallback or the result.
+
 Transports build failures from exceptions through
 `AbstractTransport::failedFromException()`, which strips configured secrets
 (bot tokens, webhook URLs) from the error message, because Guzzle puts the
@@ -406,7 +412,7 @@ Before tagging a release:
 
 - `composer validate` passes.
 - PHP syntax checks pass for all `src` and `config` PHP files.
-- Unit and integration tests pass (currently 236 tests / 686 assertions).
+- Unit and integration tests pass (currently 244 tests / 701 assertions).
 - README documents installation, Laravel channel setup, environment variables,
   supported drivers, extension examples, and security notes. ✓
 - CHANGELOG.md exists and is up to date. ✓

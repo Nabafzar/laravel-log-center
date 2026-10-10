@@ -6,6 +6,7 @@ namespace Nabafzar\LogCenter\Suppression;
 
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\Cache;
+use Throwable;
 
 final class SuppressionManager
 {
@@ -20,7 +21,14 @@ final class SuppressionManager
             return false;
         }
 
-        return $this->store()->has($this->suppressionKey($fingerprint));
+        // A cache outage must not drop the alert: treat it as "not suppressed".
+        try {
+            return $this->store()->has($this->suppressionKey($fingerprint));
+        } catch (Throwable $e) {
+            error_log('[LogCenter] suppression store unavailable: '.$e->getMessage());
+
+            return false;
+        }
     }
 
     public function recordSuccessfulSend(string $fingerprint): void
@@ -30,15 +38,25 @@ final class SuppressionManager
         }
 
         $ttl = max(1, (int) config('logcenter.suppression.ttl', 300));
-        $store = $this->store();
 
-        $store->put($this->suppressionKey($fingerprint), true, $ttl);
-        $store->put($this->countKey($fingerprint), 0, $ttl);
+        try {
+            $store = $this->store();
+            $store->put($this->suppressionKey($fingerprint), true, $ttl);
+            $store->put($this->countKey($fingerprint), 0, $ttl);
+        } catch (Throwable $e) {
+            error_log('[LogCenter] suppression store unavailable: '.$e->getMessage());
+        }
     }
 
     public function incrementAndGetCount(string $fingerprint): int
     {
-        return (int) $this->store()->increment($this->countKey($fingerprint));
+        try {
+            return (int) $this->store()->increment($this->countKey($fingerprint));
+        } catch (Throwable $e) {
+            error_log('[LogCenter] suppression store unavailable: '.$e->getMessage());
+
+            return 0;
+        }
     }
 
     private function store(): Repository

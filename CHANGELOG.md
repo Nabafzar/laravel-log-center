@@ -19,6 +19,12 @@ All notable changes to this project are documented in this file. Releases follow
 
 ### Fixed
 
+- **Alerts were lost when the database went down** — exactly when they matter most (Laravel 11+ uses the database for cache, queue and sessions by default):
+  - with suppression enabled, an unavailable cache store threw and the log was dropped. A store failure now counts as "not suppressed"
+  - with queueing enabled, a failed queue push threw and the log was dropped. The log is now sent synchronously instead
+  - resolving the authenticated user for the payload could query the database and throw. A failed lookup now just leaves the user empty
+- A listener on `LogDispatchFailed` that threw (or a queued listener whose queue was down) skipped the fallback driver, and a throwing `LogDispatched` listener turned a delivered log into an error. Listener failures are now reported with `error_log()` and do not affect delivery
+- Logs written from Artisan commands and queue workers included Artisan's placeholder request (`GET` on `APP_URL` from `127.0.0.1`). Console logs now only include a request passed explicitly in the context
 - **Security:** bot tokens and webhook URLs leaked into failure messages. Guzzle puts the request URL in connection errors, and that text reached `LogDispatchFailed`, the `failed_jobs` table and the incoming API response. Transports now replace configured secrets with `******`
 - **Security:** the viewer served any file under a configured directory, not only log files. With a broad root such as `storage_path()`, session or app files could be downloaded. Inside a directory root only `*.log` files are served now
 - `LOGCENTER_LEVEL` was never applied. With the channel left at Laravel's default `debug` level, every debug and info log was sent to the provider. The handler now requires both the channel level and `LOGCENTER_LEVEL`
