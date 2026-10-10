@@ -123,7 +123,7 @@ final class WebhookTransport extends AbstractTransport
 
     private function timeout(): int
     {
-        return max(1, (int) config('logcenter.drivers.webhook.timeout', 5));
+        return $this->positiveInt(config('logcenter.drivers.webhook.timeout'), 5);
     }
 
     /**

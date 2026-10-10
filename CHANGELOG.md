@@ -23,6 +23,9 @@ All notable changes to this project are documented in this file. Releases follow
 
 ### Fixed
 
+- `LOGCENTER_TRUNCATE_MESSAGE` and `LOGCENTER_TRUNCATE_TRACE` were documented but never read. They are now the fallback limits when a formatter has no `max_length` / `trace_max_length` of its own (for example in a config published before a key existed)
+- An empty value in `.env` (for example `LOGCENTER_PLAIN_FORMATTER_MAX_LENGTH=` or `LOGCENTER_TELEGRAM_MESSAGE_LIMIT=`) read as a limit of 0 or 1, so every message was cut to "... [truncated]". Empty, zero or non-numeric limits, timeouts, TTLs, page sizes and retry counts now fall back to their defaults
+- The plain and markdown formatters read `trace_max_length`, but the config did not declare it. Added `LOGCENTER_PLAIN_FORMATTER_TRACE_MAX_LENGTH` and `LOGCENTER_MARKDOWN_FORMATTER_TRACE_MAX_LENGTH` (default 1200)
 - Bale rejected messages over its 4096-character limit (for example with `LOGCENTER_BALE_FORMATTER=json` or a raised `max_length`), so the log was lost. Long messages are now shortened and sent without a parse mode, as Telegram already did
 - Tags were passed to providers unprocessed: nested arrays or invalid UTF-8 in `tags` made webhook requests fail, and a non-string tag crashed Telegram's tag-to-topic lookup. Tags are now normalized to a list of valid strings
 - The fallback driver was skipped when the primary driver could not send at all: an unknown driver name (for example `LOGCENTER_DRIVER=slack`), a formatter error, or a custom transport that throws instead of returning a failed result. These now count as a failed send, so `LogDispatchFailed` fires and the fallback runs

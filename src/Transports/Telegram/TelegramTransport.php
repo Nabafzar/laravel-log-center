@@ -223,7 +223,7 @@ class TelegramTransport extends AbstractTransport
 
     private function timeout(): int
     {
-        return max(1, (int) config('logcenter.drivers.telegram.timeout', 5));
+        return $this->positiveInt(config('logcenter.drivers.telegram.timeout'), 5);
     }
 
     private function proxy(): ?string
@@ -272,7 +272,7 @@ class TelegramTransport extends AbstractTransport
 
     private function messageLimit(): int
     {
-        return max(1, (int) config('logcenter.drivers.telegram.limits.message', self::MAX_MESSAGE_LENGTH));
+        return $this->positiveInt(config('logcenter.drivers.telegram.limits.message'), self::MAX_MESSAGE_LENGTH);
     }
 
     private function messageId(mixed $response): ?string

@@ -116,7 +116,7 @@ final class BaleTransport extends AbstractTransport
 
     private function timeout(): int
     {
-        return max(1, (int) config('logcenter.drivers.bale.timeout', 5));
+        return $this->positiveInt(config('logcenter.drivers.bale.timeout'), 5);
     }
 
     private function replyToMessageId(FormattedMessage $message): ?int

@@ -115,6 +115,15 @@ abstract class AbstractTransport implements LogTransportInterface
         return $value !== '' ? $value : null;
     }
 
+    /**
+     * A positive integer setting. An empty env value (`LOGCENTER_X=`) reads as
+     * an empty string, which would cast to 0; fall back to the default instead.
+     */
+    final protected function positiveInt(mixed $value, int $default): int
+    {
+        return is_numeric($value) && (int) $value > 0 ? (int) $value : $default;
+    }
+
     final protected function statusCodeFromException(Throwable $exception): ?int
     {
         if ($exception instanceof RequestException) {

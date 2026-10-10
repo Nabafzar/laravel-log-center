@@ -263,9 +263,22 @@ abstract class AbstractFormatter
         return $content;
     }
 
-    protected function configInt(string $key, int $default): int
+    /**
+     * Read a positive limit, falling back to `$fallbackKey` (the global
+     * `truncate.*` setting) and then to `$default`. Empty env values read as an
+     * empty string, which would otherwise cast to a limit of 0.
+     */
+    protected function configInt(string $key, int $default, ?string $fallbackKey = null): int
     {
-        return (int) config($key, $default);
+        foreach (array_filter([$key, $fallbackKey]) as $candidate) {
+            $value = config($candidate);
+
+            if (is_numeric($value) && (int) $value > 0) {
+                return (int) $value;
+            }
+        }
+
+        return $default;
     }
 
     protected function sectionMaxLength(int $maxLength): int

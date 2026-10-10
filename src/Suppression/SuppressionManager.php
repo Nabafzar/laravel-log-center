@@ -37,7 +37,8 @@ final class SuppressionManager
             return;
         }
 
-        $ttl = max(1, (int) config('logcenter.suppression.ttl', 300));
+        $ttl = config('logcenter.suppression.ttl');
+        $ttl = is_numeric($ttl) && (int) $ttl > 0 ? (int) $ttl : 300;
 
         try {
             $store = $this->store();
