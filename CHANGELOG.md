@@ -6,6 +6,9 @@ All notable changes to this project are documented in this file. Releases follow
 
 ### Added
 
+- **Log viewer redesign** — issues grouped with event count and first/last seen; exception header with source preview; stack trace with app frames highlighted and vendor frames folded; Context, Occurrences and Raw tabs; activity chart; level chips with counts for all eight levels; keyboard shortcuts; mobile layout; notification links open the matching issue already expanded
+- **`viewer.code_snippets`** (`LOGCENTER_VIEWER_CODE_SNIPPETS`, defaults to `APP_DEBUG`) — show source lines around an exception; only PHP files inside `base_path()` are read
+- **`viewer.editor`** (`LOGCENTER_VIEWER_EDITOR`) — "open in editor" links for VS Code, Cursor, PhpStorm, Sublime or a custom URL template
 - **`#[LogTopic]` attribute** — decorate any method or class with one or more tags to route logs to a Telegram forum topic thread and append `#tag` to all other driver messages; topic ID resolved with priority: attribute `topicId` → `tag_topics` config (tag → topic ID) → `topics_level` config (level → topic ID) → default `topic_id` config
 - **Telegram `tag_topics` routing** — new `drivers.telegram.tag_topics` config maps tag names to Telegram forum thread IDs, sitting between an explicit attribute `topicId` and the `topics_level` level-based mapping in the resolution chain
 - **`supportsTopics()` transport contract** — new method on `LogTransportInterface` (default `false` on `AbstractTransport`); `TelegramTransport` returns `true`, signalling that it handles tag-to-topic routing natively
@@ -16,6 +19,10 @@ All notable changes to this project are documented in this file. Releases follow
 
 ### Fixed
 
+- Notification "open in viewer" links landed on an empty page for Laravel exceptions: the viewer did not parse the multi-line exception JSON Laravel writes, so neither the fingerprint nor the search term matched. The viewer now parses the exception class, message, file, line, stack frames and previous exceptions, and its fingerprint matches the notification's
+- The viewer's level chart left out emergency, alert and critical entries
+- Live tail re-sent the last complete entry whenever new lines were appended
+- Live tail now confirms the connection immediately instead of after the first 10-second heartbeat
 - `LogPayload::source` is now resolved from runtime context (`http` or `console`); was always `null` before
 - Incoming log ingress now validates the `level` field; invalid or uppercase values are rejected with 422
 - `BaleTransport` now imports `BackedEnum`; missing import previously risked a fatal error at runtime

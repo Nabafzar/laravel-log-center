@@ -148,6 +148,14 @@ return [
         'per_page' => env('LOGCENTER_VIEWER_PER_PAGE', 50),
         'max_files' => env('LOGCENTER_VIEWER_MAX_FILES', 20),
         'max_entry_lines' => env('LOGCENTER_VIEWER_MAX_ENTRY_LINES', 500),
+
+        // Show the source lines around an exception's location. Only PHP files
+        // inside base_path() are read. Follows APP_DEBUG unless set explicitly.
+        'code_snippets' => env('LOGCENTER_VIEWER_CODE_SNIPPETS', env('APP_DEBUG', false)),
+
+        // Turn file paths into "open in editor" links: vscode, cursor, phpstorm,
+        // sublime, or a custom URL template using {file} and {line}.
+        'editor' => env('LOGCENTER_VIEWER_EDITOR'),
     ],
 
     /*

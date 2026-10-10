@@ -85,6 +85,7 @@ Implemented code:
 - Queue job:
   - `src/Jobs/DispatchLogJob.php`
 - Log viewer:
+  - `src/Viewer/CodeSnippet.php`
   - `src/Http/Controllers/LogViewerController.php`
   - `src/Viewer/LogFileRepository.php`
   - `routes/web.php`
@@ -119,7 +120,9 @@ stable release:
 - Config references Slack driver support, but factory creation is still missing
   and classes are missing.
 - Log viewer exists, but still needs larger-file performance work before
-  release.
+  release (files are parsed fully per request; parsing is cached per request).
+  `LogFileRepository` parses Laravel's multi-line exception JSON so viewer
+  fingerprints match `LogPayloadFactory` fingerprints — keep both recipes in sync.
 - `LogCenterHandler` requires a `LogDispatcher` constructor argument; verify the
   Laravel logging integration can instantiate it correctly.
 - Several source files contain mojibake where icons or Persian comments were
@@ -187,6 +190,8 @@ Global keys:
 - `viewer.max_files`: maximum number of files shown in the sidebar.
 - `viewer.max_file_size`: maximum file size in bytes accepted by the viewer.
 - `viewer.max_entry_lines`: future guardrail for large entries.
+- `viewer.code_snippets`: show source lines around exceptions (PHP files inside `base_path()` only; defaults to `APP_DEBUG`).
+- `viewer.editor`: `vscode`, `cursor`, `phpstorm`, `sublime`, or a URL template with `{file}` and `{line}` for open-in-editor links.
 - `incoming.enabled`: toggles the incoming log ingress route.
 - `incoming.route_prefix`: route prefix for incoming logs.
 - `incoming.middleware`: middleware stack for incoming routes.
@@ -233,6 +238,8 @@ Global:
 - `LOGCENTER_VIEWER_MAX_FILES`
 - `LOGCENTER_VIEWER_MAX_FILE_SIZE`
 - `LOGCENTER_VIEWER_MAX_ENTRY_LINES`
+- `LOGCENTER_VIEWER_CODE_SNIPPETS`
+- `LOGCENTER_VIEWER_EDITOR`
 - `LOGCENTER_INCOMING_ENABLED`
 - `LOGCENTER_INCOMING_ROUTE_PREFIX`
 - `LOGCENTER_INCOMING_AUTH_ENABLED`

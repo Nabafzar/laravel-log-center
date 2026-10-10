@@ -468,16 +468,35 @@ Multiple tags, class-level, or tag-only (no topic ID) are all supported. Topic r
 
 ## Log Viewer
 
-A lightweight read-only viewer for local Laravel log files.
+A read-only viewer for your Laravel log files, built to answer "what broke, where, and how often?" quickly.
 
 ```dotenv
 LOGCENTER_VIEWER_ENABLED=true
 LOGCENTER_VIEWER_ROUTE_PREFIX=log-viewer    # → /log-viewer
 LOGCENTER_VIEWER_AUTH_ENABLED=true          # default: true
+LOGCENTER_VIEWER_CODE_SNIPPETS=true         # default: follows APP_DEBUG
+LOGCENTER_VIEWER_EDITOR=vscode              # vscode, cursor, phpstorm, sublime, or a URL template
 ```
 
-Features: sidebar with file list and entry count, full-text search (`/`), expand/collapse,
-copy-trace, file download, dark/light mode.
+What you get:
+
+- **Issues, not lines** — identical errors are grouped, with event count, first seen and last seen.
+- **Exception details** — class, message and `file:line` parsed from Laravel's log format, plus a
+  preview of the source lines around the error (PHP files inside your app only, and only when
+  `code_snippets` is on).
+- **Readable stack traces** — your application frames are highlighted and vendor frames are folded.
+  "Caused by" chains for previous exceptions are shown too.
+- **Context, occurrences and raw tabs** — highlighted JSON context, every occurrence with its raw
+  entry, and the latest raw entry with a copy button.
+- **Activity chart** — errors, warnings and other entries over time, following your filters.
+- **Search and level filters** — level chips keep their counts while you filter.
+- **Notification links** — the "open in viewer" link in Telegram, Bale and Mattermost messages opens
+  the exact error, already expanded.
+- **Live tail, download, dark mode, mobile layout and keyboard shortcuts** (`/` search, `j`/`k` move,
+  `e` expand all, `l` live, `t` theme, `?` help).
+
+`LOGCENTER_VIEWER_EDITOR` turns file paths into "open in editor" links. A custom template can use
+`{file}` and `{line}`, for example `idea://open?file={file}&line={line}`.
 
 > **Note:** The viewer exposes raw log contents including stack traces. Authentication is enabled
 > by default — only disable it in trusted, non-public environments.

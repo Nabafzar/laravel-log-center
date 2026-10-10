@@ -11,6 +11,14 @@ use Throwable;
 
 final class LogFileRepository
 {
+    /**
+     * Parsed entries per file for the lifetime of this instance (one request).
+     * Keyed by path and invalidated when the file's size or mtime changes.
+     *
+     * @var array<string, array{signature: string, entries: Collection}>
+     */
+    private array $parsed = [];
+
     public function all(): array
     {
         $files = [];
@@ -108,6 +116,72 @@ final class LogFileRepository
         ];
     }
 
+    /**
+     * Bucket entries over time for the activity chart. Bucket width snaps to a
+     * readable unit (1 minute up to 1 week) so axis labels stay meaningful.
+     *
+     * @return array{start: ?int, end: ?int, size: int, max: int, buckets: list<array{from: int, to: int, error: int, warning: int, other: int, total: int}>}
+     */
+    public function timeline(Collection $entries, int $maxBuckets = 48): array
+    {
+        $points = [];
+
+        foreach ($entries as $entry) {
+            $time = strtotime((string) ($entry['timestamp'] ?? ''));
+
+            if ($time !== false) {
+                $points[] = [$time, (string) ($entry['level'] ?? 'info')];
+            }
+        }
+
+        if ($points === []) {
+            return ['start' => null, 'end' => null, 'size' => 0, 'max' => 0, 'buckets' => []];
+        }
+
+        $times = array_column($points, 0);
+        $start = min($times);
+        $end = max($times);
+        $rawSize = (int) ceil(($end - $start + 1) / max(1, $maxBuckets));
+        $size = 604800;
+
+        foreach ([60, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 43200, 86400, 172800, 604800] as $candidate) {
+            if ($candidate >= $rawSize) {
+                $size = $candidate;
+
+                break;
+            }
+        }
+
+        $origin = intdiv($start, $size) * $size;
+        $count = intdiv($end - $origin, $size) + 1;
+        $buckets = [];
+
+        for ($i = 0; $i < $count; $i++) {
+            $from = $origin + ($i * $size);
+            $buckets[] = ['from' => $from, 'to' => $from + $size, 'error' => 0, 'warning' => 0, 'other' => 0, 'total' => 0];
+        }
+
+        foreach ($points as [$time, $level]) {
+            $index = intdiv($time - $origin, $size);
+            $band = match ($level) {
+                'emergency', 'alert', 'critical', 'error' => 'error',
+                'warning' => 'warning',
+                default => 'other',
+            };
+
+            $buckets[$index][$band]++;
+            $buckets[$index]['total']++;
+        }
+
+        return [
+            'start' => $start,
+            'end' => $end,
+            'size' => $size,
+            'max' => max(array_column($buckets, 'total')),
+            'buckets' => $buckets,
+        ];
+    }
+
     public function groupedEntries(Collection $entries): Collection
     {
         return $entries
@@ -136,6 +210,8 @@ final class LogFileRepository
                     'first_timestamp' => (string) ($timestamps->first() ?? ($first['timestamp'] ?? '')),
                     'last_timestamp' => (string) ($timestamps->last() ?? ($first['timestamp'] ?? '')),
                     'items' => $items,
+                    'latest' => $items->last() ?? [],
+                    'exception' => ($items->last() ?? [])['exception'] ?? null,
                     'truncated' => $items->contains(static fn (array $entry): bool => (bool) ($entry['truncated'] ?? false)),
                     'has_json' => $items->contains(static fn (array $entry): bool => (bool) ($entry['has_json'] ?? false)),
                     'has_exception' => $items->contains(static fn (array $entry): bool => (bool) ($entry['has_exception'] ?? false)),
@@ -219,6 +295,21 @@ final class LogFileRepository
 
     private function parseFile(string $path): Collection
     {
+        clearstatcache(true, $path);
+        $signature = (@filesize($path) ?: 0).':'.(@filemtime($path) ?: 0);
+
+        if (($this->parsed[$path]['signature'] ?? null) === $signature) {
+            return $this->parsed[$path]['entries'];
+        }
+
+        $entries = $this->readEntries($path);
+        $this->parsed[$path] = ['signature' => $signature, 'entries' => $entries];
+
+        return $entries;
+    }
+
+    private function readEntries(string $path): Collection
+    {
         $handle = new SplFileObject($path, 'r');
         $entries = collect();
         $current = null;
@@ -273,12 +364,27 @@ final class LogFileRepository
         }
 
         $rawMessage = trim((string) ($header['message'] ?? ''));
-        $message = $this->normalizeMessage($rawMessage);
+        [$message, $jsonContext] = $this->splitMessageAndContext($rawMessage, $visibleLines);
+        $laravelException = $this->parseLaravelException($jsonContext['exception'] ?? null);
         $stack = count($visibleLines) > 1 ? implode(PHP_EOL, array_slice($visibleLines, 1)) : null;
         $firstLine = (string) ($visibleLines[0] ?? $message);
-        $jsonContext = $this->extractJsonContext($rawMessage);
-        $exception = $this->extractExceptionDetails($message, $content, $visibleLines);
+
+        if ($laravelException !== null) {
+            $exception = $laravelException['details'];
+            $frames = $laravelException['frames'];
+            $previous = $laravelException['previous'];
+            $stack = $laravelException['trace'] ?? $stack;
+            unset($jsonContext['exception']);
+            $jsonContext = $jsonContext === [] ? null : $jsonContext;
+        } else {
+            $exception = $this->extractExceptionDetails($message, $content, $visibleLines);
+            $frames = $this->parseFrames((string) $stack);
+            $previous = [];
+        }
+
         $searchable = implode(' ', array_filter([
+            // Matches the search term notification links carry: message, class, exception message.
+            implode(' ', array_filter([$message, $exception['class'] ?? null, $exception['message'] ?? null])),
             $rawMessage,
             $message,
             $jsonContext ? json_encode($jsonContext, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null,
@@ -300,6 +406,8 @@ final class LogFileRepository
             'has_exception' => ! empty($exception['class']) || ! empty($exception['message']),
             'stack' => $stack,
             'has_stack' => $stack !== null,
+            'frames' => $frames,
+            'previous_exceptions' => $previous,
             'content' => $content,
             'raw' => $content,
             'line_count' => count($lines),
@@ -319,44 +427,123 @@ final class LogFileRepository
         ];
     }
 
-    private function extractJsonContext(string $message): ?array
+    /**
+     * Split the header message from the JSON context Monolog appends to it.
+     *
+     * Laravel writes exceptions inside the context as one JSON string that
+     * contains raw newlines (the stack trace), so the context can span every
+     * line of the entry. Each candidate "{" in the header is tried from the
+     * left until the rest of the entry decodes as a JSON object.
+     *
+     * @param  list<string>  $lines
+     * @return array{0: string, 1: array<string, mixed>|null}
+     */
+    private function splitMessageAndContext(string $rawMessage, array $lines): array
     {
-        $position = strrpos($message, '{');
+        $body = implode("\n", array_slice($lines, 1));
+        $offset = 0;
+        $attempts = 0;
 
-        if ($position === false) {
-            return null;
+        while (($position = strpos($rawMessage, '{', $offset)) !== false && $attempts < 20) {
+            $offset = $position + 1;
+            $attempts++;
+
+            if ($position > 0 && $rawMessage[$position - 1] !== ' ') {
+                continue;
+            }
+
+            $candidate = rtrim(substr($rawMessage, $position).($body !== '' ? "\n".$body : ''));
+
+            if (! str_ends_with($candidate, '}')) {
+                continue;
+            }
+
+            $decoded = json_decode(str_replace(["\r\n", "\n"], '\n', $candidate), true);
+
+            if (is_array($decoded) && ! array_is_list($decoded)) {
+                return [rtrim(substr($rawMessage, 0, $position)), $decoded];
+            }
         }
 
-        $candidate = trim(substr($message, $position));
-
-        if ($candidate === '' || ! str_starts_with($candidate, '{') || ! str_ends_with($candidate, '}')) {
-            return null;
-        }
-
-        $decoded = json_decode($candidate, true);
-
-        return is_array($decoded) && json_last_error() === JSON_ERROR_NONE ? $decoded : null;
+        return [$rawMessage, null];
     }
 
-    private function normalizeMessage(string $message): string
+    /**
+     * Parse the "[object] (Class(code: 0): message at file:line)" string that
+     * Laravel's log formatter writes for exceptions, including the stack trace
+     * and any "[previous exception]" chain.
+     *
+     * @return array{details: array<string, mixed>, frames: list<array<string, mixed>>, previous: list<array<string, mixed>>, trace: ?string}|null
+     */
+    private function parseLaravelException(mixed $value): ?array
     {
-        $position = strrpos($message, '{');
-
-        if ($position === false) {
-            return $message;
+        if (! is_string($value) || ! str_starts_with($value, '[object] (')) {
+            return null;
         }
 
-        $candidate = trim(substr($message, $position));
+        $blocks = preg_split('/\n\[previous exception\] /', $value) ?: [$value];
+        $parsed = [];
 
-        if ($candidate === '' || ! str_starts_with($candidate, '{') || ! str_ends_with($candidate, '}')) {
-            return $message;
+        foreach ($blocks as $block) {
+            [$summary, $trace] = array_pad(explode("\n[stacktrace]\n", $block, 2), 2, null);
+
+            if (! preg_match('/^\[object\] \((?<class>[^\s(]+)\(code: (?<code>[^)]*)\): (?<message>.*) at (?<file>[^\n]+):(?<line>\d+)\)$/s', trim((string) $summary), $matches)) {
+                continue;
+            }
+
+            $trace = $trace !== null ? rtrim($trace) : null;
+
+            $parsed[] = [
+                'details' => [
+                    'class' => $matches['class'],
+                    'message' => $matches['message'],
+                    'file' => $matches['file'],
+                    'line' => (int) $matches['line'],
+                    'code' => $matches['code'],
+                ],
+                'frames' => $this->parseFrames((string) $trace),
+                'trace' => $trace !== '' ? $trace : null,
+            ];
         }
 
-        if (json_decode($candidate, true) === null && json_last_error() !== JSON_ERROR_NONE) {
-            return $message;
+        if ($parsed === []) {
+            return null;
         }
 
-        return rtrim(substr($message, 0, $position));
+        $main = array_shift($parsed);
+        $main['previous'] = array_map(
+            static fn (array $item): array => $item['details'] + ['frames' => $item['frames']],
+            $parsed,
+        );
+
+        return $main;
+    }
+
+    /**
+     * @return list<array{index: int, file: ?string, line: ?int, call: string, vendor: bool}>
+     */
+    private function parseFrames(string $trace): array
+    {
+        $frames = [];
+        $basePath = rtrim(str_replace('\\', '/', base_path()), '/').'/';
+
+        foreach (explode("\n", $trace) as $line) {
+            if (! preg_match('/^#(?<index>\d+) (?:(?<file>[^\n]+?)\((?<line>\d+)\): |\[internal function\]: )?(?<call>.+)$/', trim($line), $matches)) {
+                continue;
+            }
+
+            $file = ($matches['file'] ?? '') !== '' ? $matches['file'] : null;
+
+            $frames[] = [
+                'index' => (int) $matches['index'],
+                'file' => $file,
+                'line' => ($matches['line'] ?? '') !== '' ? (int) $matches['line'] : null,
+                'call' => $matches['call'],
+                'vendor' => $this->isVendorFrame($file, $basePath),
+            ];
+        }
+
+        return $frames;
     }
 
     private function extractExceptionDetails(string $message, string $content, array $lines): array
@@ -384,6 +571,26 @@ final class LogFileRepository
         }
 
         return $details;
+    }
+
+    /**
+     * Frames without a file ({main}, internal functions) count as framework
+     * code. Inside the app, only paths under vendor/ are third-party; outside
+     * it (e.g. a different deploy path in an older log) any /vendor/ segment is.
+     */
+    private function isVendorFrame(?string $file, string $basePath): bool
+    {
+        if ($file === null) {
+            return true;
+        }
+
+        $normalized = str_replace('\\', '/', $file);
+
+        if (str_starts_with($normalized, $basePath)) {
+            return str_starts_with(substr($normalized, strlen($basePath)), 'vendor/');
+        }
+
+        return str_contains($normalized, '/vendor/');
     }
 
     private function isHeaderLine(string $line, ?array &$header = null): bool
@@ -550,6 +757,19 @@ final class LogFileRepository
 
         if ($chunk === false || $chunk === '') {
             return ['entries' => [], 'offset' => $size, 'rotated' => $rotated];
+        }
+
+        // Backtracking only matters when the new bytes continue the previous
+        // entry. If they start with a fresh header, that entry was already
+        // complete and sent by the previous poll, so do not send it again.
+        $newStart = $offset - $safeOffset;
+
+        if ($newStart > 0) {
+            $firstNewLine = rtrim(strstr(substr($chunk, $newStart), "\n", true) ?: substr($chunk, $newStart), "\r");
+
+            if ($this->isHeaderLine($firstNewLine)) {
+                $chunk = substr($chunk, $newStart);
+            }
         }
 
         $lines = explode("\n", rtrim($chunk, "\n"));
