@@ -160,6 +160,12 @@ Main extension points:
 - `TransportFactory::extend()` is intended for custom transport registration.
 - `FormatterFactory` should eventually get a symmetric extension mechanism.
 
+Important rule: `DispatchLogJob::handle()` must never throw. The queue worker
+reports thrown exceptions through the application logger, which is Log Center
+itself, so a throw while the destination is down queues a new job per attempt
+(an unbounded log storm). Retry with `release()`, give up with `fail()`, and
+wrap delivery in `LogCenterHandler::muted()`.
+
 Important rule: `LogCenterHandler` must not call Laravel's logger inside error
 handling, or it can recursively log its own failures. Use `error_log()` or a
 separate non-LogCenter fallback when needed. The handler also ignores records
@@ -423,7 +429,7 @@ Before tagging a release:
 
 - `composer validate` passes.
 - PHP syntax checks pass for all `src` and `config` PHP files.
-- Unit and integration tests pass (currently 283 tests / 770 assertions).
+- Unit and integration tests pass (currently 287 tests / 777 assertions).
 - README documents installation, Laravel channel setup, environment variables,
   supported drivers, extension examples, and security notes. ✓
 - CHANGELOG.md exists and is up to date. ✓
