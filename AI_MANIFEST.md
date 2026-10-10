@@ -12,7 +12,7 @@ drivers, configuration, or public contracts change.
 - License: MIT
 - PHP: `^8.2`
 - Laravel: `laravel/framework` `^10.0|^11.0|^12.0|^13.0` (CI tests each major)
-- HTTP client: `guzzlehttp/guzzle` `^7.5` (Laravel 10 does not install it by itself)
+- HTTP client: `guzzlehttp/guzzle` `^7.5|^8.0` (Laravel 10 does not install it by itself; fresh Laravel 13 apps ship Guzzle 8)
 - Monolog: `^3.0`
 - Goal: centralize Laravel log delivery, driver switching, message formatting,
   masking, optional async dispatch, and later a built-in log viewer.
@@ -204,6 +204,9 @@ Global keys:
   every viewer route and checks the `viewLogCenter` gate; without the gate only
   the `local` environment is allowed. Tests define an allow-all gate in
   `TestCase::setUp()` (`$allowLogViewer`); `LogViewerAuthTest` turns it off.
+- `src/Http/Middleware/HandleLogViewerGuests.php` runs before Laravel's `auth`
+  (registered in the middleware priority list) and answers guests with 401 when
+  the app has no `login` route or `redirectGuestsTo()` target.
 - `viewer.paths`: directories or files scanned for logs. Inside a directory root only `*.log`
   files are served (index, download, tail).
 - `viewer.per_page`: number of entries displayed per page.
@@ -420,7 +423,7 @@ Before tagging a release:
 
 - `composer validate` passes.
 - PHP syntax checks pass for all `src` and `config` PHP files.
-- Unit and integration tests pass (currently 279 tests / 763 assertions).
+- Unit and integration tests pass (currently 283 tests / 770 assertions).
 - README documents installation, Laravel channel setup, environment variables,
   supported drivers, extension examples, and security notes. ✓
 - CHANGELOG.md exists and is up to date. ✓

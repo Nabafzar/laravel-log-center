@@ -525,7 +525,8 @@ Gate::define('viewLogCenter', function ($user) {
 ```
 
 The gate runs after the `auth` middleware (enabled by default with `LOGCENTER_VIEWER_AUTH_ENABLED`),
-so guests are redirected to log in first. Inside a directory listed in `viewer.paths`, only `*.log`
+so guests are redirected to log in first. If your app has no `login` route (an API-only app, for
+example), guests get a 401 instead of an error. Inside a directory listed in `viewer.paths`, only `*.log`
 files can be opened, downloaded or tailed.
 
 **Live Tail** — click the **Live** button to stream new entries in real time via SSE (falls back

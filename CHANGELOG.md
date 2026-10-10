@@ -23,6 +23,8 @@ All notable changes to this project are documented in this file. Releases follow
 
 ### Fixed
 
+- **The package could not be installed in a new Laravel app.** Fresh Laravel 13 projects ship Guzzle 8, but the package required `guzzlehttp/guzzle ^7.5`, so Composer refused. The constraint is now `^7.5|^8.0`; the test suite passes on Guzzle 8.2
+- The viewer answered every guest with a 500 ("Route [login] not defined") in apps without a login page, and each one was logged as an error, so it also triggered an alert. Guests now get a 401 when the app cannot redirect them; apps with a `login` route keep the redirect
 - `LOGCENTER_TRUNCATE_MESSAGE` and `LOGCENTER_TRUNCATE_TRACE` were documented but never read. They are now the fallback limits when a formatter has no `max_length` / `trace_max_length` of its own (for example in a config published before a key existed)
 - An empty value in `.env` (for example `LOGCENTER_PLAIN_FORMATTER_MAX_LENGTH=` or `LOGCENTER_TELEGRAM_MESSAGE_LIMIT=`) read as a limit of 0 or 1, so every message was cut to "... [truncated]". Empty, zero or non-numeric limits, timeouts, TTLs, page sizes and retry counts now fall back to their defaults
 - The plain and markdown formatters read `trace_max_length`, but the config did not declare it. Added `LOGCENTER_PLAIN_FORMATTER_TRACE_MAX_LENGTH` and `LOGCENTER_MARKDOWN_FORMATTER_TRACE_MAX_LENGTH` (default 1200)
@@ -65,6 +67,8 @@ All notable changes to this project are documented in this file. Releases follow
 - Dead code `$explicitRequest` removed from `LogPayloadFactory`
 
 ### Changed
+
+- Added `.gitattributes` so the installed package no longer ships `tests/`, CI config, `phpunit.xml`, `pint.json` and the internal AI/agent notes (`AGENTS.md`, `AI_MANIFEST.md`, `CONTEXT.md`, `llms.txt`); they stay in the repository
 
 - Composer now requires `laravel/framework` (`^10.0|^11.0|^12.0|^13.0`) and `guzzlehttp/guzzle` instead of only `illuminate/support` and `illuminate/log`; the package already used framework classes and the HTTP client, so the old constraints under-declared its real dependencies
 - Laravel 13 support added; CI now runs the test suite on Laravel 10, 11, 12 and 13
