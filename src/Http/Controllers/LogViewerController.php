@@ -8,14 +8,23 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\View\View;
+use Nabafzar\LogCenter\Viewer\CodeSnippet;
 use Nabafzar\LogCenter\Viewer\LogFileRepository;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class LogViewerController extends Controller
 {
+    private const EDITORS = [
+        'vscode' => 'vscode://file/{file}:{line}',
+        'cursor' => 'cursor://file/{file}:{line}',
+        'phpstorm' => 'phpstorm://open?file={file}&line={line}',
+        'sublime' => 'subl://open?url=file://{file}&line={line}',
+    ];
+
     public function __construct(
         private readonly LogFileRepository $files,
+        private readonly CodeSnippet $snippets,
     ) {}
 
     public function index(Request $request): View
@@ -47,8 +56,18 @@ final class LogViewerController extends Controller
         $perPage = max(1, (int) config('logcenter.viewer.per_page', 50));
         $page = max(1, (int) $request->query('page', 1));
         $totalGroups = $allGroups->count();
-        $items = $allGroups->slice(($page - 1) * $perPage, $perPage)->values();
+        $items = $allGroups->slice(($page - 1) * $perPage, $perPage)
+            ->map(function (array $group): array {
+                $exception = $group['exception'] ?? [];
+                $group['snippet'] = $this->snippets->around($exception['file'] ?? null, $exception['line'] ?? null);
+
+                return $group;
+            })
+            ->values();
         $pageCount = max(1, (int) ceil($totalGroups / $perPage));
+        $levelCounts = $level !== '' && $level !== 'all' && $selectedFile !== null
+            ? $this->files->stats($this->files->entries($selectedFile, array_merge($effectiveFilters, ['level' => ''])))['levels']
+            : $this->files->stats($entries)['levels'];
 
         return view('logcenter::index', [
             'files' => $availableFiles,
@@ -65,10 +84,14 @@ final class LogViewerController extends Controller
             ],
             'filters' => [
                 'level' => $level,
-                'search' => $search,
+                'search' => (string) ($effectiveFilters['search'] ?? ''),
                 'fingerprint' => $fingerprint,
             ],
             'stats' => $this->files->stats($entries),
+            'levelCounts' => $levelCounts,
+            'timeline' => $this->files->timeline($entries),
+            'editorUrl' => $this->editorTemplate(),
+            'fingerprintMatched' => $fingerprint === '' || ($effectiveFilters['fingerprint'] ?? '') !== '',
             'groupStats' => [
                 'total' => $totalGroups,
                 'average' => $totalGroups > 0 ? round($entries->count() / $totalGroups, 2) : 0,
@@ -98,6 +121,11 @@ final class LogViewerController extends Controller
             while (ob_get_level() > 0) {
                 ob_end_flush();
             }
+
+            // Send something straight away so the browser can confirm the
+            // connection instead of waiting for the first heartbeat.
+            echo "retry: 3000\n: connected\n\n";
+            flush();
 
             $iterations = 0;
             $maxIterations = 90;
@@ -201,31 +229,43 @@ final class LogViewerController extends Controller
     }
 
     /**
-     * If a link carries both fingerprint and search, fall back to search-only
-     * when the fingerprint does not line up with the parsed log file.
+     * Notification links carry a fingerprint plus a search term. The
+     * fingerprint is exact, so when it matches it is used on its own; the
+     * search term is only a fallback for entries the fingerprint misses
+     * (for example logs written before a parser change).
      *
      * @param  array{level?: string, search?: string, fingerprint?: string}  $filters
      * @return array{level?: string, search?: string, fingerprint?: string}
      */
     private function effectiveFilters(?string $file, array $filters): array
     {
-        $entries = $file !== null ? $this->files->entries($file, $filters) : collect();
-
-        if ($entries->isNotEmpty()) {
-            return $filters;
-        }
-
         $fingerprint = trim((string) ($filters['fingerprint'] ?? ''));
         $search = trim((string) ($filters['search'] ?? ''));
 
-        if ($fingerprint === '' || $search === '') {
+        if ($file === null || $fingerprint === '' || $search === '') {
             return $filters;
         }
 
-        $fallbackFilters = $filters;
-        $fallbackFilters['fingerprint'] = '';
+        $fingerprintOnly = array_merge($filters, ['search' => '']);
 
-        return $fallbackFilters;
+        if ($this->files->entries($file, $fingerprintOnly)->isNotEmpty()) {
+            return $fingerprintOnly;
+        }
+
+        return array_merge($filters, ['fingerprint' => '']);
+    }
+
+    private function editorTemplate(): ?string
+    {
+        $editor = trim((string) config('logcenter.viewer.editor', ''));
+
+        if ($editor === '') {
+            return null;
+        }
+
+        $template = self::EDITORS[strtolower($editor)] ?? $editor;
+
+        return str_contains($template, '{file}') ? $template : null;
     }
 
     private function normalizeFingerprint(string $fingerprint): string

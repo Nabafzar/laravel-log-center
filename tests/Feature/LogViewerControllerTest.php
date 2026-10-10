@@ -140,4 +140,98 @@ LOG);
         $response->assertViewHas('selectedFile', realpath($matchingFile) ?: $matchingFile);
         $response->assertSee('Fingerprint target failure');
     }
+
+    public function test_a_notification_link_opens_the_matching_issue_by_fingerprint(): void
+    {
+        $directory = $this->logDirectory('logcenter-feature-deeplink-tests');
+        $payload = LogPayloadFactory::fromLogRecord(new LogRecord(
+            datetime: Carbon::parse('2026-05-08 09:00:00')->toDateTimeImmutable(),
+            channel: 'local',
+            level: Level::Error,
+            message: 'Deep link failure',
+        ));
+
+        file_put_contents($directory.'/laravel.log', <<<'LOG'
+[2026-05-08 09:00:00] local.ERROR: Deep link failure
+[2026-05-08 09:05:00] local.ERROR: Another failure
+LOG);
+        config()->set('logcenter.viewer.paths', [$directory]);
+
+        $response = $this->get('/log-viewer?fingerprint='.substr($payload->fingerprint, 0, 14).'&search='.urlencode('Deep link failure'));
+
+        $response->assertOk();
+        $response->assertSee('Showing the error from your notification link');
+        $response->assertSee('Deep link failure');
+        $response->assertDontSee('Another failure');
+        $response->assertViewHas('fingerprintMatched', true);
+        // The exact fingerprint matched, so the redundant search term is dropped.
+        $response->assertViewHas('filters', fn (array $filters): bool => $filters['search'] === '');
+        $this->assertMatchesRegularExpression('/<details class="issue[^"]*" id="issue-[0-9a-f]+" data-issue\s+open/', $response->getContent());
+    }
+
+    public function test_a_stale_notification_link_falls_back_to_its_search_term(): void
+    {
+        $directory = $this->logDirectory('logcenter-feature-stale-link-tests');
+        file_put_contents($directory.'/laravel.log', <<<'LOG'
+[2026-05-08 09:00:00] local.ERROR: Stale link failure
+LOG);
+        config()->set('logcenter.viewer.paths', [$directory]);
+
+        $response = $this->get('/log-viewer?fingerprint=0000000000dead&search='.urlencode('Stale link failure'));
+
+        $response->assertOk();
+        $response->assertSee('Stale link failure');
+        $response->assertViewHas('fingerprintMatched', false);
+        $response->assertSee('The exact occurrence wasn', false);
+    }
+
+    public function test_a_notification_link_for_a_missing_entry_explains_why(): void
+    {
+        $directory = $this->logDirectory('logcenter-feature-missing-link-tests');
+        file_put_contents($directory.'/laravel.log', <<<'LOG'
+[2026-05-08 09:00:00] local.INFO: Something else
+LOG);
+        config()->set('logcenter.viewer.paths', [$directory]);
+
+        $this->get('/log-viewer?fingerprint=0000000000dead')
+            ->assertOk()
+            ->assertSee('This error is no longer in the log files');
+    }
+
+    public function test_level_chips_keep_counts_for_every_level_while_filtering(): void
+    {
+        $directory = $this->logDirectory('logcenter-feature-level-tests');
+        file_put_contents($directory.'/laravel.log', <<<'LOG'
+[2026-05-08 09:00:00] local.EMERGENCY: Down
+[2026-05-08 09:01:00] local.CRITICAL: Payment failed
+[2026-05-08 09:02:00] local.ERROR: Broken
+[2026-05-08 09:03:00] local.INFO: Fine
+LOG);
+        config()->set('logcenter.viewer.paths', [$directory]);
+
+        $response = $this->get('/log-viewer?level=info');
+
+        $response->assertOk();
+        $response->assertViewHas('levelCounts', fn (array $counts): bool => $counts['emergency'] === 1
+            && $counts['critical'] === 1
+            && $counts['error'] === 1
+            && $counts['info'] === 1);
+        $response->assertSee('Fine');
+        $response->assertDontSee('Payment failed');
+    }
+
+    private function logDirectory(string $name): string
+    {
+        $directory = storage_path('logs/'.$name);
+
+        if (! is_dir($directory)) {
+            mkdir($directory, 0777, true);
+        }
+
+        foreach (glob($directory.'/*') ?: [] as $file) {
+            @unlink($file);
+        }
+
+        return $directory;
+    }
 }

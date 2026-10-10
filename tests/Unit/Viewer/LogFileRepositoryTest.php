@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nabafzar\LogCenter\Tests\Unit\Viewer;
 
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 use Monolog\Level;
 use Monolog\LogRecord;
 use Nabafzar\LogCenter\Factories\LogPayloadFactory;
@@ -228,5 +229,87 @@ LOG);
         $this->assertCount(1, $entries);
         $this->assertCount(1, $prefixedEntries);
         $this->assertSame('Context failure', $entries[0]['message']);
+    }
+
+    public function test_it_parses_laravel_exception_context_and_matches_notification_links(): void
+    {
+        $directory = storage_path('logs/logcenter-tests');
+        if (! is_dir($directory)) {
+            mkdir($directory, 0777, true);
+        }
+
+        $file = $directory.'/exceptions.log';
+        @unlink($file);
+
+        config()->set('logging.channels.viewer-test', ['driver' => 'single', 'path' => $file]);
+        config()->set('logcenter.viewer.paths', [$directory]);
+
+        try {
+            $this->throwMissingClass();
+        } catch (\Throwable $exception) {
+            $previous = new \RuntimeException('Outer failure', 5, $exception);
+        }
+
+        Log::channel('viewer-test')->error($exception->getMessage(), ['order_id' => 7, 'exception' => $exception]);
+        Log::channel('viewer-test')->critical('Wrapped', ['exception' => $previous]);
+
+        $payload = LogPayloadFactory::fromLogRecord(new LogRecord(
+            datetime: Carbon::now()->toDateTimeImmutable(),
+            channel: (string) config('app.env'),
+            level: Level::Error,
+            message: $exception->getMessage(),
+            context: ['exception' => $exception],
+        ));
+
+        $repository = new LogFileRepository;
+        $entries = $repository->entries($file);
+
+        $this->assertCount(2, $entries);
+
+        $entry = $entries[0];
+        $this->assertSame('Class "App\Http\Controllers\exception" not found', $entry['message']);
+        $this->assertSame('Error', $entry['exception']['class']);
+        $this->assertSame($exception->getFile(), $entry['exception']['file']);
+        $this->assertSame($exception->getLine(), $entry['exception']['line']);
+        $this->assertSame(['order_id' => 7], $entry['json_context']);
+        $this->assertNotEmpty($entry['frames']);
+        $this->assertSame(0, $entry['frames'][0]['index']);
+        $this->assertSame($payload->fingerprint, $entry['fingerprint']);
+
+        $wrapped = $entries[1];
+        $this->assertSame('RuntimeException', $wrapped['exception']['class']);
+        $this->assertSame('Error', $wrapped['previous_exceptions'][0]['class']);
+
+        // The exact link a notification carries: short fingerprint + search text.
+        $search = 'Class "App\Http\Controllers\exception" not found Error Class "App\Http\Controllers\exception" not found';
+
+        $this->assertCount(1, $repository->entries($file, ['fingerprint' => substr($payload->fingerprint, 0, 14)]));
+        $this->assertCount(1, $repository->entries($file, ['search' => $search]));
+    }
+
+    public function test_it_buckets_entries_into_a_timeline(): void
+    {
+        $entries = collect([
+            ['timestamp' => '2026-05-08 10:00:10', 'level' => 'error'],
+            ['timestamp' => '2026-05-08 10:00:50', 'level' => 'warning'],
+            ['timestamp' => '2026-05-08 10:30:00', 'level' => 'info'],
+            ['timestamp' => '2026-05-08 11:59:00', 'level' => 'critical'],
+            ['timestamp' => 'not a date', 'level' => 'debug'],
+        ]);
+
+        $timeline = (new LogFileRepository)->timeline($entries, 48);
+
+        $this->assertSame(300, $timeline['size']);
+        $this->assertSame(2, $timeline['max']);
+        $this->assertSame(['error' => 1, 'warning' => 1, 'other' => 0, 'total' => 2], array_slice($timeline['buckets'][0], 2));
+        $this->assertSame(1, end($timeline['buckets'])['error']);
+        $this->assertSame(4, array_sum(array_column($timeline['buckets'], 'total')));
+    }
+
+    private function throwMissingClass(): void
+    {
+        $class = 'App\Http\Controllers\exception';
+
+        new $class;
     }
 }

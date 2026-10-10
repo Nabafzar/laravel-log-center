@@ -27,7 +27,7 @@ final class LogCenterHandlerTest extends TestCase
 {
     public function test_it_swallows_dispatch_failures_without_throwing(): void
     {
-        $formatter = $this->createMock(LogFormatterInterface::class);
+        $formatter = $this->createStub(LogFormatterInterface::class);
         $formatter->method('format')->willReturn(new FormattedMessage('formatted'));
 
         $transport = $this->createMock(LogTransportInterface::class);
@@ -36,7 +36,7 @@ final class LogCenterHandlerTest extends TestCase
             ->willThrowException(new RuntimeException('transport is unavailable'));
         $transport->method('supportedFormats')->willReturn([]);
 
-        $manager = $this->createMock(TransportManager::class);
+        $manager = $this->createStub(TransportManager::class);
         $manager->method('defaultDriverName')->willReturn('telegram');
         $manager->method('formatter')->willReturn($formatter);
         $manager->method('driver')->willReturn($transport);
@@ -65,7 +65,7 @@ final class LogCenterHandlerTest extends TestCase
 
         $captures = new \stdClass;
 
-        $formatter = $this->createMock(LogFormatterInterface::class);
+        $formatter = $this->createStub(LogFormatterInterface::class);
         $formatter->method('format')->willReturn(new FormattedMessage('formatted'));
 
         $transport = new class($captures) implements LogTransportInterface
@@ -90,7 +90,7 @@ final class LogCenterHandlerTest extends TestCase
             }
         };
 
-        $manager = $this->createMock(TransportManager::class);
+        $manager = $this->createStub(TransportManager::class);
         $manager->method('defaultDriverName')->willReturn('null');
         $manager->method('formatter')->willReturn($formatter);
         $manager->method('driver')->willReturn($transport);

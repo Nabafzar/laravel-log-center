@@ -281,7 +281,7 @@ final class LogTopicTest extends TestCase
 
     private function makeDispatcher(): LogDispatcher
     {
-        $manager = $this->createMock(TransportManager::class);
+        $manager = $this->createStub(TransportManager::class);
         $manager->method('defaultDriverName')->willReturn('null');
         $manager->method('formatter')->willReturn(
             new class implements LogFormatterInterface

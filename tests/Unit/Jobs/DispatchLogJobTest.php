@@ -226,7 +226,7 @@ final class DispatchLogJobTest extends TestCase
             }
         };
 
-        $manager = $this->createMock(TransportManager::class);
+        $manager = $this->createStub(TransportManager::class);
         $manager->method('defaultDriverName')->willReturn('telegram');
         $manager->method('formatter')->willReturn($formatter);
         $manager->method('driver')->willReturn($transport);

@@ -32,5 +32,5 @@ composer validate
 php -l src/LogCenterServiceProvider.php
 ```
 
-When editing PHP, use PHP 8.2-compatible code and Laravel 10/11/12 compatible
+When editing PHP, use PHP 8.2-compatible code and Laravel 10/11/12/13 compatible
 APIs.
