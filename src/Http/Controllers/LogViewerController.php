@@ -30,11 +30,11 @@ final class LogViewerController extends Controller
     public function index(Request $request): View
     {
         $availableFiles = $this->files->all();
-        $file = (string) $request->query('file', '');
-        $level = (string) $request->query('level', '');
+        $file = $this->queryString($request, 'file');
+        $level = $this->queryString($request, 'level');
         // An invalid UTF-8 search term breaks the page script's JSON literal.
-        $search = mb_scrub((string) $request->query('search', ''), 'UTF-8');
-        $fingerprint = $this->normalizeFingerprint((string) $request->query('fingerprint', ''));
+        $search = mb_scrub($this->queryString($request, 'search'), 'UTF-8');
+        $fingerprint = $this->normalizeFingerprint($this->queryString($request, 'fingerprint'));
         $filters = [
             'level' => $level,
             'search' => $search,
@@ -55,8 +55,10 @@ final class LogViewerController extends Controller
 
         $allGroups = $this->files->groupedEntries($entries);
         $perPage = max(1, (int) config('logcenter.viewer.per_page', 50));
-        $page = max(1, (int) $request->query('page', 1));
         $totalGroups = $allGroups->count();
+        $pageCount = max(1, (int) ceil($totalGroups / $perPage));
+        // Past the last page stays empty, but a huge number must not overflow the offset.
+        $page = min(max(1, (int) $this->queryString($request, 'page', '1')), $pageCount + 1);
         $items = $allGroups->slice(($page - 1) * $perPage, $perPage)
             ->map(function (array $group): array {
                 $exception = $group['exception'] ?? [];
@@ -65,7 +67,6 @@ final class LogViewerController extends Controller
                 return $group;
             })
             ->values();
-        $pageCount = max(1, (int) ceil($totalGroups / $perPage));
         $levelCounts = $level !== '' && $level !== 'all' && $selectedFile !== null
             ? $this->files->stats($this->files->entries($selectedFile, array_merge($effectiveFilters, ['level' => ''])))['levels']
             : $this->files->stats($entries)['levels'];
@@ -107,8 +108,8 @@ final class LogViewerController extends Controller
      */
     public function tail(Request $request): StreamedResponse
     {
-        $file = (string) $request->query('file', '');
-        $offset = (int) $request->query('offset', -1);
+        $file = $this->queryString($request, 'file');
+        $offset = (int) $this->queryString($request, 'offset', '-1');
 
         if ($offset < 0) {
             $path = $this->files->path($file);
@@ -176,8 +177,8 @@ final class LogViewerController extends Controller
      */
     public function tailPoll(Request $request): JsonResponse
     {
-        $file = (string) $request->query('file', '');
-        $offset = max(0, (int) $request->query('offset', 0));
+        $file = $this->queryString($request, 'file');
+        $offset = max(0, (int) $this->queryString($request, 'offset', '0'));
 
         $result = $this->files->tailFrom($file, $offset);
 
@@ -187,7 +188,7 @@ final class LogViewerController extends Controller
     public function download(Request $request): BinaryFileResponse
     {
         $availableFiles = $this->files->all();
-        $file = (string) $request->query('file', '');
+        $file = $this->queryString($request, 'file');
         $selectedFile = $file !== '' ? $this->files->path($file) : (string) array_key_first($availableFiles);
         $path = $selectedFile !== '' ? $selectedFile : null;
 
@@ -254,6 +255,17 @@ final class LogViewerController extends Controller
         }
 
         return array_merge($filters, ['fingerprint' => '']);
+    }
+
+    /**
+     * Query values can arrive as arrays (`?file[]=x`); treat those as absent
+     * instead of failing on an array-to-string conversion.
+     */
+    private function queryString(Request $request, string $key, string $default = ''): string
+    {
+        $value = $request->query($key, $default);
+
+        return is_scalar($value) ? (string) $value : $default;
     }
 
     private function editorTemplate(): ?string

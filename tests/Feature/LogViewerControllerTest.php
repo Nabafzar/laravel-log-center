@@ -10,6 +10,7 @@ use Monolog\LogRecord;
 use Nabafzar\LogCenter\Factories\LogPayloadFactory;
 use Nabafzar\LogCenter\Formatters\PlainTextFormatter;
 use Nabafzar\LogCenter\Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 final class LogViewerControllerTest extends TestCase
 {
@@ -295,5 +296,29 @@ LOG);
 
         $response->assertOk();
         $this->assertMatchesRegularExpression('/var term = \("[^"]*"\)\.trim\(\);/', $response->getContent());
+    }
+
+    #[DataProvider('oddQueryProvider')]
+    public function test_odd_query_values_do_not_cause_a_server_error(string $path): void
+    {
+        $directory = $this->logDirectory('logcenter-feature-odd-query-tests');
+        file_put_contents($directory.'/laravel.log', "[2026-05-08 09:00:00] local.ERROR: Something\n");
+        config()->set('logcenter.viewer.paths', [$directory]);
+
+        $this->get($path)->assertOk();
+    }
+
+    public static function oddQueryProvider(): array
+    {
+        return [
+            'huge page' => ['/log-viewer?page=99999999999999999999'],
+            'array level' => ['/log-viewer?level[]=error'],
+            'array search' => ['/log-viewer?search[]=x'],
+            'array file' => ['/log-viewer?file[]=x'],
+            'array fingerprint' => ['/log-viewer?fingerprint[]=x'],
+            'array page' => ['/log-viewer?page[]=2'],
+            'poll array file' => ['/log-viewer/tail/poll?file[]=x'],
+            'poll array offset' => ['/log-viewer/tail/poll?offset[]=1'],
+        ];
     }
 }

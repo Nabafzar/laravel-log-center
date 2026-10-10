@@ -19,6 +19,9 @@ All notable changes to this project are documented in this file. Releases follow
 
 ### Fixed
 
+- The fallback driver was skipped when the primary driver could not send at all: an unknown driver name (for example `LOGCENTER_DRIVER=slack`), a formatter error, or a custom transport that throws instead of returning a failed result. These now count as a failed send, so `LogDispatchFailed` fires and the fallback runs
+- Driver names given to `sendNow()` (including `logcenter:test-log --driver=`) and `LOGCENTER_FALLBACK_DRIVER` were case-sensitive: `Telegram` used the plain formatter instead of Telegram's, and a fallback of `Telegram` with a primary of `telegram` sent the same failing request twice
+- Viewer routes returned 500 for array query values (`?file[]=x`, `?search[]=x`, ...) or a very large `page` number
 - **Security:** masking only matched exact key names, so `current_password`, `new_password`, `client_secret`, `api_token` and Laravel's CSRF `_token` were sent in clear text. A key is now masked when its name contains a configured key
 - With the viewer enabled, a long message (such as a `QueryException` with its full SQL) put the whole message into the "open in viewer" link. In Telegram the link alone went over the length limit, so the notification showed only its header; in the other formatters the link used up the message budget. The link's search term is now capped at 100 characters, which still finds the entry
 - Incoming logs with nested values in free-form fields (`exception.class`, `user.id`, `request.method`, ...) caused a 500 error ("Array to string conversion"). Formatters now skip non-scalar values
