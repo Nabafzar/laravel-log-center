@@ -95,6 +95,7 @@ providers**, that is what this package adds on top of Monolog.
 - [Incoming Log Ingress](#incoming-log-ingress)
 - [Custom Transports](#custom-transports)
 - [Custom Formatters](#custom-formatters)
+- [Testing Your App](#testing-your-app)
 - [Testing](#testing)
 
 ## Requirements
@@ -762,6 +763,41 @@ LOGCENTER_WEBHOOK_PAYLOAD=text          # send the formatted text as the request
 ```
 
 Or per driver in `config/logcenter.php`: `'drivers' => ['webhook' => ['formatter' => 'opsgenie', ...]]`.
+
+## Testing Your App
+
+`LogCenter::fake()` records what would be sent instead of sending it, so you can test your own
+alerts. The rest of the pipeline still runs — level filter, masking, formatter, `#[LogTopic]` routing,
+suppression and fallback — and delivery becomes synchronous, so it works with the queue enabled.
+
+```php
+use Nabafzar\LogCenter\DTO\FormattedMessage;
+use Nabafzar\LogCenter\DTO\LogPayload;
+use Nabafzar\LogCenter\Facades\LogCenter;
+
+public function test_a_failed_payment_alerts_the_team(): void
+{
+    $fake = LogCenter::fake();
+
+    $this->postJson('/checkout', ['card' => 'declined'])->assertStatus(402);
+
+    $fake->assertSentTo('telegram', fn (LogPayload $payload, FormattedMessage $message) =>
+        $payload->message === 'Payment failed' && $payload->context['order_id'] === 42
+    );
+}
+```
+
+| Method | Checks |
+|---|---|
+| `assertSent(?callable)` | at least one log was sent (matching the callback) |
+| `assertSentTo($driver, ?callable)` | a log was sent to that driver |
+| `assertNotSent(callable)` | no sent log matches the callback |
+| `assertSentCount($n)` / `assertNothingSent()` | how many logs were sent |
+| `sent(?callable)` | the recorded logs (`driver`, `payload`, `message`) for your own assertions |
+
+Callbacks receive the masked `LogPayload`, the `FormattedMessage` the driver's formatter produced,
+and the driver name. To test the fallback driver or `LogDispatchFailed` listeners, make a driver
+fail: `LogCenter::fake()->failing('telegram')`.
 
 ## Testing
 
