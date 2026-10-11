@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file. Releases follow
 
 ### Added
 
+- **Faster log viewer on large files** — parsed entries and entry counts are kept between requests (`LOGCENTER_VIEWER_CACHE`, on by default, stored in `storage/framework/cache/logcenter`), and a growing log is only parsed from where the previous read stopped. Rotation, truncation or a changed parsing setting triggers a full parse. On a 4 MB log: ~190 ms → ~45 ms per page, ~366 ms → ~93 ms right after an append
 - **`php artisan logcenter:check`** — checks the setup without sending a log: log channel, level, drivers and formatters, credentials (live, read-only `getMe`/`getChat` for Telegram and Bale, `/users/me` for a Mattermost bot), queue, suppression cache, failure channel, viewer gate and incoming token. Exits with code 1 on problems; `--driver=` checks one driver, `--offline` skips provider calls
 - **`FormatterFactory::extend()`** — register custom formatters (or replace a built-in one) the same way custom transports are registered with `TransportFactory::extend()`; names are case-insensitive and the resolver receives the container
 - **`LOGCENTER_FAILURE_CHANNEL`** — a Laravel log channel (for example `single` or `daily`) where Log Center records logs it could not deliver (after the fallback and all queue retries, one entry per log) and errors inside the package. Without it, these go to PHP's `error_log` as before

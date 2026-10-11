@@ -168,6 +168,10 @@ return [
         'max_files' => env('LOGCENTER_VIEWER_MAX_FILES', 20),
         'max_entry_lines' => env('LOGCENTER_VIEWER_MAX_ENTRY_LINES', 500),
 
+        // Keep parsed entries between requests (storage/framework/cache/logcenter),
+        // so a large log is only parsed again from where it grew.
+        'cache' => env('LOGCENTER_VIEWER_CACHE', true),
+
         // Show the source lines around an exception's location. Only PHP files
         // inside base_path() are read. Follows APP_DEBUG unless set explicitly.
         'code_snippets' => env('LOGCENTER_VIEWER_CODE_SNIPPETS', env('APP_DEBUG', false)),

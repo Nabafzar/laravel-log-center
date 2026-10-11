@@ -119,9 +119,13 @@ stable release:
 
 - Config references Slack driver support, but factory creation is still missing
   and classes are missing.
-- Log viewer exists, but still needs larger-file performance work before
-  release (files are parsed fully per request; parsing is cached per request).
-  `LogFileRepository` parses Laravel's multi-line exception JSON so viewer
+- Log viewer: `src/Viewer/ParseCache.php` keeps parsed entries and entry
+  counts between requests (under `storage/framework/cache/logcenter`) and
+  parses only the appended bytes when a log grows; rotation, truncation or a
+  changed parsing setting causes a full parse. The cache leaves out frames,
+  stack and previous exceptions; `LogFileRepository::hydrate()` rebuilds them
+  for the entries a page displays. Bump `ParseCache::FORMAT` when the entry
+  structure changes. `LogFileRepository` parses Laravel's multi-line exception JSON so viewer
   fingerprints match `LogPayloadFactory` fingerprints — keep both recipes in sync.
 - `LogCenterHandler` requires a `LogDispatcher` constructor argument; verify the
   Laravel logging integration can instantiate it correctly.
@@ -217,7 +221,8 @@ Global keys:
 - `viewer.per_page`: number of entries displayed per page.
 - `viewer.max_files`: maximum number of files shown in the sidebar.
 - `viewer.max_file_size`: maximum file size in bytes accepted by the viewer.
-- `viewer.max_entry_lines`: future guardrail for large entries.
+- `viewer.max_entry_lines`: lines kept per entry (longer entries are truncated).
+- `viewer.cache`: keep parsed entries between requests (default on).
 - `viewer.code_snippets`: show source lines around exceptions (PHP files inside `base_path()` only; defaults to `APP_DEBUG`).
 - `viewer.editor`: `vscode`, `cursor`, `phpstorm`, `sublime`, or a URL template with `{file}` and `{line}` for open-in-editor links.
 - `incoming.enabled`: toggles the incoming log ingress route.
@@ -267,6 +272,7 @@ Global:
 - `LOGCENTER_VIEWER_MAX_FILES`
 - `LOGCENTER_VIEWER_MAX_FILE_SIZE`
 - `LOGCENTER_VIEWER_MAX_ENTRY_LINES`
+- `LOGCENTER_VIEWER_CACHE`
 - `LOGCENTER_VIEWER_CODE_SNIPPETS`
 - `LOGCENTER_VIEWER_EDITOR`
 - `LOGCENTER_INCOMING_ENABLED`
@@ -391,9 +397,7 @@ transform a `LogPayload` into transport-ready text or JSON.
 Prefer this order for future work:
 
 1. Implement Slack webhook transport (class, factory registration, config, tests).
-2. Speed up the log viewer on large files (it parses the whole file per
-   request), and improve pagination/search behavior.
-3. Sending to several drivers at once, and routing rules by level or channel.
+2. Sending to several drivers at once, and routing rules by level or channel.
 
 ## Testing Expectations
 
@@ -426,7 +430,7 @@ Before tagging a release:
 
 - `composer validate` passes.
 - PHP syntax checks pass for all `src` and `config` PHP files.
-- Unit and integration tests pass (currently 313 tests / 837 assertions).
+- Unit and integration tests pass (currently 320 tests / 859 assertions).
 - README documents installation, Laravel channel setup, environment variables,
   supported drivers, extension examples, and security notes. ✓
 - CHANGELOG.md exists and is up to date. ✓
