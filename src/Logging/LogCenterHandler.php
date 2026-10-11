@@ -21,6 +21,27 @@ final class LogCenterHandler extends AbstractProcessingHandler
      */
     private static bool $dispatching = false;
 
+    /**
+     * Run a callback with Log Center delivery muted: records written meanwhile
+     * are ignored by this handler (other channels still receive them).
+     *
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    public static function muted(callable $callback): mixed
+    {
+        $previous = self::$dispatching;
+        self::$dispatching = true;
+
+        try {
+            return $callback();
+        } finally {
+            self::$dispatching = $previous;
+        }
+    }
+
     public function __construct(
         private readonly LogDispatcher $dispatcher,
         private readonly AttributeResolver $attributeResolver,
