@@ -6,7 +6,6 @@ namespace Nabafzar\LogCenter\Viewer;
 
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
-use SplFileObject;
 use Throwable;
 
 final class LogFileRepository
@@ -18,6 +17,8 @@ final class LogFileRepository
      * @var array<string, array{signature: string, entries: Collection}>
      */
     private array $parsed = [];
+
+    private ?ParseCache $cache = null;
 
     public function all(): array
     {
@@ -281,14 +282,44 @@ final class LogFileRepository
             return 0;
         }
 
-        $count = 0;
-        $handle = new SplFileObject($path, 'r');
+        clearstatcache(true, $path);
+        $size = @filesize($path) ?: 0;
 
-        while (! $handle->eof()) {
-            if ($this->isHeaderLine(rtrim((string) $handle->fgets(), "\r\n"))) {
+        if (isset($this->parsed[$path]) && $this->parsed[$path]['signature'] === $this->signature($path)) {
+            return $this->parsed[$path]['entries']->count();
+        }
+
+        // Count only the header lines appended since the last count.
+        $record = $this->cache()->count($path, $size);
+
+        if ($record !== null && $record['size'] === $size) {
+            return $record['count'];
+        }
+
+        $count = ($record['count'] ?? 0) + $this->countHeaders($path, $record['size'] ?? 0);
+        $this->cache()->storeCount($path, $size, $count);
+
+        return $count;
+    }
+
+    private function countHeaders(string $path, int $from): int
+    {
+        $handle = @fopen($path, 'r');
+
+        if ($handle === false) {
+            return 0;
+        }
+
+        fseek($handle, $from);
+        $count = 0;
+
+        while (($line = fgets($handle)) !== false) {
+            if ($this->isHeaderLine(rtrim($line, "\r\n"))) {
                 $count++;
             }
         }
+
+        fclose($handle);
 
         return $count;
     }
@@ -296,26 +327,75 @@ final class LogFileRepository
     private function parseFile(string $path): Collection
     {
         clearstatcache(true, $path);
-        $signature = (@filesize($path) ?: 0).':'.(@filemtime($path) ?: 0);
+        $signature = $this->signature($path);
 
         if (($this->parsed[$path]['signature'] ?? null) === $signature) {
             return $this->parsed[$path]['entries'];
         }
 
-        $entries = $this->readEntries($path);
+        $size = @filesize($path) ?: 0;
+        $record = $this->cache()->entries($path, $size);
+
+        if ($record !== null && $record['size'] === $size) {
+            $entries = $record['entries'];
+        } elseif ($record !== null && $record['resume'] > 0 && $record['entries'] !== []) {
+            // The file grew: re-read from the start of the last cached entry,
+            // which may have been incomplete (a stack trace still being written).
+            [$appended, $resume] = $this->readEntries($path, $record['resume']);
+            $entries = array_merge(array_slice($record['entries'], 0, -1), $appended);
+            $resume = $appended === [] ? $record['resume'] : $resume;
+            $this->cache()->storeEntries($path, $size, $resume, $entries);
+        } else {
+            [$entries, $resume] = $this->readEntries($path, 0);
+            $this->cache()->storeEntries($path, $size, $resume, $entries);
+        }
+
+        $entries = collect($entries);
         $this->parsed[$path] = ['signature' => $signature, 'entries' => $entries];
 
         return $entries;
     }
 
-    private function readEntries(string $path): Collection
+    private function signature(string $path): string
     {
-        $handle = new SplFileObject($path, 'r');
-        $entries = collect();
-        $current = null;
+        return (@filesize($path) ?: 0).':'.(@filemtime($path) ?: 0);
+    }
 
-        while (! $handle->eof()) {
-            $line = rtrim((string) $handle->fgets(), "\r\n");
+    private function cache(): ParseCache
+    {
+        // Entries depend on these settings, so a change must not reuse old ones.
+        return $this->cache ??= ParseCache::fromConfig(
+            max(10, (int) config('logcenter.viewer.max_entry_lines', 500)).'|'.base_path(),
+        );
+    }
+
+    /**
+     * Parse entries starting at a byte offset that is the start of a line.
+     *
+     * @return array{0: list<array<string, mixed>>, 1: int} the entries, and the byte offset where the last one starts
+     */
+    private function readEntries(string $path, int $from): array
+    {
+        $handle = @fopen($path, 'r');
+
+        if ($handle === false) {
+            return [[], $from];
+        }
+
+        fseek($handle, $from);
+        $entries = [];
+        $current = null;
+        $lastStart = $from;
+
+        while (true) {
+            $position = ftell($handle);
+            $raw = fgets($handle);
+
+            if ($raw === false) {
+                break;
+            }
+
+            $line = rtrim($raw, "\r\n");
 
             if ($line === '') {
                 if ($current !== null) {
@@ -327,13 +407,15 @@ final class LogFileRepository
 
             if ($this->isHeaderLine($line, $header)) {
                 if ($current !== null) {
-                    $entries->push($this->buildEntry($current));
+                    $entries[] = $this->buildEntry($current) + ['offset' => $current['offset']];
                 }
 
                 $current = [
                     'header' => $header,
                     'lines' => [$line],
+                    'offset' => (int) $position,
                 ];
+                $lastStart = (int) $position;
 
                 continue;
             }
@@ -343,11 +425,66 @@ final class LogFileRepository
             }
         }
 
+        fclose($handle);
+
         if ($current !== null) {
-            $entries->push($this->buildEntry($current));
+            $entries[] = $this->buildEntry($current) + ['offset' => $current['offset']];
         }
 
-        return $entries;
+        return [$entries, $lastStart];
+    }
+
+    /**
+     * Fill in the fields the cache leaves out (frames, stack, previous
+     * exceptions) by re-reading this one entry from its offset in the file.
+     *
+     * @param  array<string, mixed>  $entry
+     * @return array<string, mixed>
+     */
+    public function hydrate(string $file, array $entry): array
+    {
+        if (array_key_exists('frames', $entry) || ! isset($entry['offset'])) {
+            return $entry;
+        }
+
+        $path = $this->resolvePath($file);
+        $handle = $path !== null ? @fopen($path, 'r') : false;
+
+        if ($handle === false) {
+            return $entry + ['frames' => [], 'stack' => null, 'previous_exceptions' => []];
+        }
+
+        fseek($handle, (int) $entry['offset']);
+        $current = null;
+
+        while (($raw = fgets($handle)) !== false) {
+            $line = rtrim($raw, "\r\n");
+            $isHeader = $line !== '' && $this->isHeaderLine($line, $header);
+
+            if ($isHeader && $current !== null) {
+                break;
+            }
+
+            if ($isHeader) {
+                $current = ['header' => $header, 'lines' => [$line]];
+            } elseif ($current !== null) {
+                $current['lines'][] = $line;
+            }
+        }
+
+        fclose($handle);
+
+        if ($current === null) {
+            return $entry + ['frames' => [], 'stack' => null, 'previous_exceptions' => []];
+        }
+
+        $full = $this->buildEntry($current);
+
+        return array_merge($entry, [
+            'frames' => $full['frames'],
+            'stack' => $full['stack'],
+            'previous_exceptions' => $full['previous_exceptions'],
+        ]);
     }
 
     private function buildEntry(array $entry): array

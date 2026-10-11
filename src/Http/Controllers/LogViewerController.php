@@ -60,7 +60,8 @@ final class LogViewerController extends Controller
         // Past the last page stays empty, but a huge number must not overflow the offset.
         $page = min(max(1, (int) $this->queryString($request, 'page', '1')), $pageCount + 1);
         $items = $allGroups->slice(($page - 1) * $perPage, $perPage)
-            ->map(function (array $group): array {
+            ->map(function (array $group) use ($selectedFile): array {
+                $group['latest'] = $this->files->hydrate((string) $selectedFile, $group['latest']);
                 $exception = $group['exception'] ?? [];
                 $group['snippet'] = $this->snippets->around($exception['file'] ?? null, $exception['line'] ?? null);
 

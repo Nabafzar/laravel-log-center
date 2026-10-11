@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nabafzar\LogCenter\Tests;
 
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Monolog\Level;
@@ -24,6 +25,10 @@ abstract class TestCase extends Orchestra
     protected function setUp(): void
     {
         parent::setUp();
+
+        // The viewer's parse cache lives on disk; never let one test's
+        // records leak into the next.
+        (new Filesystem)->deleteDirectory(storage_path('framework/cache/logcenter'));
 
         if ($this->allowLogViewer) {
             Gate::define(AuthorizeLogViewer::GATE, static fn (?object $user = null): bool => true);
