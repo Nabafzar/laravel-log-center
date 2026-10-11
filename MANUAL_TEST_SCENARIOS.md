@@ -205,6 +205,25 @@ curl -i -X POST http://localhost:8000/incoming-logs \
 | [ ] | 10.24 | Truncate or rotate the file, then reload; then set `LOGCENTER_VIEWER_CACHE=false` | A full re-parse with correct counts. With the cache off, nothing is written to the cache folder. |
 | [ ] | 10.25 | Multiple `viewer.paths` (a directory and a single file) | Both are listed. |
 
+### Copy for AI
+
+Throw an exception from a route (for example `/boom`), then open the issue in the viewer.
+
+| ✓ | # | Scenario | Expected |
+|---|---|---|---|
+| [ ] | 10.26 | Click **Copy stack trace** at the bottom of the issue and paste it into an editor | The full raw trace of the latest occurrence is pasted. A "Stack trace copied" toast appears. |
+| [ ] | 10.27 | An entry with no stack trace (`Log::error('plain message')`) | **Copy stack trace** is not shown. **Copy AI prompt** still is. |
+| [ ] | 10.28 | Click **Copy AI prompt** and paste it | The text starts with the request to explain the root cause and suggest a fix. It contains: exception class, message, `Location: app/...:line`, level and channel, occurrence count with first and last seen, Laravel and PHP versions, and the stack trace and context. An "AI prompt copied" toast appears. |
+| [ ] | 10.29 | Paths in the prompt | No absolute server path appears, so `/var/www/...` reads `app/...`. |
+| [ ] | 10.30 | Log with secrets: `Log::error('Login failed password=hunter2', ['api_token' => 'abc', 'nested' => ['secret' => 'x']])`, plus a trace line containing `Authorization: Bearer xyz` | The prompt shows `password=******`, `"api_token": "******"`, `"secret": "******"` and `Bearer ******`. None of the real values appear. |
+| [ ] | 10.31 | An exception with a previous exception (`throw new RuntimeException('outer', 0, new LogicException('inner'))`) | The prompt has a **Caused by** section with `LogicException: inner`. |
+| [ ] | 10.32 | `LOGCENTER_VIEWER_CODE_SNIPPETS=true` vs. `false` | With snippets on, the prompt has a **Source around …** block with the error line marked `>`. With them off, there is no source block. |
+| [ ] | 10.33 | A very long trace or a large context | The trace stops near 12,000 characters and the context near 4,000, each ending with `... [truncated]`. |
+| [ ] | 10.34 | A log message containing three backticks | The prompt still renders as clean Markdown when pasted into ChatGPT or Claude. The code block doesn't end early. |
+| [ ] | 10.35 | Paste the prompt into ChatGPT, Claude or another assistant | The answer names a cause and a fix that point to the right file and line. |
+| [ ] | 10.36 | Copy over plain HTTP (not `localhost`, so the clipboard API is unavailable) | Copy still works through the fallback. |
+| [ ] | 10.37 | Open the browser DevTools Network tab and click both buttons | No network request is made. |
+
 ## 11. Testing helper and extension points
 
 | ✓ | # | Scenario | Expected |
