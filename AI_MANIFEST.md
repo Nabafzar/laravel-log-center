@@ -431,7 +431,7 @@ Before tagging a release:
 
 - `composer validate` passes.
 - PHP syntax checks pass for all `src` and `config` PHP files.
-- Unit and integration tests pass (currently 328 tests / 877 assertions).
+- Unit and integration tests pass (currently 329 tests / 883 assertions).
 - README documents installation, Laravel channel setup, environment variables,
   supported drivers, extension examples, and security notes. ✓
 - CHANGELOG.md exists and is up to date. ✓

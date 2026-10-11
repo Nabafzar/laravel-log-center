@@ -25,6 +25,7 @@ All notable changes to this project are documented in this file. Releases follow
 ### Security
 
 - **Breaking:** the log viewer now requires the `viewLogCenter` gate. Before, the `auth` middleware was the only check, so in an app with public sign-up every logged-in user could read the logs. Without the gate the viewer only opens in the `local` environment; define `Gate::define('viewLogCenter', fn ($user) => ...)` to allow access elsewhere
+- Masking in log text now hides the whole value: `Authorization: Bearer xyz` and `Basic xyz` mask the credential instead of only the word `Bearer`/`Basic`, and quoted values (`password: 'two words'`, JSON strings with escaped quotes) are masked in full instead of up to the first space
 
 ### Fixed
 
