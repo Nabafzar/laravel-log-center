@@ -110,7 +110,15 @@ final class PayloadProcessor
 
         return preg_replace_callback(
             $pattern,
-            fn (array $matches) => $matches[1].$matches[2].$this->replacement(),
+            function (array $matches): string {
+                $quote = $matches[3] ?? '';
+                $scheme = $matches[4] ?? '';
+
+                // Keep the quotes and the auth scheme, mask only the value.
+                $value = $quote !== '' ? $quote.$this->replacement().$quote : $scheme.$this->replacement();
+
+                return $matches[1].$matches[2].$value;
+            },
             $text,
         ) ?? $text;
     }
@@ -190,7 +198,11 @@ final class PayloadProcessor
 
         $flags = $this->caseSensitive() ? '' : 'i';
 
-        return $this->cachedPattern = '/('.implode('|', $escaped).')(["\']?\s*[:=]\s*["\']?)([^&\s,"\']+)/'.$flags;
+        // The value is a quoted string (spaces and escaped quotes included), or
+        // a bare word after an optional auth scheme, so `Authorization: Bearer
+        // xyz` masks the token rather than the word "Bearer".
+        return $this->cachedPattern = '/('.implode('|', $escaped).')(["\']?\s*[:=]\s*)'
+            .'(?:(["\'])(?:\\\\.|(?!\3).)*\3|((?i:bearer|basic|digest|token)\s+)?[^&\s,"\']+)/'.$flags;
     }
 
     /**

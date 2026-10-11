@@ -185,6 +185,24 @@ final class PayloadProcessorTest extends TestCase
         ], $payload->request['body']);
     }
 
+    public function test_it_masks_the_whole_secret_value_in_text(): void
+    {
+        $cases = [
+            'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.abc.def' => 'Authorization: Bearer ******',
+            'curl -H "Authorization: Basic dXNlcjpwYXNz"' => 'curl -H "Authorization: Basic ******"',
+            "password: 'hunter 2' next" => "password: '******' next",
+            '{"password":"a \"quoted\" pass","name":"kept"}' => '{"password":"******","name":"kept"}',
+            'password=hunter2&x=1' => 'password=******&x=1',
+            'token: abc123, other' => 'token: ******, other',
+        ];
+
+        $processor = new PayloadProcessor;
+
+        foreach ($cases as $message => $expected) {
+            $this->assertSame($expected, $processor->process($this->makePayload(['message' => $message]))->message);
+        }
+    }
+
     public function test_it_normalizes_tags_to_a_list_of_valid_strings(): void
     {
         $payload = (new PayloadProcessor)->process($this->makePayload([
