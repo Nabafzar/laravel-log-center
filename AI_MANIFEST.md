@@ -87,6 +87,7 @@ Implemented code:
   - `src/Jobs/DispatchLogJob.php`
 - Log viewer:
   - `src/Viewer/CodeSnippet.php`
+  - `src/Viewer/AiPrompt.php` ("Copy AI prompt": issue as a masked, base-path-free prompt; clipboard only, no network)
   - `src/Http/Controllers/LogViewerController.php`
   - `src/Viewer/LogFileRepository.php`
   - `routes/web.php`
@@ -431,7 +432,7 @@ Before tagging a release:
 
 - `composer validate` passes.
 - PHP syntax checks pass for all `src` and `config` PHP files.
-- Unit and integration tests pass (currently 329 tests / 883 assertions).
+- Unit and integration tests pass (currently 334 tests / 912 assertions).
 - README documents installation, Laravel channel setup, environment variables,
   supported drivers, extension examples, and security notes. ✓
 - CHANGELOG.md exists and is up to date. ✓
