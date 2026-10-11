@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. Releases follow
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-10-11
+
+First stable release.
+
 ### Added
 
 - **Log digest** — `php artisan logcenter:digest` sends a daily or weekly summary through the configured driver: entry counts per level and the top issues (grouped like the log viewer), with new issues marked `[NEW]` and a link to the viewer. Options: `--period=daily|weekly`, `--since=`, `--level=`, `--driver=`, `--dry-run`. `LOGCENTER_DIGEST_ENABLED=true` adds it to Laravel's scheduler (`LOGCENTER_DIGEST_FREQUENCY`, `_TIME`, `_DAY`, `_TIMEZONE`); other settings: `_DRIVER`, `_LEVEL`, `_TOP`, `_SKIP_EMPTY`, `_MAX_FILE_SIZE`. Counts come from the files in `viewer.paths`
@@ -40,7 +44,7 @@ All notable changes to this project are documented in this file. Releases follow
 - The plain and markdown formatters read `trace_max_length`, but the config did not declare it. Added `LOGCENTER_PLAIN_FORMATTER_TRACE_MAX_LENGTH` and `LOGCENTER_MARKDOWN_FORMATTER_TRACE_MAX_LENGTH` (default 1200)
 - Bale rejected messages over its 4096-character limit (for example with `LOGCENTER_BALE_FORMATTER=json` or a raised `max_length`), so the log was lost. Long messages are now shortened and sent without a parse mode, as Telegram already did
 - Tags were passed to providers unprocessed: nested arrays or invalid UTF-8 in `tags` made webhook requests fail, and a non-string tag crashed Telegram's tag-to-topic lookup. Tags are now normalized to a list of valid strings
-- The fallback driver was skipped when the primary driver could not send at all: an unknown driver name (for example `LOGCENTER_DRIVER=slack`), a formatter error, or a custom transport that throws instead of returning a failed result. These now count as a failed send, so `LogDispatchFailed` fires and the fallback runs
+- The fallback driver was skipped when the primary driver could not send at all: an unknown driver name (for example a typo such as `LOGCENTER_DRIVER=telgram`), a formatter error, or a custom transport that throws instead of returning a failed result. These now count as a failed send, so `LogDispatchFailed` fires and the fallback runs
 - Driver names given to `sendNow()` (including `logcenter:test-log --driver=`) and `LOGCENTER_FALLBACK_DRIVER` were case-sensitive: `Telegram` used the plain formatter instead of Telegram's, and a fallback of `Telegram` with a primary of `telegram` sent the same failing request twice
 - Viewer routes returned 500 for array query values (`?file[]=x`, `?search[]=x`, ...) or a very large `page` number
 - **Security:** masking only matched exact key names, so `current_password`, `new_password`, `client_secret`, `api_token` and Laravel's CSRF `_token` were sent in clear text. A key is now masked when its name contains a configured key
@@ -90,7 +94,6 @@ All notable changes to this project are documented in this file. Releases follow
 - `LogFileRepository::entryCountFor()` no longer parses the full file — counts only header lines
 - Incoming log payload depth capped at 10 levels to prevent stack overflow on deeply nested payloads
 - `bale_text` formatter removed from docs and config (was never implemented)
-- Slack removed from `composer.json` keywords, `MessageFormatEnum`, and `config/logcenter.php` — transport is not yet implemented and will be added in a future release
 
 ## [0.1.0] — 2026-05-28
 

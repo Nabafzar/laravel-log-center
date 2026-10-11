@@ -1,7 +1,8 @@
 # nabafzar/laravel-log-center
 
-Laravel package for centralized log dispatch, driver switching, message
-formatting, masking, and planned multi-channel log notifications.
+Laravel package for centralized log delivery: driver switching, per-driver
+formatting, secret masking, queueing, fallback, alert suppression, a built-in
+log viewer, incoming log ingress and daily/weekly digests.
 
 Canonical AI manifest:
 
@@ -17,20 +18,16 @@ Key package files:
 - `src/Managers/TransportManager.php`
 - `src/Factories/TransportFactory.php`
 - `src/Factories/FormatterFactory.php`
-- `src/Transports/Null/NullTransport.php`
-- `src/Transports/Telegram/TelegramTransport.php`
-- `src/Formatters/PlainTextFormatter.php`
-- `src/Formatters/JsonFormatter.php`
-- `src/Formatters/MarkdownFormatter.php`
-- `src/Formatters/TelegramHtmlFormatter.php`
+- `src/Transports/` (Null, Telegram, Bale, Mattermost, Webhook)
+- `src/Formatters/` (PlainText, Json, Markdown, TelegramHtml, BaleMarkdown)
+- `src/Viewer/` and `src/Http/Controllers/LogViewerController.php`
+- `src/Digest/DigestBuilder.php` and `src/Console/Commands/`
 
 Current status summary:
 
-- Transport classes present: `null`, `telegram`
-- Planned transports: `bale`, `slack`, `mattermost`, `webhook`
-- Factory-exposed formatters: `plain`, `json`, `markdown`, `telegram_html`
+- Transports: `null`, `telegram`, `bale`, `mattermost`, `webhook`
+- Formatters: `plain`, `json`, `markdown`, `telegram_html`, `bale_markdown`
 - Known gaps and roadmap are documented in `AI_MANIFEST.md`.
 
 AI assistants should treat `AI_MANIFEST.md` as the project handoff and avoid
-claiming planned drivers are production-ready until implementation and tests
-exist.
+claiming a driver is supported until its class, configuration and tests exist.

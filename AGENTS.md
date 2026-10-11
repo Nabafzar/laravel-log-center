@@ -15,8 +15,8 @@ and aligned with the existing package structure:
 
 Important constraints:
 
-- Do not assume configured drivers are implemented. Telegram and null are the
-  only transport classes currently present.
+- Do not assume configured drivers are implemented. The transport classes present
+  are null, telegram, bale, mattermost and webhook.
 - Fix compile/runtime blockers before adding new features.
 - Never log through Laravel's logger from inside `LogCenterHandler` failure
   handling; that can recurse.

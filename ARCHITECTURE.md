@@ -129,7 +129,6 @@ graph TD
         TF --> TB[BaleTransport]
         TF --> TMM[MattermostTransport]
         TF --> TW[WebhookTransport]
-        TF --> TS[SlackTransport ⚠️ not yet]
     end
 
     subgraph Events["Events"]
@@ -346,7 +345,6 @@ classDiagram
 | `bale` | ✅ Implemented | Bot Token | `bale_markdown` | No |
 | `mattermost` | ✅ Implemented | Bot Token / Webhook | `markdown` / `plain` | No |
 | `webhook` | ✅ Implemented | Header / none | `json` / `plain` | No |
-| `slack` | ⚠️ Config only | Webhook URL | — | No |
 
 ### Telegram Topic Routing
 
@@ -475,8 +473,7 @@ logcenter.php
     ├── telegram  (token, chat_id, topic_id, topics_level, tag_topics, ...)
     ├── bale      (token, chat_id, base_url, ...)
     ├── mattermost (bot_token, webhook, channel_id, ...)
-    ├── webhook   (url, method, payload, ...)
-    └── slack     (webhook, channel — config only, transport not implemented)
+    └── webhook   (url, method, payload, ...)
 ```
 
 ---
@@ -505,8 +502,8 @@ class DiscordTransport extends AbstractTransport
 
 ### Custom Formatter
 
-`FormatterFactory` does not yet have an `extend()` mechanism (planned). Until then,
-swap the formatter key in config or bind a custom implementation in the container.
+Register it with `FormatterFactory::extend('name', fn ($app) => new MyFormatter)`, then select it
+with `LOGCENTER_FORMATTER=name` or a driver's `formatter` key.
 
 ---
 
@@ -515,8 +512,7 @@ swap the formatter key in config or bind a custom implementation in the containe
 1. **Mask before format** — `PayloadProcessor` must run before any formatter or transport sees the payload.
 2. **No recursive logging** — `LogCenterHandler` error paths must use `error_log()`, never `Log::*()`.
 3. **No real HTTP in tests** — use Laravel's `Http::fake()`.
-4. **Slack is not production-ready** — do not set `LOGCENTER_DRIVER=slack` until the transport class is implemented.
-5. **strict_types=1** — all new PHP files must declare strict types.
+4. **strict_types=1** — all new PHP files must declare strict types.
 
 ---
 
@@ -533,10 +529,9 @@ swap the formatter key in config or bind a custom implementation in the containe
 | Mattermost transport | ✅ Complete |
 | Webhook transport | ✅ Complete |
 | Null transport | ✅ Complete |
-| Log Viewer (web UI) | ✅ Complete (needs perf hardening) |
+| Log Viewer (web UI) | ✅ Complete (parse cache for large files) |
 | Incoming log ingress | ✅ Complete |
 | Events (dispatched/failed/suppressed) | ✅ Complete |
-| Slack transport | ⚠️ Config only — class missing |
-| `FormatterFactory::extend()` | ⚠️ Not yet implemented |
-| Viewer large-file pagination | ⚠️ Needs hardening |
+| `FormatterFactory::extend()` | ✅ Complete |
+| Log digest (`logcenter:digest`) | ✅ Complete |
 | End-to-end Laravel channel integration tests | ⚠️ Planned |
