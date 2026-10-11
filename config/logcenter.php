@@ -203,6 +203,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Log Digest
+    |--------------------------------------------------------------------------
+    |
+    | `php artisan logcenter:digest` sends a summary of the last day or week:
+    | entry counts per level and the most frequent issues, read from the log
+    | files in viewer.paths. With `enabled`, the command is added to Laravel's
+    | scheduler, so `schedule:run` must already run from cron.
+    |
+    */
+    'digest' => [
+        'enabled' => env('LOGCENTER_DIGEST_ENABLED', false),
+        'frequency' => env('LOGCENTER_DIGEST_FREQUENCY', 'daily'), // daily or weekly
+        'time' => env('LOGCENTER_DIGEST_TIME', '09:00'),
+        'day' => env('LOGCENTER_DIGEST_DAY', 1), // weekly only: 0 = Sunday, 1 = Monday ... 6 = Saturday
+        'timezone' => env('LOGCENTER_DIGEST_TIMEZONE'), // null = app.timezone
+        'driver' => env('LOGCENTER_DIGEST_DRIVER'), // null = the default driver
+        'level' => env('LOGCENTER_DIGEST_LEVEL', 'warning'), // lowest level counted
+        'top' => env('LOGCENTER_DIGEST_TOP', 10), // issues listed
+        'skip_empty' => env('LOGCENTER_DIGEST_SKIP_EMPTY', true), // send nothing for a quiet period
+        'max_file_size' => env('LOGCENTER_DIGEST_MAX_FILE_SIZE', 100 * 1024 * 1024), // 0 = no limit
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Formatter Configuration
     |--------------------------------------------------------------------------
     |

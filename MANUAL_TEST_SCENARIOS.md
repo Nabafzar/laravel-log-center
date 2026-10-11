@@ -205,19 +205,65 @@ curl -i -X POST http://localhost:8000/incoming-logs \
 | [ ] | 10.24 | Truncate or rotate the file, then reload; then set `LOGCENTER_VIEWER_CACHE=false` | A full re-parse with correct counts. With the cache off, nothing is written to the cache folder. |
 | [ ] | 10.25 | Multiple `viewer.paths` (a directory and a single file) | Both are listed. |
 
-## 11. Testing helper and extension points
+### Copy for AI
+
+Throw an exception from a route (for example `/boom`), then open the issue in the viewer.
 
 | ✓ | # | Scenario | Expected |
 |---|---|---|---|
-| [ ] | 11.1 | In an app test, call `LogCenter::fake()`, trigger an error, then assert on the sent logs | Passes. No real HTTP call is made. |
-| [ ] | 11.2 | A custom transport via `TransportFactory::extend()` and a custom formatter via `FormatterFactory::extend()`, selected through `LOGCENTER_DRIVER` / `LOGCENTER_FORMATTER` | The custom classes are used. |
+| [ ] | 10.26 | Click **Copy stack trace** at the bottom of the issue and paste it into an editor | The full raw trace of the latest occurrence is pasted. A "Stack trace copied" toast appears. |
+| [ ] | 10.27 | An entry with no stack trace (`Log::error('plain message')`) | **Copy stack trace** is not shown. **Copy AI prompt** still is. |
+| [ ] | 10.28 | Click **Copy AI prompt** and paste it | The text starts with the request to explain the root cause and suggest a fix. It contains: exception class, message, `Location: app/...:line`, level and channel, occurrence count with first and last seen, Laravel and PHP versions, and the stack trace and context. An "AI prompt copied" toast appears. |
+| [ ] | 10.29 | Paths in the prompt | No absolute server path appears, so `/var/www/...` reads `app/...`. |
+| [ ] | 10.30 | Log with secrets: `Log::error('Login failed password=hunter2', ['api_token' => 'abc', 'nested' => ['secret' => 'x']])`, plus a trace line containing `Authorization: Bearer xyz` | The prompt shows `password=******`, `"api_token": "******"`, `"secret": "******"` and `Bearer ******`. None of the real values appear. |
+| [ ] | 10.31 | An exception with a previous exception (`throw new RuntimeException('outer', 0, new LogicException('inner'))`) | The prompt has a **Caused by** section with `LogicException: inner`. |
+| [ ] | 10.32 | `LOGCENTER_VIEWER_CODE_SNIPPETS=true` vs. `false` | With snippets on, the prompt has a **Source around …** block with the error line marked `>`. With them off, there is no source block. |
+| [ ] | 10.33 | A very long trace or a large context | The trace stops near 12,000 characters and the context near 4,000, each ending with `... [truncated]`. |
+| [ ] | 10.34 | A log message containing three backticks | The prompt still renders as clean Markdown when pasted into ChatGPT or Claude. The code block doesn't end early. |
+| [ ] | 10.35 | Paste the prompt into ChatGPT, Claude or another assistant | The answer names a cause and a fix that point to the right file and line. |
+| [ ] | 10.36 | Copy over plain HTTP (not `localhost`, so the clipboard API is unavailable) | Copy still works through the fallback. |
+| [ ] | 10.37 | Open the browser DevTools Network tab and click both buttons | No network request is made. |
 
-## 12. Compatibility
+## 11. Log digest
+
+Write a few warnings and errors to `storage/logs/laravel.log`: some repeated, one critical, one info. Make some older
+than a day and some older than a week; edit the timestamps by hand if needed.
 
 | ✓ | # | Scenario | Expected |
 |---|---|---|---|
-| [ ] | 12.1 | Run scenarios 1.6, 3.1, 9.1 and 10.6 on Laravel 10, 11, 12 and 13 | All pass. On Laravel 10, install `guzzlehttp/guzzle` yourself first. |
-| [ ] | 12.2 | Same scenarios on PHP 8.2 and the newest PHP | All pass. |
+| [ ] | 11.1 | `php artisan logcenter:digest --dry-run` | Prints the digest: period, entry/issue/new counts, per-level counts, top issues with `file:line`. Nothing is sent. |
+| [ ] | 11.2 | `php artisan logcenter:digest` with the Telegram driver | One message arrives with the same text, tagged `#digest`. The command prints `Digest sent through [telegram]`. |
+| [ ] | 11.3 | Same on Bale, Mattermost, webhook and the JSON formatter | Readable on each, with special characters (`<`, `&`, `_`, `*`) escaped correctly. |
+| [ ] | 11.4 | Repeated errors | Grouped into one issue with `×count`. Issues are ordered by count, highest first. |
+| [ ] | 11.5 | An error that also appeared before the period | Listed without `[NEW]`. An error first seen inside the period has `[NEW]`. |
+| [ ] | 11.6 | `--period=weekly` | Covers the last 7 days, so entries 2–6 days old are counted. A daily digest leaves them out. |
+| [ ] | 11.7 | `--since="3 hours ago"` | Labelled "Custom", counts only the last 3 hours. `--since=tomorrow` and `--since=garbage` fail with a clear error. |
+| [ ] | 11.8 | Default level (`warning`) vs. `--level=error` vs. `--level=info` | Info entries appear only with `--level=info`. Warnings disappear with `--level=error`. |
+| [ ] | 11.9 | `LOGCENTER_DIGEST_TOP=2` with 4 issues | Two issues listed, then `… and 2 more issues.` |
+| [ ] | 11.10 | A quiet period (only info entries) | "Nothing to report", nothing sent. With `LOGCENTER_DIGEST_SKIP_EMPTY=false`, a "Nothing to report" message is sent. |
+| [ ] | 11.11 | A logged message with `password=hunter2` | The digest shows `password=******`. |
+| [ ] | 11.12 | `LOGCENTER_VIEWER_ENABLED=true` | The digest ends with a working `Log viewer: …` link (set `APP_URL` correctly). |
+| [ ] | 11.13 | `LOGCENTER_DIGEST_DRIVER=webhook`, and also `--driver=bale` | Sent to the webhook. The option overrides the config for that run. |
+| [ ] | 11.14 | Digest driver broken, with `LOGCENTER_FALLBACK_DRIVER` set | Delivered through the fallback. With no fallback, the command fails with exit code 1 and the failure channel gets an entry. |
+| [ ] | 11.15 | A log larger than `LOGCENTER_VIEWER_MAX_FILE_SIZE` but under `LOGCENTER_DIGEST_MAX_FILE_SIZE` | Still counted in the digest. |
+| [ ] | 11.16 | `LOGCENTER_DIGEST_ENABLED=true`, `FREQUENCY=weekly`, `DAY=5`, `TIME=08:30`, then `php artisan schedule:list` | Shows `logcenter:digest --period=weekly` at `30 8 * * 5`. With `TIMEZONE` set, the schedule uses it. |
+| [ ] | 11.17 | Same, then `php artisan schedule:test` (pick the digest) | One digest is sent. |
+| [ ] | 11.18 | Telegram `tag_topics => ['digest' => <topic id>]` | The digest lands in that forum topic. |
+| [ ] | 11.19 | `--period=monthly` | Fails with `Unknown period "monthly"`. |
+
+## 12. Testing helper and extension points
+
+| ✓ | # | Scenario | Expected |
+|---|---|---|---|
+| [ ] | 12.1 | In an app test, call `LogCenter::fake()`, trigger an error, then assert on the sent logs | Passes. No real HTTP call is made. |
+| [ ] | 12.2 | A custom transport via `TransportFactory::extend()` and a custom formatter via `FormatterFactory::extend()`, selected through `LOGCENTER_DRIVER` / `LOGCENTER_FORMATTER` | The custom classes are used. |
+
+## 13. Compatibility
+
+| ✓ | # | Scenario | Expected |
+|---|---|---|---|
+| [ ] | 13.1 | Run scenarios 1.6, 3.1, 9.1 and 10.6 on Laravel 10, 11, 12 and 13 | All pass. On Laravel 10, install `guzzlehttp/guzzle` yourself first. |
+| [ ] | 13.2 | Same scenarios on PHP 8.2 and the newest PHP | All pass. |
 
 ---
 

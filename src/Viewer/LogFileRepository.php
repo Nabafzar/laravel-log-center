@@ -20,6 +20,20 @@ final class LogFileRepository
 
     private ?ParseCache $cache = null;
 
+    private ?int $maxFileSize = null;
+
+    /**
+     * A copy that accepts files up to this size instead of viewer.max_file_size
+     * (0 means no limit). The digest uses it, so a large log is still counted.
+     */
+    public function withMaxFileSize(int $bytes): self
+    {
+        $copy = clone $this;
+        $copy->maxFileSize = max(0, $bytes);
+
+        return $copy;
+    }
+
     public function all(): array
     {
         $files = [];
@@ -834,7 +848,7 @@ final class LogFileRepository
         }
 
         // 0 means no limit; an empty or invalid value keeps the default.
-        $maxFileSize = config('logcenter.viewer.max_file_size');
+        $maxFileSize = $this->maxFileSize ?? config('logcenter.viewer.max_file_size');
         $maxFileSize = is_numeric($maxFileSize) ? max(0, (int) $maxFileSize) : 10 * 1024 * 1024;
 
         if ($maxFileSize === 0) {

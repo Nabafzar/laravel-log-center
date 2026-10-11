@@ -26,6 +26,7 @@ Log::error('Payment gateway timeout', ['order_id' => 'ORD-999']);
 - ⚡ **Async dispatch** — push delivery onto a queue so logging never blocks a request.
 - 🛟 **Fallback transport** — automatically retry through a second driver when the primary fails.
 - 🔕 **Alert suppression** — collapse duplicate errors within a TTL window to stop notification floods.
+- 📊 **Daily / weekly digest** — a summary of entry counts and the top issues, sent through your driver.
 - 🧩 **Payload enrichment** — attach git SHA, hostname, or any context to every log.
 - 🧭 **Attribute routing** — `#[LogTopic]` routes a controller's logs to a specific Telegram thread.
 - 👀 **Built-in log viewer** — read-only viewer with search, live tail, and downloads.
@@ -87,6 +88,7 @@ providers**, that is what this package adds on top of Monolog.
 - [Fallback Transport](#fallback-transport)
 - [Failure Channel](#failure-channel)
 - [Alert Suppression](#alert-suppression)
+- [Log Digest](#log-digest)
 - [Secret Masking](#secret-masking)
 - [Payload Enrichment](#payload-enrichment)
 - [Events](#events)
@@ -393,6 +395,60 @@ The first occurrence is delivered normally. Duplicates within the TTL window fir
 > store. In a multi-worker deployment, point `LOGCENTER_SUPPRESSION_STORE` at a **shared, atomic**
 > store such as Redis. With per-process stores (e.g. `array`), each worker tracks its own counts
 > and suppression will not be global.
+
+## Log Digest
+
+A summary of the last day or week, sent through your driver like any other log: entry counts per level and the most
+frequent issues, with new ones marked `[NEW]`.
+
+```text
+Daily log digest · Oct 10, 09:00 – Oct 11, 09:00
+
+152 entries · 12 issues · 3 new
+CRITICAL 2 · ERROR 120 · WARNING 30
+
+Top issues:
+1. [NEW] ERROR ×45 — RuntimeException: Order total is negative (app/Http/Controllers/OrderController.php:42)
+2. ERROR ×31 — QueryException: Deadlock found when trying to get lock
+...
+… and 2 more issues.
+
+Log viewer: https://app.test/log-viewer
+```
+
+Run it by hand, or let Log Center add it to Laravel's scheduler:
+
+```bash
+php artisan logcenter:digest                      # last 24 hours
+php artisan logcenter:digest --period=weekly      # last 7 days
+php artisan logcenter:digest --since="48 hours ago" --level=error
+php artisan logcenter:digest --driver=mattermost  # another driver for this run
+php artisan logcenter:digest --dry-run            # print it, send nothing
+```
+
+```dotenv
+LOGCENTER_DIGEST_ENABLED=true        # schedule it (your cron must run `php artisan schedule:run`)
+LOGCENTER_DIGEST_FREQUENCY=daily     # daily or weekly
+LOGCENTER_DIGEST_TIME=09:00
+LOGCENTER_DIGEST_DAY=1               # weekly only: 0 = Sunday … 6 = Saturday
+LOGCENTER_DIGEST_TIMEZONE=           # default: app.timezone
+LOGCENTER_DIGEST_DRIVER=             # default: LOGCENTER_DRIVER
+LOGCENTER_DIGEST_LEVEL=warning       # lowest level counted
+LOGCENTER_DIGEST_TOP=10              # issues listed
+LOGCENTER_DIGEST_SKIP_EMPTY=true     # send nothing for a quiet period
+```
+
+How it works:
+
+- The counts come from the log files in `viewer.paths` (the viewer does not have to be enabled), grouped exactly like
+  the viewer groups issues. Write your logs to a file channel (`single` or `daily`) alongside `logcenter`.
+- An issue is `[NEW]` when it does not appear before the period in the files still kept.
+- The digest is sent as an `info` log on the `digest` channel with the tag `digest`, so masking, the fallback driver and
+  `LogCenter::fake()` apply. On Telegram, map the tag to a forum topic with `'tag_topics' => ['digest' => 1234]`.
+- Files up to `LOGCENTER_DIGEST_MAX_FILE_SIZE` (100 MB by default, `0` for no limit) are read, even when they are
+  larger than the viewer's own limit.
+- On several servers, schedule the command yourself with `->onOneServer()` instead of `LOGCENTER_DIGEST_ENABLED`,
+  so only one digest is sent.
 
 ## Secret Masking
 
