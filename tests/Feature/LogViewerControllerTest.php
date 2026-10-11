@@ -222,6 +222,33 @@ LOG);
         $response->assertDontSee('Payment failed');
     }
 
+    public function test_an_issue_offers_its_stack_trace_and_an_ai_prompt_to_copy(): void
+    {
+        $directory = $this->logDirectory('logcenter-feature-ai-prompt-tests');
+        $file = base_path('app/Services/Billing.php');
+        file_put_contents($directory.'/laravel.log', <<<LOG
+[2026-05-08 09:00:00] local.ERROR: Charge failed token=sk_live_123 {"exception":"[object] (RuntimeException(code: 0): Charge failed at {$file}:12)
+[stacktrace]
+#0 {$file}(12): App\\\\Services\\\\Billing->charge()
+#1 {main}
+"}
+LOG);
+        config()->set('logcenter.viewer.paths', [$directory]);
+
+        $response = $this->get('/log-viewer');
+
+        $response->assertOk();
+        $response->assertSee('Copy stack trace');
+        $response->assertSee('Copy AI prompt');
+        $this->assertSame(1, preg_match('/<textarea id="issue-[0-9a-f]+-ai-prompt" hidden>([^<]*)<\/textarea>/', $response->getContent(), $match));
+        $prompt = html_entity_decode($match[1]);
+        $this->assertStringContainsString('Exception: RuntimeException', $prompt);
+        $this->assertStringContainsString('Log message: Charge failed token=******', $prompt);
+        $this->assertStringContainsString('Location: app/Services/Billing.php:12', $prompt);
+        $this->assertStringContainsString('#0 app/Services/Billing.php(12): App\\Services\\Billing->charge()', $prompt);
+        $this->assertStringNotContainsString('sk_live_123', $prompt);
+    }
+
     private function logDirectory(string $name): string
     {
         $directory = storage_path('logs/'.$name);

@@ -943,6 +943,19 @@
                         </div>
 
                         <div class="detail-actions">
+                            @if($hasTrace)
+                                <button type="button" class="btn btn-sm" data-copy-from="{{ $groupId }}-trace-text" data-copy-label="Stack trace copied">
+                                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M3 10.5V4a1 1 0 0 1 1-1h6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                                    Copy stack trace
+                                </button>
+                            @endif
+                            @if(! empty($group['ai_prompt']))
+                                <button type="button" class="btn btn-sm" data-copy-from="{{ $groupId }}-ai-prompt" data-copy-label="AI prompt copied" title="Copies a prompt with the error, source, stack trace and context (secrets masked) to paste into ChatGPT, Claude or another assistant">
+                                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1.5l1.4 3.6 3.6 1.4-3.6 1.4L8 11.5 6.6 7.9 3 6.5l3.6-1.4zM12.5 10.5l.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+                                    Copy AI prompt
+                                </button>
+                                <textarea id="{{ $groupId }}-ai-prompt" hidden>{{ $group['ai_prompt'] }}</textarea>
+                            @endif
                             <button type="button" class="btn btn-sm" data-copy="{{ $issueLink }}" data-copy-label="Link copied">
                                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6.5 9.5 9.5 6.5M7 4.5l1-1a2.8 2.8 0 0 1 4 4l-1 1M9 11.5l-1 1a2.8 2.8 0 0 1-4-4l1-1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                                 Copy link to this issue

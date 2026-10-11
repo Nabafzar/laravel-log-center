@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\View\View;
+use Nabafzar\LogCenter\Viewer\AiPrompt;
 use Nabafzar\LogCenter\Viewer\CodeSnippet;
 use Nabafzar\LogCenter\Viewer\LogFileRepository;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -25,6 +26,7 @@ final class LogViewerController extends Controller
     public function __construct(
         private readonly LogFileRepository $files,
         private readonly CodeSnippet $snippets,
+        private readonly AiPrompt $prompts,
     ) {}
 
     public function index(Request $request): View
@@ -64,6 +66,7 @@ final class LogViewerController extends Controller
                 $group['latest'] = $this->files->hydrate((string) $selectedFile, $group['latest']);
                 $exception = $group['exception'] ?? [];
                 $group['snippet'] = $this->snippets->around($exception['file'] ?? null, $exception['line'] ?? null);
+                $group['ai_prompt'] = $this->prompts->build($group);
 
                 return $group;
             })

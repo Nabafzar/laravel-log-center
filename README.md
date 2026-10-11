@@ -546,6 +546,10 @@ What you get:
   "Caused by" chains for previous exceptions are shown too.
 - **Context, occurrences and raw tabs** — highlighted JSON context, every occurrence with its raw
   entry, and the latest raw entry with a copy button.
+- **Copy for AI** — "Copy stack trace" copies the raw trace, and "Copy AI prompt" copies a ready-to-paste
+  prompt for ChatGPT, Claude or any other assistant: the exception, location, occurrence counts, source
+  lines, "Caused by" chain, stack trace and context. Secrets are masked with your `mask` rules and your
+  app's base path is removed from file paths. Nothing is sent anywhere; the text only goes to your clipboard.
 - **Activity chart** — errors, warnings and other entries over time, following your filters.
 - **Search and level filters** — level chips keep their counts while you filter.
 - **Notification links** — the "open in viewer" link in Telegram, Bale and Mattermost messages opens
