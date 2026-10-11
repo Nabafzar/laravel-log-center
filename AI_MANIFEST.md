@@ -48,7 +48,8 @@ Implemented code:
 - Service provider: `src/LogCenterServiceProvider.php`
 - Config file: `config/logcenter.php`
 - Testing helper: `src/Facades/LogCenter.php` (`LogCenter::fake()`), `src/Testing/LogCenterFake.php`, `FakeTransport.php`, `SentLog.php`; `TransportFactory::fake()` swaps every transport for the recorder.
-- Console commands: `src/Console/Commands/TestLogCommand.php` (sends a test log), `src/Console/Commands/CheckCommand.php` (`logcenter:check`, read-only setup check)
+- Console commands: `src/Console/Commands/TestLogCommand.php` (sends a test log), `src/Console/Commands/CheckCommand.php` (`logcenter:check`, read-only setup check), `src/Console/Commands/DigestCommand.php` (`logcenter:digest`, daily/weekly summary)
+- Digest: `src/Digest/DigestBuilder.php` reads `viewer.paths` through `LogFileRepository::withMaxFileSize()`, groups like the viewer, and builds one `info` payload (channel `digest`, tag `digest`, no fingerprint so suppression never drops it) sent with `LogDispatcher::sendNow()`. `LogCenterServiceProvider::bootDigestSchedule()` schedules it when `digest.enabled` is on
 - Incoming log ingress:
   - `src/Http/Controllers/IncomingLogController.php`
   - `src/Factories/IncomingLogPayloadFactory.php`
@@ -227,6 +228,7 @@ Global keys:
 - `viewer.cache`: keep parsed entries between requests (default on).
 - `viewer.code_snippets`: show source lines around exceptions (PHP files inside `base_path()` only; defaults to `APP_DEBUG`).
 - `viewer.editor`: `vscode`, `cursor`, `phpstorm`, `sublime`, or a URL template with `{file}` and `{line}` for open-in-editor links.
+- `digest.*`: `enabled` (schedule it), `frequency` (daily/weekly), `time`, `day`, `timezone`, `driver`, `level`, `top`, `skip_empty`, `max_file_size`.
 - `incoming.enabled`: toggles the incoming log ingress route.
 - `incoming.route_prefix`: route prefix for incoming logs.
 - `incoming.middleware`: middleware stack for incoming routes.
@@ -277,6 +279,16 @@ Global:
 - `LOGCENTER_VIEWER_CACHE`
 - `LOGCENTER_VIEWER_CODE_SNIPPETS`
 - `LOGCENTER_VIEWER_EDITOR`
+- `LOGCENTER_DIGEST_ENABLED`
+- `LOGCENTER_DIGEST_FREQUENCY`
+- `LOGCENTER_DIGEST_TIME`
+- `LOGCENTER_DIGEST_DAY`
+- `LOGCENTER_DIGEST_TIMEZONE`
+- `LOGCENTER_DIGEST_DRIVER`
+- `LOGCENTER_DIGEST_LEVEL`
+- `LOGCENTER_DIGEST_TOP`
+- `LOGCENTER_DIGEST_SKIP_EMPTY`
+- `LOGCENTER_DIGEST_MAX_FILE_SIZE`
 - `LOGCENTER_INCOMING_ENABLED`
 - `LOGCENTER_INCOMING_ROUTE_PREFIX`
 - `LOGCENTER_INCOMING_AUTH_ENABLED`
@@ -432,7 +444,7 @@ Before tagging a release:
 
 - `composer validate` passes.
 - PHP syntax checks pass for all `src` and `config` PHP files.
-- Unit and integration tests pass (currently 334 tests / 912 assertions).
+- Unit and integration tests pass (currently 346 tests / 957 assertions).
 - README documents installation, Laravel channel setup, environment variables,
   supported drivers, extension examples, and security notes. ✓
 - CHANGELOG.md exists and is up to date. ✓

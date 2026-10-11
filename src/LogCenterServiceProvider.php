@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Nabafzar\LogCenter;
 
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Support\ServiceProvider;
 use Nabafzar\LogCenter\Attributes\AttributeResolver;
 use Nabafzar\LogCenter\Console\Commands\CheckCommand;
+use Nabafzar\LogCenter\Console\Commands\DigestCommand;
 use Nabafzar\LogCenter\Console\Commands\TestLogCommand;
 use Nabafzar\LogCenter\Contracts\LogDispatcherInterface;
 use Nabafzar\LogCenter\Factories\FormatterFactory;
@@ -30,6 +32,7 @@ final class LogCenterServiceProvider extends ServiceProvider
     {
         $this->bootPublishes();
         $this->bootCommands();
+        $this->bootDigestSchedule();
         $this->bootRoutes();
         $this->bootIncomingRoutes();
         $this->bootViews();
@@ -93,8 +96,35 @@ final class LogCenterServiceProvider extends ServiceProvider
             $this->commands([
                 TestLogCommand::class,
                 CheckCommand::class,
+                DigestCommand::class,
             ]);
         }
+    }
+
+    /**
+     * Add logcenter:digest to Laravel's scheduler when logcenter.digest.enabled
+     * is on. The app's cron must already run `php artisan schedule:run`.
+     */
+    private function bootDigestSchedule(): void
+    {
+        if (! $this->app->runningInConsole() || ! filter_var(config('logcenter.digest.enabled', false), FILTER_VALIDATE_BOOL)) {
+            return;
+        }
+
+        $this->callAfterResolving(Schedule::class, static function (Schedule $schedule): void {
+            $frequency = strtolower(trim((string) config('logcenter.digest.frequency', 'daily')));
+            $time = trim((string) config('logcenter.digest.time', '09:00'));
+            $time = preg_match('/^([01]?\d|2[0-3]):[0-5]\d$/', $time) === 1 ? $time : '09:00';
+            $day = is_numeric($day = config('logcenter.digest.day', 1)) ? max(0, min(6, (int) $day)) : 1;
+
+            $event = $schedule->command('logcenter:digest', ['--period' => $frequency === 'weekly' ? 'weekly' : 'daily']);
+            $event = $frequency === 'weekly' ? $event->weeklyOn($day, $time) : $event->dailyAt($time);
+
+            $timezone = config('logcenter.digest.timezone');
+            if (is_string($timezone) && trim($timezone) !== '') {
+                $event->timezone(trim($timezone));
+            }
+        });
     }
 
     private function bootRoutes(): void
