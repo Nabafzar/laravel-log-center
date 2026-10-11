@@ -7,6 +7,7 @@ namespace Nabafzar\LogCenter;
 use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Support\ServiceProvider;
 use Nabafzar\LogCenter\Attributes\AttributeResolver;
+use Nabafzar\LogCenter\Console\Commands\CheckCommand;
 use Nabafzar\LogCenter\Console\Commands\TestLogCommand;
 use Nabafzar\LogCenter\Contracts\LogDispatcherInterface;
 use Nabafzar\LogCenter\Factories\FormatterFactory;
@@ -91,6 +92,7 @@ final class LogCenterServiceProvider extends ServiceProvider
         if (class_exists(TestLogCommand::class)) {
             $this->commands([
                 TestLogCommand::class,
+                CheckCommand::class,
             ]);
         }
     }
