@@ -47,6 +47,7 @@ Implemented code:
 
 - Service provider: `src/LogCenterServiceProvider.php`
 - Config file: `config/logcenter.php`
+- Testing helper: `src/Facades/LogCenter.php` (`LogCenter::fake()`), `src/Testing/LogCenterFake.php`, `FakeTransport.php`, `SentLog.php`; `TransportFactory::fake()` swaps every transport for the recorder.
 - Console commands: `src/Console/Commands/TestLogCommand.php` (sends a test log), `src/Console/Commands/CheckCommand.php` (`logcenter:check`, read-only setup check)
 - Incoming log ingress:
   - `src/Http/Controllers/IncomingLogController.php`
@@ -430,7 +431,7 @@ Before tagging a release:
 
 - `composer validate` passes.
 - PHP syntax checks pass for all `src` and `config` PHP files.
-- Unit and integration tests pass (currently 320 tests / 859 assertions).
+- Unit and integration tests pass (currently 328 tests / 877 assertions).
 - README documents installation, Laravel channel setup, environment variables,
   supported drivers, extension examples, and security notes. ✓
 - CHANGELOG.md exists and is up to date. ✓

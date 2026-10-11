@@ -41,7 +41,10 @@
     "laravel": {
       "providers": [
         "Nabafzar\\LogCenter\\LogCenterServiceProvider"
-      ]
+      ],
+      "aliases": {
+        "LogCenter": "Nabafzar\\LogCenter\\Facades\\LogCenter"
+      }
     }
   },
   "require": {
