@@ -69,6 +69,7 @@ All notable changes to this project are documented in this file. Releases follow
 
 ### Changed
 
+- README: the Queue Dispatch section now explains that synchronous delivery waits for the driver timeout when the destination hangs, and recommends the queue (or short timeouts) for production
 - Added `.gitattributes` so the installed package no longer ships `tests/`, CI config, `phpunit.xml`, `pint.json` and the internal AI/agent notes (`AGENTS.md`, `AI_MANIFEST.md`, `CONTEXT.md`, `llms.txt`); they stay in the repository
 
 - Composer now requires `laravel/framework` (`^10.0|^11.0|^12.0|^13.0`) and `guzzlehttp/guzzle` instead of only `illuminate/support` and `illuminate/log`; the package already used framework classes and the HTTP client, so the old constraints under-declared its real dependencies

@@ -319,6 +319,13 @@ fire a `LogDispatchFailed` event.
 
 > Masking runs before the job is pushed to the queue — sensitive data never enters queue storage.
 
+> **Use the queue in production.** Without it, logs are sent during the request that wrote them.
+> That costs nothing while the destination is healthy, but if it accepts the connection and then
+> stops answering, every request that logs an error waits for the driver timeout (5 s by default)
+> before the user gets a response — plus the same again when a fallback driver is configured. If
+> you send synchronously, keep the timeouts short (`LOGCENTER_TELEGRAM_TIMEOUT`,
+> `LOGCENTER_BALE_TIMEOUT`, `LOGCENTER_MATTERMOST_TIMEOUT`, `LOGCENTER_WEBHOOK_TIMEOUT`).
+
 ## Fallback Transport
 
 When the primary driver fails, a fallback driver is tried automatically:
