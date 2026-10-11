@@ -29,6 +29,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Failure Channel
+    |--------------------------------------------------------------------------
+    |
+    | A Laravel log channel (for example 'single' or 'daily') where Log Center
+    | records its own problems: a log that could not be delivered after the
+    | fallback and all retries, or an error inside the package. Leave empty
+    | to write them to PHP's error_log instead.
+    |
+    */
+    'failure_channel' => env('LOGCENTER_FAILURE_CHANNEL'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Alert Suppression
     |--------------------------------------------------------------------------
     |

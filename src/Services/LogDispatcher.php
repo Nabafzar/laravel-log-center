@@ -11,6 +11,7 @@ use Nabafzar\LogCenter\Events\LogDispatched;
 use Nabafzar\LogCenter\Events\LogDispatchFailed;
 use Nabafzar\LogCenter\Events\LogSuppressed;
 use Nabafzar\LogCenter\Jobs\DispatchLogJob;
+use Nabafzar\LogCenter\Logging\FailureLog;
 use Nabafzar\LogCenter\Managers\TransportManager;
 use Nabafzar\LogCenter\Processors\PayloadProcessor;
 use Nabafzar\LogCenter\Suppression\SuppressionManager;
@@ -70,8 +71,15 @@ final readonly class LogDispatcher implements LogDispatcherInterface
         }
 
         $fallbackResult = $this->tryFallback($payload, $driverName, $fingerprint, $emitFailEvents);
+        $finalResult = $fallbackResult ?? $result;
 
-        return $fallbackResult ?? $result;
+        // Queued sends report once, from DispatchLogJob::failed(), after the
+        // last retry; here only synchronous sends that finally failed.
+        if ($emitFailEvents && $finalResult->isFailure()) {
+            FailureLog::deliveryFailed($payload, $finalResult);
+        }
+
+        return $finalResult;
     }
 
     /**
@@ -186,7 +194,7 @@ final readonly class LogDispatcher implements LogDispatcherInterface
 
             // The queue backend is often the database, which may be the very
             // thing that failed. Deliver now instead of losing the log.
-            error_log('[LogCenter] queue unavailable, sending synchronously: '.$e->getMessage());
+            FailureLog::write('Log Center queue unavailable, sending synchronously', ['error' => $e->getMessage()]);
 
             return $this->sendNow($payload, $driverName, $formatterName);
         }
@@ -211,7 +219,7 @@ final readonly class LogDispatcher implements LogDispatcherInterface
         try {
             event($event);
         } catch (Throwable $e) {
-            error_log('[LogCenter] event listener failed: '.$e->getMessage());
+            FailureLog::write('Log Center event listener failed', ['event' => $event::class, 'error' => $e->getMessage()]);
         }
     }
 

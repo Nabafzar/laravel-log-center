@@ -167,8 +167,9 @@ itself, so a throw while the destination is down queues a new job per attempt
 wrap delivery in `LogCenterHandler::muted()`.
 
 Important rule: `LogCenterHandler` must not call Laravel's logger inside error
-handling, or it can recursively log its own failures. Use `error_log()` or a
-separate non-LogCenter fallback when needed. The handler also ignores records
+handling, or it can recursively log its own failures. Report through
+`FailureLog::write()`, which writes to `logcenter.failure_channel` with Log Center
+muted, or to `error_log()` when no channel is set. The handler also ignores records
 written while it is already dispatching (re-entrancy guard).
 
 Delivery must survive the database being down: suppression store errors
@@ -188,6 +189,7 @@ Main config file: `config/logcenter.php`
 
 Global keys:
 
+- `failure_channel`: Laravel log channel for Log Center's own problems (undelivered logs, package errors); `src/Logging/FailureLog.php` writes it muted, or to `error_log()` when unset.
 - `default`: active transport driver, defaults to `LOGCENTER_DRIVER` or `null`.
 - `level`: minimum log level, defaults to `LOGCENTER_LEVEL` or `error`. Enforced by
   `LogCenterHandler::isHandling()` on top of the channel level; the stricter one wins.
@@ -253,6 +255,7 @@ Global:
 
 - `LOGCENTER_DRIVER`
 - `LOGCENTER_LEVEL`
+- `LOGCENTER_FAILURE_CHANNEL`
 - `LOGCENTER_FORMATTER`
 - `LOGCENTER_QUEUE_ENABLED`
 - `LOGCENTER_QUEUE_CONNECTION`
@@ -429,7 +432,7 @@ Before tagging a release:
 
 - `composer validate` passes.
 - PHP syntax checks pass for all `src` and `config` PHP files.
-- Unit and integration tests pass (currently 287 tests / 777 assertions).
+- Unit and integration tests pass (currently 294 tests / 792 assertions).
 - README documents installation, Laravel channel setup, environment variables,
   supported drivers, extension examples, and security notes. ✓
 - CHANGELOG.md exists and is up to date. ✓

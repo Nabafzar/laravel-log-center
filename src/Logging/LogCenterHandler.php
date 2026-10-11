@@ -80,8 +80,11 @@ final class LogCenterHandler extends AbstractProcessingHandler
 
             $this->dispatcher->dispatch($payload);
         } catch (Throwable $e) {
-            // Never log via logger() here — it recurses.
-            error_log('[LogCenter] '.$e->getMessage());
+            // Never log via logger() here — it recurses. FailureLog writes muted.
+            FailureLog::write('Log Center failed to handle a log record', [
+                'error' => $e->getMessage(),
+                'exception' => $e::class,
+            ]);
         } finally {
             self::$dispatching = false;
         }

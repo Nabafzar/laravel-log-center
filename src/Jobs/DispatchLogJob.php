@@ -13,6 +13,7 @@ use Illuminate\Queue\SerializesModels;
 use Nabafzar\LogCenter\DTO\LogPayload;
 use Nabafzar\LogCenter\DTO\TransportResult;
 use Nabafzar\LogCenter\Events\LogDispatchFailed;
+use Nabafzar\LogCenter\Logging\FailureLog;
 use Nabafzar\LogCenter\Logging\LogCenterHandler;
 use Nabafzar\LogCenter\Services\LogDispatcher;
 use RuntimeException;
@@ -109,6 +110,8 @@ final class DispatchLogJob implements ShouldQueue
             exception: $exception,
             retryable: false,
         );
+
+        FailureLog::deliveryFailed($this->payload, $result);
 
         LogCenterHandler::muted(fn () => event(new LogDispatchFailed($this->payload, $result, false)));
     }

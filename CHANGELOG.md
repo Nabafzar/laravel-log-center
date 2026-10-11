@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file. Releases follow
 
 ### Added
 
+- **`LOGCENTER_FAILURE_CHANNEL`** — a Laravel log channel (for example `single` or `daily`) where Log Center records logs it could not deliver (after the fallback and all queue retries, one entry per log) and errors inside the package. Without it, these go to PHP's `error_log` as before
 - **Log viewer redesign** — issues grouped with event count and first/last seen; exception header with source preview; stack trace with app frames highlighted and vendor frames folded; Context, Occurrences and Raw tabs; activity chart; level chips with counts for all eight levels; keyboard shortcuts; mobile layout; notification links open the matching issue already expanded
 - **`viewer.code_snippets`** (`LOGCENTER_VIEWER_CODE_SNIPPETS`, defaults to `APP_DEBUG`) — show source lines around an exception; only PHP files inside `base_path()` are read
 - **`viewer.editor`** (`LOGCENTER_VIEWER_EDITOR`) — "open in editor" links for VS Code, Cursor, PhpStorm, Sublime or a custom URL template
@@ -23,6 +24,7 @@ All notable changes to this project are documented in this file. Releases follow
 
 ### Fixed
 
+- README said only retryable failures trigger the fallback driver; any failed send does, including configuration errors such as a wrong token
 - **Log storm when the destination is down (queue enabled).** A failed `DispatchLogJob` threw so the queue would retry; the worker reported that exception through the application logger — Log Center itself — which queued a new job, which failed too. In a real Laravel 13 app one log call produced 13,270 queued jobs, 8,178 failed jobs and 21,000 log lines in two minutes. The job now never throws: it retries with `release()` using the configured backoff, fails itself after the last attempt, and anything logged while delivering (or from its `LogDispatchFailed` listeners) is muted for Log Center. Same scenario now: one failed job, one log line
 - **The package could not be installed in a new Laravel app.** Fresh Laravel 13 projects ship Guzzle 8, but the package required `guzzlehttp/guzzle ^7.5`, so Composer refused. The constraint is now `^7.5|^8.0`; the test suite passes on Guzzle 8.2
 - The viewer answered every guest with a 500 ("Route [login] not defined") in apps without a login page, and each one was logged as an error, so it also triggered an alert. Guests now get a 401 when the app cannot redirect them; apps with a `login` route keep the redirect

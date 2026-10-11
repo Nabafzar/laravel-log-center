@@ -6,6 +6,7 @@ namespace Nabafzar\LogCenter\Suppression;
 
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\Cache;
+use Nabafzar\LogCenter\Logging\FailureLog;
 use Throwable;
 
 final class SuppressionManager
@@ -25,7 +26,7 @@ final class SuppressionManager
         try {
             return $this->store()->has($this->suppressionKey($fingerprint));
         } catch (Throwable $e) {
-            error_log('[LogCenter] suppression store unavailable: '.$e->getMessage());
+            FailureLog::write('Log Center suppression store unavailable', ['error' => $e->getMessage()]);
 
             return false;
         }
@@ -45,7 +46,7 @@ final class SuppressionManager
             $store->put($this->suppressionKey($fingerprint), true, $ttl);
             $store->put($this->countKey($fingerprint), 0, $ttl);
         } catch (Throwable $e) {
-            error_log('[LogCenter] suppression store unavailable: '.$e->getMessage());
+            FailureLog::write('Log Center suppression store unavailable', ['error' => $e->getMessage()]);
         }
     }
 
@@ -54,7 +55,7 @@ final class SuppressionManager
         try {
             return (int) $this->store()->increment($this->countKey($fingerprint));
         } catch (Throwable $e) {
-            error_log('[LogCenter] suppression store unavailable: '.$e->getMessage());
+            FailureLog::write('Log Center suppression store unavailable', ['error' => $e->getMessage()]);
 
             return 0;
         }
