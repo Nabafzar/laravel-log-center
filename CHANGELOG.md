@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file. Releases follow
 
 ### Added
 
+- **`php artisan logcenter:check`** — checks the setup without sending a log: log channel, level, drivers and formatters, credentials (live, read-only `getMe`/`getChat` for Telegram and Bale, `/users/me` for a Mattermost bot), queue, suppression cache, failure channel, viewer gate and incoming token. Exits with code 1 on problems; `--driver=` checks one driver, `--offline` skips provider calls
 - **`FormatterFactory::extend()`** — register custom formatters (or replace a built-in one) the same way custom transports are registered with `TransportFactory::extend()`; names are case-insensitive and the resolver receives the container
 - **`LOGCENTER_FAILURE_CHANNEL`** — a Laravel log channel (for example `single` or `daily`) where Log Center records logs it could not deliver (after the fallback and all queue retries, one entry per log) and errors inside the package. Without it, these go to PHP's `error_log` as before
 - **Log viewer redesign** — issues grouped with event count and first/last seen; exception header with source preview; stack trace with app frames highlighted and vendor frames folded; Context, Occurrences and Raw tabs; activity chart; level chips with counts for all eight levels; keyboard shortcuts; mobile layout; notification links open the matching issue already expanded

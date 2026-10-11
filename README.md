@@ -156,7 +156,21 @@ Every `Log::error()`, `Log::critical()`, or uncaught exception now lands in your
 transport. Verify your setup without triggering a real error:
 
 ```bash
-php artisan logcenter:test-log
+php artisan logcenter:check      # checks the setup without sending anything
+php artisan logcenter:test-log   # sends a real test message
+```
+
+`logcenter:check` lists each part of the setup as `OK`, `WARN`, `FAIL` or `SKIP` and exits with code
+1 when something is broken, so it also fits a deploy pipeline. It checks that Log Center is attached
+to a log channel, the level, the default and fallback drivers and their formatters, and the
+credentials: Telegram and Bale tokens with `getMe` and chat access with `getChat`, a Mattermost bot
+token with `/users/me` — read-only calls that never post a message. Webhook URLs are only validated,
+because checking one would mean posting to it. It also checks the queue connection, the suppression
+cache, the failure channel, the viewer gate and the incoming token.
+
+```bash
+php artisan logcenter:check --driver=bale   # check one driver
+php artisan logcenter:check --offline       # skip calls to the providers
 ```
 
 ## How It Works
