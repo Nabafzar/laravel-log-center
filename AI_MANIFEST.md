@@ -25,7 +25,6 @@ The package should let a Laravel app route log events to configurable transports
 - `telegram`: send logs to Telegram Bot API.
 - `bale`: send logs to Bale messenger.
 - `mattermost`: send logs to Mattermost incoming webhooks.
-- `slack`: planned Slack webhook transport.
 - `webhook`: send logs to a generic HTTP webhook endpoint.
 
 The package should eventually support:
@@ -110,18 +109,12 @@ Implemented code:
   - unit tests for factories, formatters, transports (including Http::fake HTTP error scenarios), payload masking, suppression, fallback, events, log parsing, and `#[LogTopic]` attribute resolution from stack/current route, tag-to-topic routing, and hashtag injection for non-topic drivers
   - feature tests for package bindings, the log viewer route, and viewer auth gating
 
-Advertised or partially planned, but not implemented yet:
-
-- Slack transport
-- README is now complete; incoming log ingress documentation is in README
+README documents every implemented feature, including incoming log ingress.
 
 ## Known Technical Gaps
 
-Do not assume config entries are implemented. Current gaps to resolve before a
-stable release:
+Do not assume config entries are implemented. Known gaps and implementation notes:
 
-- Config references Slack driver support, but factory creation is still missing
-  and classes are missing.
 - Log viewer: `src/Viewer/ParseCache.php` keeps parsed entries and entry
   counts between requests (under `storage/framework/cache/logcenter`) and
   parses only the appended bytes when a log grows; rotation, truncation or a
@@ -252,7 +245,6 @@ Driver names currently intended:
 - `telegram`
 - `bale`
 - `mattermost`
-- `slack`
 - `webhook`
 
 ## Environment Variables
@@ -342,13 +334,6 @@ Bale:
 - `LOGCENTER_BALE_CHAT_ID`
 - `LOGCENTER_BALE_TIMEOUT`
 
-Slack (planned — not in `config/logcenter.php` yet):
-
-- `LOGCENTER_SLACK_WEBHOOK`
-- `LOGCENTER_SLACK_CHANNEL`
-- `LOGCENTER_SLACK_USERNAME`
-- `LOGCENTER_SLACK_TIMEOUT`
-
 Mattermost:
 
 - `LOGCENTER_MATTERMOST_FORMATTER`
@@ -410,15 +395,14 @@ transform a `LogPayload` into transport-ready text or JSON.
 
 Prefer this order for future work:
 
-1. Implement Slack webhook transport (class, factory registration, config, tests).
-2. Sending to several drivers at once, and routing rules by level or channel.
+1. Sending to several drivers at once, and routing rules by level or channel.
 
 ## Testing Expectations
 
 Use focused tests around public behavior:
 
 - unit tests for DTO/factory/formatter/processor behavior
-- HTTP fake tests for Telegram, Bale, Slack, Mattermost, and webhook transports
+- HTTP fake tests for Telegram, Bale, Mattermost, and webhook transports
 - service provider tests for config publishing and container bindings
 - handler tests for converting `LogRecord` into `LogPayload`
 - integration tests for Laravel logging channel configuration
@@ -448,8 +432,7 @@ Before tagging a release:
 - README documents installation, Laravel channel setup, environment variables,
   supported drivers, extension examples, and security notes. ✓
 - CHANGELOG.md exists and is up to date. ✓
-- Config does not advertise unimplemented drivers as production-ready. ✓ (Slack is absent from the `default` driver comment)
+- Config does not advertise unimplemented drivers as production-ready. ✓
 - All provider paths referenced by `LogCenterServiceProvider` exist or are
   guarded safely.
 - No real credentials, chat IDs, webhook URLs, or tokens are committed.
-- Remaining gap: Slack transport — do not tag `v1.0.0` until implemented or removed from keywords.

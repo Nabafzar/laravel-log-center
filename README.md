@@ -54,7 +54,7 @@ across one or more providers.
 
 ### Why not just use Monolog's own transport handlers?
 
-Monolog ships a `TelegramBotHandler`, and there are community handlers for Slack and others. They
+Monolog ships a `TelegramBotHandler`, and there are community handlers for other services. They
 are perfectly fine when all you need is *"write this record to one chat."* The reason this package
 exists is that a raw handler is a **sink** — it takes a `LogRecord` and writes it to one
 destination — whereas real alerting needs a **pipeline**. Stack several Monolog handlers together

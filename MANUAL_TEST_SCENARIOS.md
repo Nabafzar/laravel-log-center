@@ -1,8 +1,7 @@
 # Laravel Log Center — Manual Test Scenarios
 
-Manual checks for every feature the package currently has. The Slack transport
-is not implemented yet, so it has no scenarios here. Tick the checkbox next to
-each scenario once it passes.
+Manual checks for every feature the package has. Tick the checkbox next to each
+scenario once it passes.
 
 ## 0. Setup (once)
 

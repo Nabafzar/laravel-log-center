@@ -127,13 +127,12 @@ Laravel Log::error("msg", [...])
 | Live Tail (SSE + JSON poll endpoint)  | ✅ کامل                                      |
 | Incoming log ingress (POST API)       | ✅ کامل                                      |
 | `TransportFactory::extend()`          | ✅ کامل                                      |
-| **Slack transport**                   | ⚠️ فقط config — کلاس ندارد، blocking v1.0.0 |
-| **`FormatterFactory::extend()`**      | ⚠️ برنامه‌ریزی‌شده برای نسخه‌های بعدی       |
+| `FormatterFactory::extend()`          | ✅ کامل                                      |
 | Rate limiting / flood protection      | ❌ پیاده‌سازی نشده                           |
 | Multi-transport fan-out               | ❌ پیاده‌سازی نشده                           |
 | Conditional routing rules             | ❌ پیاده‌سازی نشده                           |
-| Payload enrichment pipeline           | ❌ پیاده‌سازی نشده                           |
-| Digest / batching mode                | ❌ پیاده‌سازی نشده                           |
+| Payload enrichment pipeline           | ✅ کامل                                      |
+| Digest روزانه/هفتگی (`logcenter:digest`) | ✅ کامل                                   |
 
 ---
 
@@ -142,9 +141,8 @@ Laravel Log::error("msg", [...])
 1. **Mask قبل از format** — `PayloadProcessor` باید قبل از هر formatter یا transport اجرا شود
 2. **بدون recursive logging** — `LogCenterHandler` در error path هرگز نباید `Log::*()` صدا کند؛ فقط `error_log()`
 3. **بدون HTTP واقعی در تست** — از `Http::fake()` استفاده شود
-4. **Slack production-ready نیست** — تا کلاس پیاده‌سازی نشود، در مستندات به عنوان پشتیبانی‌شده معرفی نشود
-5. **`declare(strict_types=1)`** در همه فایل‌های PHP جدید
-6. **Namespace:** `Nabafzar\LogCenter` ثابت بماند
+4. **`declare(strict_types=1)`** در همه فایل‌های PHP جدید
+5. **Namespace:** `Nabafzar\LogCenter` ثابت بماند
 
 ---
 
@@ -169,7 +167,6 @@ Laravel Log::error("msg", [...])
 | `bale`       | ✅             | Bot Token           | خیر    |
 | `mattermost` | ✅             | Bot Token / Webhook | خیر    |
 | `webhook`    | ✅             | Header/none         | خیر    |
-| `slack`      | ⚠️ فقط config | Webhook URL         | خیر    |
 
 ### منطق routing تاپیک Telegram (به ترتیب اولویت)
 1. `meta.logcenter_topic_id` (از `#[LogTopic(topicId: X)]`)
@@ -209,10 +206,10 @@ $this->app->make(TransportFactory::class)
     });
 ```
 
-### Formatter سفارشی (برنامه‌ریزی‌شده — فعلاً موجود نیست)
+### Formatter سفارشی
 ```php
-// FormatterFactory::extend() هنوز پیاده‌سازی نشده
-// در نسخه‌های بعدی خواهد آمد
+FormatterFactory::extend('my_format', fn ($app) => new MyFormatter);
+// سپس: LOGCENTER_FORMATTER=my_format
 ```
 
 ---
@@ -221,15 +218,9 @@ $this->app->make(TransportFactory::class)
 
 | اولویت   | فیچر                         | توضیح                                                        |
 |----------|------------------------------|--------------------------------------------------------------|
-| 🔴 بالا  | Slack Transport              | blocking برای v1.0.0                                         |
-| 🟠 متوسط | `logcenter:health` command   | تست اتصال به driver بدون ارسال لاگ واقعی                     |
-| 🟠 متوسط | Payload Enrichment Pipeline  | interface برای inject کردن git SHA، hostname، deploy version |
-| 🟡       | Conditional Routing Rules    | if level=critical → telegram, if channel=payment → slack     |
+| 🟡       | Conditional Routing Rules    | if level=critical → telegram, if channel=payment → webhook   |
 | 🟡       | Rate Limiting                | max N پیام در بازه زمانی — جلوگیری از bot ban                |
 | 🟡       | Multi-Transport Fan-out      | ارسال یک لاگ به چند driver همزمان                            |
-| 🟢       | `FormatterFactory::extend()` | symmetric با TransportFactory — برنامه‌ریزی‌شده              |
-| 🟢       | Digest / Batching Mode       | جمع‌آوری و ارسال خلاصه هر X دقیقه                            |
-| 🟢       | Viewer Stats Timeline        | نمودار تعداد error بر اساس ساعت                              |
 | 🟢       | Incoming Multi-Token         | هر سرویس خارجی token جداگانه + routing جداگانه               |
 
 ---
