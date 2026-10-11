@@ -94,6 +94,7 @@ providers**, that is what this package adds on top of Monolog.
 - [Log Viewer](#log-viewer)
 - [Incoming Log Ingress](#incoming-log-ingress)
 - [Custom Transports](#custom-transports)
+- [Custom Formatters](#custom-formatters)
 - [Testing](#testing)
 
 ## Requirements
@@ -688,6 +689,60 @@ DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
 
 Built-in transports: `TelegramTransport` returns `true` (routes to forum topic threads); all
 others return `false`.
+
+## Custom Formatters
+
+A formatter turns a log into the text a transport sends. Write your own when the built-in ones do
+not fit, for example to send JSON in the shape your webhook expects.
+
+**1. Create the formatter** by implementing `LogFormatterInterface`:
+
+```php
+namespace App\Logging;
+
+use Nabafzar\LogCenter\Contracts\LogFormatterInterface;
+use Nabafzar\LogCenter\DTO\FormattedMessage;
+use Nabafzar\LogCenter\DTO\LogPayload;
+
+final class OpsgenieFormatter implements LogFormatterInterface
+{
+    public function format(LogPayload $payload): FormattedMessage
+    {
+        return new FormattedMessage(
+            content: json_encode([
+                'message'  => mb_substr($payload->message, 0, 130),
+                'priority' => $payload->level === 'CRITICAL' ? 'P1' : 'P3',
+                'details'  => $payload->context,
+            ]),
+            format: 'json',
+        );
+    }
+}
+```
+
+The payload is already masked when it reaches the formatter, so secrets stay hidden.
+
+**2. Register it** in `AppServiceProvider::boot()`:
+
+```php
+use App\Logging\OpsgenieFormatter;
+use Nabafzar\LogCenter\Factories\FormatterFactory;
+
+$this->app->make(FormatterFactory::class)
+    ->extend('opsgenie', fn ($app) => new OpsgenieFormatter);
+```
+
+The resolver receives the container. Registering a built-in name (`plain`, `json`, `markdown`,
+`telegram_html`, `bale_markdown`) replaces that formatter. Names are case-insensitive.
+
+**3. Use it** globally or for one driver:
+
+```dotenv
+LOGCENTER_FORMATTER=opsgenie            # every driver without its own formatter
+LOGCENTER_WEBHOOK_PAYLOAD=text          # send the formatted text as the request body
+```
+
+Or per driver in `config/logcenter.php`: `'drivers' => ['webhook' => ['formatter' => 'opsgenie', ...]]`.
 
 ## Testing
 

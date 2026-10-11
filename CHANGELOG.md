@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file. Releases follow
 
 ### Added
 
+- **`FormatterFactory::extend()`** — register custom formatters (or replace a built-in one) the same way custom transports are registered with `TransportFactory::extend()`; names are case-insensitive and the resolver receives the container
 - **`LOGCENTER_FAILURE_CHANNEL`** — a Laravel log channel (for example `single` or `daily`) where Log Center records logs it could not deliver (after the fallback and all queue retries, one entry per log) and errors inside the package. Without it, these go to PHP's `error_log` as before
 - **Log viewer redesign** — issues grouped with event count and first/last seen; exception header with source preview; stack trace with app frames highlighted and vendor frames folded; Context, Occurrences and Raw tabs; activity chart; level chips with counts for all eight levels; keyboard shortcuts; mobile layout; notification links open the matching issue already expanded
 - **`viewer.code_snippets`** (`LOGCENTER_VIEWER_CODE_SNIPPETS`, defaults to `APP_DEBUG`) — show source lines around an exception; only PHP files inside `base_path()` are read

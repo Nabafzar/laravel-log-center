@@ -110,7 +110,6 @@ Implemented code:
 Advertised or partially planned, but not implemented yet:
 
 - Slack transport
-- formatter extension API (custom formatter registration parity with `TransportFactory::extend()`)
 - README is now complete; incoming log ingress documentation is in README
 
 ## Known Technical Gaps
@@ -128,8 +127,6 @@ stable release:
   Laravel logging integration can instantiate it correctly.
 - Several source files contain mojibake where icons or Persian comments were
   likely saved with a wrong encoding. Prefer UTF-8 consistently.
-- `FormatterFactory` has no extension mechanism; only `TransportFactory` supports
-  custom driver registration via `extend()`.
 
 ## Architecture
 
@@ -158,7 +155,7 @@ Main extension points:
 - Transports implement `LogTransportInterface`.
 - Formatters implement `LogFormatterInterface`.
 - `TransportFactory::extend()` is intended for custom transport registration.
-- `FormatterFactory` should eventually get a symmetric extension mechanism.
+- `FormatterFactory::extend()` registers custom formatters (same contract as `TransportFactory::extend()`).
 
 Important rule: `DispatchLogJob::handle()` must never throw. The queue worker
 reports thrown exceptions through the application logger, which is Log Center
@@ -394,12 +391,9 @@ transform a `LogPayload` into transport-ready text or JSON.
 Prefer this order for future work:
 
 1. Implement Slack webhook transport (class, factory registration, config, tests).
-2. Add `FormatterFactory::extend()` so custom formatters can be registered the
-   same way custom transports are.
-3. Harden the log viewer with parsing tests, file-size limits, and better
-   pagination/search behavior.
-4. Add integration tests that exercise Laravel logging channel configuration
-   end-to-end (from `Log::error()` through to the transport).
+2. Speed up the log viewer on large files (it parses the whole file per
+   request), and improve pagination/search behavior.
+3. Sending to several drivers at once, and routing rules by level or channel.
 
 ## Testing Expectations
 
@@ -432,7 +426,7 @@ Before tagging a release:
 
 - `composer validate` passes.
 - PHP syntax checks pass for all `src` and `config` PHP files.
-- Unit and integration tests pass (currently 294 tests / 792 assertions).
+- Unit and integration tests pass (currently 299 tests / 800 assertions).
 - README documents installation, Laravel channel setup, environment variables,
   supported drivers, extension examples, and security notes. ✓
 - CHANGELOG.md exists and is up to date. ✓
