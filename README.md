@@ -85,6 +85,7 @@ providers**, that is what this package adds on top of Monolog.
 - [Formatters](#formatters)
 - [Queue Dispatch](#queue-dispatch)
 - [Fallback Transport](#fallback-transport)
+- [Failure Channel](#failure-channel)
 - [Alert Suppression](#alert-suppression)
 - [Secret Masking](#secret-masking)
 - [Payload Enrichment](#payload-enrichment)
@@ -335,8 +336,29 @@ LOGCENTER_DRIVER=telegram
 LOGCENTER_FALLBACK_DRIVER=webhook
 ```
 
-The fallback must differ from the primary driver. Only retryable failures (timeouts, HTTP 429,
-5xx) trigger the fallback; configuration errors (4xx) do not.
+The fallback must differ from the primary driver. Any failed send triggers it — a timeout, HTTP
+429 or 5xx, and also a configuration error such as a wrong token (4xx) — so the alert still gets out.
+
+## Failure Channel
+
+Log Center never interrupts your app: if it cannot deliver a log, or something fails inside the
+package, the request carries on. To keep a record of those problems in your own log files, name a
+Laravel log channel:
+
+```dotenv
+LOGCENTER_FAILURE_CHANNEL=single   # or daily, or any channel from config/logging.php
+```
+
+It then writes a warning there for every log that could not be delivered after the fallback and all
+queue retries, and for errors inside the package:
+
+```
+local.WARNING: Log Center could not deliver a log {"driver":"telegram","error":"HTTP request returned status code 401","level":"ERROR","message":"Order 42 failed",...}
+```
+
+Secrets in the error text (bot tokens, webhook URLs) are already masked. Without the setting, the same
+messages go to PHP's `error_log`. The original log itself is written by your other channels as usual,
+for example `single` in `LOG_STACK=single,logcenter`.
 
 ## Alert Suppression
 
