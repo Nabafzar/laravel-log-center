@@ -9,6 +9,7 @@
 /pint.json          export-ignore
 /CONTRIBUTING.md    export-ignore
 /MANUAL_TEST_SCENARIOS.md export-ignore
+/art                export-ignore
 
 # Internal AI / agent notes (see .gitignore)
 /AGENTS.md          export-ignore

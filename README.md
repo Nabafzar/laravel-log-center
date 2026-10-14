@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="art/logo.png" width="320" alt="Laravel Log Center logo">
+  <img src="art/logo.svg" width="320" alt="Laravel Log Center logo">
 </p>
 
 <h1 align="center">Laravel Log Center</h1>
