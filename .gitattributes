@@ -1,0 +1,19 @@
+# Keep development and internal files out of the package Composer installs.
+# They stay in the repository; only `git archive` / Packagist dist zips skip them.
+
+/.github            export-ignore
+/tests              export-ignore
+/.gitattributes     export-ignore
+/.gitignore         export-ignore
+/phpunit.xml        export-ignore
+/pint.json          export-ignore
+/CONTRIBUTING.md    export-ignore
+/MANUAL_TEST_SCENARIOS.md export-ignore
+/art                export-ignore
+
+# Internal AI / agent notes (see .gitignore)
+/AGENTS.md          export-ignore
+/AI_MANIFEST.md     export-ignore
+/CONTEXT.md         export-ignore
+/llms.txt           export-ignore
+/CLAUDE.md          export-ignore

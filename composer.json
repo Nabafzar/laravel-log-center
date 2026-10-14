@@ -1,0 +1,74 @@
+{
+  "name": "nabafzar/laravel-log-center",
+  "description": "Unified logging, multi-channel notifications, and built-in log viewer for Laravel.",
+  "keywords": [
+    "laravel",
+    "log",
+    "logger",
+    "log viewer",
+    "monolog",
+    "telegram",
+    "bale",
+    "mattermost",
+    "webhook",
+    "observability",
+    "notification"
+  ],
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Sayyed Abdollah Mahmoudzadeh",
+      "email": "s.a.mahmoudzadeh@gmail.com"
+    }
+  ],
+  "homepage": "https://github.com/saMahmoudzadeh/laravel-log-center",
+  "support": {
+    "issues": "https://github.com/saMahmoudzadeh/laravel-log-center/issues",
+    "source": "https://github.com/saMahmoudzadeh/laravel-log-center"
+  },
+  "autoload": {
+    "psr-4": {
+      "Nabafzar\\LogCenter\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Nabafzar\\LogCenter\\Tests\\": "tests/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Nabafzar\\LogCenter\\LogCenterServiceProvider"
+      ],
+      "aliases": {
+        "LogCenter": "Nabafzar\\LogCenter\\Facades\\LogCenter"
+      }
+    }
+  },
+  "require": {
+    "php": "^8.2",
+    "guzzlehttp/guzzle": "^7.5|^8.0",
+    "laravel/framework": "^10.0|^11.0|^12.0|^13.0",
+    "monolog/monolog": "^3.0"
+  },
+  "require-dev": {
+    "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
+    "phpunit/phpunit": "^10.5|^11.0|^12.0",
+    "laravel/pint": "^1.0"
+  },
+  "scripts": {
+    "test": [
+      "@php -d xdebug.mode=off vendor/bin/phpunit"
+    ],
+    "lint": [
+      "@php vendor/bin/pint --test"
+    ],
+    "lint:fix": [
+      "@php vendor/bin/pint"
+    ]
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}

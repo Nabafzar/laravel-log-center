@@ -1,0 +1,68 @@
+# Dependencies
+
+/vendor/
+composer.lock
+
+# Laravel / Framework
+
+/bootstrap/cache/*
+!/bootstrap/cache/.gitignore
+
+/storage/*
+!/storage/logs/.gitignore
+
+# Environment
+
+.env
+.env.*
+!.env.example
+
+# IDE / Editor
+
+/.idea
+/.vscode
+/.qodo
+*.sublime-project
+*.sublime-workspace
+
+# OS
+
+.DS_Store
+Thumbs.db
+
+# Logs
+
+*.log
+
+# PHPUnit
+
+.phpunit.result.cache
+.phpunit.cache/test-results
+
+# Coverage
+
+/coverage/
+
+# Node (if added later)
+
+/node_modules/
+/public/build/
+/public/hot
+
+# Misc
+
+*.bak
+*.swp
+*.tmp
+
+# Testing Laravel app (if you attach local test project)
+
+/tests/tmp/
+
+# AI / agent files (kept local, must never reach master)
+
+CLAUDE.md
+/FEATURE_SUGGESTION.md
+AGENTS.md
+AI_MANIFEST.md
+llms.txt

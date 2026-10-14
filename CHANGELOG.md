@@ -1,0 +1,115 @@
+# Changelog
+
+All notable changes to this project are documented in this file. Releases follow [Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+## [1.0.0] — 2026-10-11
+
+First stable release.
+
+### Added
+
+- **Log digest** — `php artisan logcenter:digest` sends a daily or weekly summary through the configured driver: entry counts per level and the top issues (grouped like the log viewer), with new issues marked `[NEW]` and a link to the viewer. Options: `--period=daily|weekly`, `--since=`, `--level=`, `--driver=`, `--dry-run`. `LOGCENTER_DIGEST_ENABLED=true` adds it to Laravel's scheduler (`LOGCENTER_DIGEST_FREQUENCY`, `_TIME`, `_DAY`, `_TIMEZONE`); other settings: `_DRIVER`, `_LEVEL`, `_TOP`, `_SKIP_EMPTY`, `_MAX_FILE_SIZE`. Counts come from the files in `viewer.paths`
+- **Copy for AI in the log viewer** — each issue has "Copy stack trace" and "Copy AI prompt" buttons. The prompt asks an AI assistant for the root cause and a fix, and carries the exception, location, occurrence counts, source lines, "Caused by" chain, stack trace (up to 12,000 characters) and context (up to 4,000). Secrets are masked with the `mask` rules and the app base path is removed. Nothing is sent; the text is only copied to the clipboard
+- **`LogCenter::fake()`** — test helper for apps: records what would be sent instead of sending it, with `assertSent()`, `assertSentTo()`, `assertNotSent()`, `assertSentCount()`, `assertNothingSent()` and `sent()`. The real pipeline (level filter, masking, formatter, routing, fallback) still runs, delivery becomes synchronous, and `->failing('telegram')` simulates a failing driver. Adds the `LogCenter` facade (auto-registered alias)
+- **Faster log viewer on large files** — parsed entries and entry counts are kept between requests (`LOGCENTER_VIEWER_CACHE`, on by default, stored in `storage/framework/cache/logcenter`), and a growing log is only parsed from where the previous read stopped. Rotation, truncation or a changed parsing setting triggers a full parse. On a 4 MB log: ~190 ms → ~45 ms per page, ~366 ms → ~93 ms right after an append
+- **`php artisan logcenter:check`** — checks the setup without sending a log: log channel, level, drivers and formatters, credentials (live, read-only `getMe`/`getChat` for Telegram and Bale, `/users/me` for a Mattermost bot), queue, suppression cache, failure channel, viewer gate and incoming token. Exits with code 1 on problems; `--driver=` checks one driver, `--offline` skips provider calls
+- **`FormatterFactory::extend()`** — register custom formatters (or replace a built-in one) the same way custom transports are registered with `TransportFactory::extend()`; names are case-insensitive and the resolver receives the container
+- **`LOGCENTER_FAILURE_CHANNEL`** — a Laravel log channel (for example `single` or `daily`) where Log Center records logs it could not deliver (after the fallback and all queue retries, one entry per log) and errors inside the package. Without it, these go to PHP's `error_log` as before
+- **Log viewer redesign** — issues grouped with event count and first/last seen; exception header with source preview; stack trace with app frames highlighted and vendor frames folded; Context, Occurrences and Raw tabs; activity chart; level chips with counts for all eight levels; keyboard shortcuts; mobile layout; notification links open the matching issue already expanded
+- **`viewer.code_snippets`** (`LOGCENTER_VIEWER_CODE_SNIPPETS`, defaults to `APP_DEBUG`) — show source lines around an exception; only PHP files inside `base_path()` are read
+- **`viewer.editor`** (`LOGCENTER_VIEWER_EDITOR`) — "open in editor" links for VS Code, Cursor, PhpStorm, Sublime or a custom URL template
+- **`#[LogTopic]` attribute** — decorate any method or class with one or more tags to route logs to a Telegram forum topic thread and append `#tag` to all other driver messages; topic ID resolved with priority: attribute `topicId` → `tag_topics` config (tag → topic ID) → `topics_level` config (level → topic ID) → default `topic_id` config
+- **Telegram `tag_topics` routing** — new `drivers.telegram.tag_topics` config maps tag names to Telegram forum thread IDs, sitting between an explicit attribute `topicId` and the `topics_level` level-based mapping in the resolution chain
+- **`supportsTopics()` transport contract** — new method on `LogTransportInterface` (default `false` on `AbstractTransport`); `TelegramTransport` returns `true`, signalling that it handles tag-to-topic routing natively
+- **Log viewer UI rewrite** — new dark/light design with CSS custom properties, `prefers-reduced-motion` support, sidebar file search, health bars, entry stagger animation, exception chips, tabbed trace/raw dialog, and "Copy all" with checkmark feedback
+- **Live Tail** — SSE endpoint (`GET /log-viewer/tail`) and JSON poll endpoint (`GET /log-viewer/tail/poll`) for real-time log streaming in the viewer; browser falls back to polling when SSE is unavailable
+- **`PayloadEnricherInterface`** — inject custom context (git SHA, hostname, deploy version) into every log payload before masking via `PayloadProcessor::addEnricher()`
+- **HTTP status in formatters** — when an exception is logged its HTTP status code (e.g. 500, 404) is included alongside the exception class name
+
+### Security
+
+- **Breaking:** the log viewer now requires the `viewLogCenter` gate. Before, the `auth` middleware was the only check, so in an app with public sign-up every logged-in user could read the logs. Without the gate the viewer only opens in the `local` environment; define `Gate::define('viewLogCenter', fn ($user) => ...)` to allow access elsewhere
+- Masking in log text now hides the whole value: `Authorization: Bearer xyz` and `Basic xyz` mask the credential instead of only the word `Bearer`/`Basic`, and quoted values (`password: 'two words'`, JSON strings with escaped quotes) are masked in full instead of up to the first space
+
+### Fixed
+
+- README said only retryable failures trigger the fallback driver; any failed send does, including configuration errors such as a wrong token
+- **Log storm when the destination is down (queue enabled).** A failed `DispatchLogJob` threw so the queue would retry; the worker reported that exception through the application logger — Log Center itself — which queued a new job, which failed too. In a real Laravel 13 app one log call produced 13,270 queued jobs, 8,178 failed jobs and 21,000 log lines in two minutes. The job now never throws: it retries with `release()` using the configured backoff, fails itself after the last attempt, and anything logged while delivering (or from its `LogDispatchFailed` listeners) is muted for Log Center. Same scenario now: one failed job, one log line
+- **The package could not be installed in a new Laravel app.** Fresh Laravel 13 projects ship Guzzle 8, but the package required `guzzlehttp/guzzle ^7.5`, so Composer refused. The constraint is now `^7.5|^8.0`; the test suite passes on Guzzle 8.2
+- The viewer answered every guest with a 500 ("Route [login] not defined") in apps without a login page, and each one was logged as an error, so it also triggered an alert. Guests now get a 401 when the app cannot redirect them; apps with a `login` route keep the redirect
+- `LOGCENTER_TRUNCATE_MESSAGE` and `LOGCENTER_TRUNCATE_TRACE` were documented but never read. They are now the fallback limits when a formatter has no `max_length` / `trace_max_length` of its own (for example in a config published before a key existed)
+- An empty value in `.env` (for example `LOGCENTER_PLAIN_FORMATTER_MAX_LENGTH=` or `LOGCENTER_TELEGRAM_MESSAGE_LIMIT=`) read as a limit of 0 or 1, so every message was cut to "... [truncated]". Empty, zero or non-numeric limits, timeouts, TTLs, page sizes and retry counts now fall back to their defaults
+- The plain and markdown formatters read `trace_max_length`, but the config did not declare it. Added `LOGCENTER_PLAIN_FORMATTER_TRACE_MAX_LENGTH` and `LOGCENTER_MARKDOWN_FORMATTER_TRACE_MAX_LENGTH` (default 1200)
+- Bale rejected messages over its 4096-character limit (for example with `LOGCENTER_BALE_FORMATTER=json` or a raised `max_length`), so the log was lost. Long messages are now shortened and sent without a parse mode, as Telegram already did
+- Tags were passed to providers unprocessed: nested arrays or invalid UTF-8 in `tags` made webhook requests fail, and a non-string tag crashed Telegram's tag-to-topic lookup. Tags are now normalized to a list of valid strings
+- The fallback driver was skipped when the primary driver could not send at all: an unknown driver name (for example a typo such as `LOGCENTER_DRIVER=telgram`), a formatter error, or a custom transport that throws instead of returning a failed result. These now count as a failed send, so `LogDispatchFailed` fires and the fallback runs
+- Driver names given to `sendNow()` (including `logcenter:test-log --driver=`) and `LOGCENTER_FALLBACK_DRIVER` were case-sensitive: `Telegram` used the plain formatter instead of Telegram's, and a fallback of `Telegram` with a primary of `telegram` sent the same failing request twice
+- Viewer routes returned 500 for array query values (`?file[]=x`, `?search[]=x`, ...) or a very large `page` number
+- **Security:** masking only matched exact key names, so `current_password`, `new_password`, `client_secret`, `api_token` and Laravel's CSRF `_token` were sent in clear text. A key is now masked when its name contains a configured key
+- With the viewer enabled, a long message (such as a `QueryException` with its full SQL) put the whole message into the "open in viewer" link. In Telegram the link alone went over the length limit, so the notification showed only its header; in the other formatters the link used up the message budget. The link's search term is now capped at 100 characters, which still finds the entry
+- Incoming logs with nested values in free-form fields (`exception.class`, `user.id`, `request.method`, ...) caused a 500 error ("Array to string conversion"). Formatters now skip non-scalar values
+- A viewer URL with an invalid UTF-8 search term broke the page's JavaScript (live tail, shortcuts)
+- **Alerts were lost when the database went down** — exactly when they matter most (Laravel 11+ uses the database for cache, queue and sessions by default):
+  - with suppression enabled, an unavailable cache store threw and the log was dropped. A store failure now counts as "not suppressed"
+  - with queueing enabled, a failed queue push threw and the log was dropped. The log is now sent synchronously instead
+  - resolving the authenticated user for the payload could query the database and throw. A failed lookup now just leaves the user empty
+- A listener on `LogDispatchFailed` that threw (or a queued listener whose queue was down) skipped the fallback driver, and a throwing `LogDispatched` listener turned a delivered log into an error. Listener failures are now reported with `error_log()` and do not affect delivery
+- Logs written from Artisan commands and queue workers included Artisan's placeholder request (`GET` on `APP_URL` from `127.0.0.1`). Console logs now only include a request passed explicitly in the context
+- **Security:** bot tokens and webhook URLs leaked into failure messages. Guzzle puts the request URL in connection errors, and that text reached `LogDispatchFailed`, the `failed_jobs` table and the incoming API response. Transports now replace configured secrets with `******`
+- **Security:** the viewer served any file under a configured directory, not only log files. With a broad root such as `storage_path()`, session or app files could be downloaded. Inside a directory root only `*.log` files are served now
+- `LOGCENTER_LEVEL` was never applied. With the channel left at Laravel's default `debug` level, every debug and info log was sent to the provider. The handler now requires both the channel level and `LOGCENTER_LEVEL`
+- A log message with invalid UTF-8 threw a `JsonException` while building the fingerprint, so the log was dropped. Invalid bytes are now replaced before formatting, and the viewer uses the same fingerprint recipe
+- Non-string values in `logcenter_tags` context (arrays, `null`) caused a `TypeError` in the formatters and the log was dropped. Tags are now filtered to strings
+- `#[LogTopic]` found through the route fallback was cached by call stack, so in long-running workers (Octane) later requests on other routes reused the first route's topic
+- Logging from inside a dispatch (for example a `LogDispatchFailed` listener that writes to the same channel while the transport is down) recursed until the stack overflowed. The handler now ignores nested records
+- Telegram rejected messages that were cut to the length limit in HTML or Markdown mode, because the cut could split a tag or code block. Such messages are now sent as plain text
+- The Markdown and Bale formatters could leave a code block open when truncating and went over `max_length`; the plain formatter also went over it. Truncated output now stays within the limit and closes open code blocks
+- The plain formatter printed the exception `File:` and `Line:` twice
+- Incoming log validation errors redirected (302) when the client sent no `Accept: application/json` header. They now always return JSON 422
+- Custom transports registered with `extend()` under a mixed-case name could not be resolved, because configured driver names are lowercased
+- Live tail returned broken JSON (SSE) or a 500 error (poll endpoint) when a log line contained invalid UTF-8
+- Notification "open in viewer" links landed on an empty page for Laravel exceptions: the viewer did not parse the multi-line exception JSON Laravel writes, so neither the fingerprint nor the search term matched. The viewer now parses the exception class, message, file, line, stack frames and previous exceptions, and its fingerprint matches the notification's
+- The viewer's level chart left out emergency, alert and critical entries
+- Live tail re-sent the last complete entry whenever new lines were appended
+- Live tail now confirms the connection immediately instead of after the first 10-second heartbeat
+- `LogPayload::source` is now resolved from runtime context (`http` or `console`); was always `null` before
+- Incoming log ingress now validates the `level` field; invalid or uppercase values are rejected with 422
+- `BaleTransport` now imports `BackedEnum`; missing import previously risked a fatal error at runtime
+- `LogDispatcher` and `TransportResult` now declare `strict_types=1`
+- Dead code `$explicitRequest` removed from `LogPayloadFactory`
+
+### Changed
+
+- README: the Queue Dispatch section now explains that synchronous delivery waits for the driver timeout when the destination hangs, and recommends the queue (or short timeouts) for production
+- Added `.gitattributes` so the installed package no longer ships `tests/`, CI config, `phpunit.xml`, `pint.json` and the internal AI/agent notes (`AGENTS.md`, `AI_MANIFEST.md`, `CONTEXT.md`, `llms.txt`); they stay in the repository
+
+- Composer now requires `laravel/framework` (`^10.0|^11.0|^12.0|^13.0`) and `guzzlehttp/guzzle` instead of only `illuminate/support` and `illuminate/log`; the package already used framework classes and the HTTP client, so the old constraints under-declared its real dependencies
+- Laravel 13 support added; CI now runs the test suite on Laravel 10, 11, 12 and 13
+
+- Driver and formatter names in `TransportManager` are now normalised to lowercase — `LOGCENTER_DRIVER=Bale` works the same as `bale`
+- `debug_backtrace` depth reduced from 50 to 25; `resolve()` result is now cached per call-stack hash
+- `PayloadProcessor` caches config values once on construction instead of rebuilding the regex on every log event
+- `LogFileRepository::entryCountFor()` no longer parses the full file — counts only header lines
+- Incoming log payload depth capped at 10 levels to prevent stack overflow on deeply nested payloads
+- `bale_text` formatter removed from docs and config (was never implemented)
+
+## [0.1.0] — 2026-05-28
+
+### Added
+
+- **Drivers:** `telegram`, `bale`, `mattermost`, `webhook`, `null`
+- **Formatters:** `plain`, `markdown`, `json`, `telegram_html`, `bale_markdown`
+- **Secret masking** — key-based and regex-based masking before formatting or sending; covers nested arrays and queue dispatch
+- **Queue dispatch** — async log delivery via `DispatchLogJob` with configurable tries and exponential backoff (10 s → 60 s → 300 s)
+- **Fallback transport** — when the primary driver fails, a secondary driver is tried automatically
+- **Alert suppression** — cache-based deduplication prevents notification floods; suppressed duplicates fire a `LogSuppressed` event with an occurrence counter
+- **Events:** `LogDispatched`, `LogDispatchFailed`, `LogSuppressed` for subscribing to dispatch outcomes
+- **Log viewer** — lightweight built-in read-only viewer for local Laravel log files; auth-guarded by default; supports full-text search, expand/collapse, direct entry links, and file download
+- **Incoming log ingress** — accept structured logs from external applications over HTTP; token-protected and rate-limited
+- **Telegram:** per-level forum topics, message splitting, configurable proxy, custom parse mode, notification and web-preview control
+- **Mattermost:** incoming webhook mode and bot API mode (bearer token + channel ID)
+- **Artisan command** `log-center:test` to verify transport configuration
+- **`#[LogTopic]` attribute** — decorate any method or class with one or more tags to route logs to a Telegram topic thread and append `#tag` to all other drivers; resolved automatically from the call stack or current route action at log time
+- `TransportFactory::extend()` for registering custom transport drivers
